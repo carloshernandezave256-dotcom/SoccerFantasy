@@ -1,83 +1,23 @@
--- Initial relational foundation. Apply only after the application audit and RLS review.
 create extension if not exists pgcrypto;
-
-create type public.league_size as enum ('8', '10', '12');
-create type public.member_role as enum ('manager', 'commissioner');
-create type public.player_position as enum ('GK', 'DEF', 'MID', 'FWD');
-create type public.draft_status as enum ('scheduled', 'live', 'paused', 'complete');
-
-create table public.profiles (
-  id uuid primary key references auth.users(id) on delete cascade,
-  display_name text not null check (char_length(display_name) between 2 and 40),
-  created_at timestamptz not null default now()
-);
-
-create table public.leagues (
-  id uuid primary key default gen_random_uuid(),
-  name text not null check (char_length(name) between 2 and 60),
-  invite_code text not null unique,
-  size public.league_size not null default '10',
-  commissioner_id uuid not null references public.profiles(id),
-  created_at timestamptz not null default now()
-);
-
-create table public.league_members (
-  league_id uuid not null references public.leagues(id) on delete cascade,
-  user_id uuid not null references public.profiles(id) on delete cascade,
-  team_name text not null check (char_length(team_name) between 2 and 40),
-  role public.member_role not null default 'manager',
-  draft_slot smallint,
-  joined_at timestamptz not null default now(),
-  primary key (league_id, user_id),
-  unique (league_id, team_name),
-  unique (league_id, draft_slot)
-);
-
-create table public.players (
-  id bigint generated always as identity primary key,
-  provider_id text not null unique,
-  full_name text not null,
-  position public.player_position not null,
-  club text not null,
-  competition text not null,
-  active boolean not null default true
-);
-
-create table public.drafts (
-  id uuid primary key default gen_random_uuid(),
-  league_id uuid not null unique references public.leagues(id) on delete cascade,
-  status public.draft_status not null default 'scheduled',
-  rounds smallint not null default 18 check (rounds = 18),
-  pick_seconds smallint not null default 60 check (pick_seconds between 15 and 300),
-  current_pick smallint not null default 1,
-  starts_at timestamptz,
-  updated_at timestamptz not null default now()
-);
-
-create table public.draft_picks (
-  id bigint generated always as identity primary key,
-  draft_id uuid not null references public.drafts(id) on delete cascade,
-  league_id uuid not null references public.leagues(id) on delete cascade,
-  pick_number smallint not null,
-  round smallint not null check (round between 1 and 18),
-  user_id uuid not null references public.profiles(id),
-  player_id bigint not null references public.players(id),
-  auto_picked boolean not null default false,
-  picked_at timestamptz not null default now(),
-  unique (draft_id, pick_number),
-  unique (league_id, player_id)
-);
-
-alter table public.profiles enable row level security;
-alter table public.leagues enable row level security;
-alter table public.league_members enable row level security;
-alter table public.players enable row level security;
-alter table public.drafts enable row level security;
-alter table public.draft_picks enable row level security;
-
-create policy "profiles readable by authenticated users" on public.profiles for select to authenticated using (true);
-create policy "users update own profile" on public.profiles for update to authenticated using ((select auth.uid()) = id) with check ((select auth.uid()) = id);
-create policy "active players readable" on public.players for select to authenticated using (active = true);
-
--- League-scoped policies and transactional draft RPCs are intentionally deferred
--- until the exact commissioner and guest-access behavior is locked.
+create type public.member_role as enum ('manager','commissioner');
+create type public.player_position as enum ('GK','DEF','MID','FWD');
+create table public.profiles(id uuid primary key references auth.users(id) on delete cascade,display_name text not null check(char_length(display_name) between 2 and 40),created_at timestamptz not null default now());
+create table public.leagues(id uuid primary key default gen_random_uuid(),name text not null check(char_length(name) between 2 and 60),invite_code text not null unique check(invite_code ~ '^XI-[A-Z0-9]{6}$'),size smallint not null check(size in(8,10,12)),commissioner_id uuid not null references public.profiles(id),created_at timestamptz not null default now());
+create table public.league_members(league_id uuid not null references public.leagues(id) on delete cascade,user_id uuid not null references public.profiles(id) on delete cascade,team_name text not null check(char_length(team_name) between 2 and 40),role public.member_role not null default 'manager',draft_slot smallint,joined_at timestamptz not null default now(),primary key(league_id,user_id),unique(league_id,team_name),unique(league_id,draft_slot));
+create table public.players(id bigint generated always as identity primary key,provider_id text not null unique,full_name text not null,position public.player_position not null,club text not null,competition text not null,active boolean not null default true);
+create index league_members_user_id_idx on public.league_members(user_id);
+create index leagues_commissioner_id_idx on public.leagues(commissioner_id);
+alter table public.profiles enable row level security;alter table public.leagues enable row level security;alter table public.league_members enable row level security;alter table public.players enable row level security;
+grant select on public.players to authenticated;revoke all on public.profiles,public.leagues,public.league_members from anon,authenticated;
+create policy "active players readable" on public.players for select to authenticated using(active=true);
+create function public.handle_new_user() returns trigger language plpgsql security definer set search_path='' as $$begin insert into public.profiles(id,display_name) values(new.id,coalesce(nullif(new.raw_user_meta_data->>'display_name',''),split_part(coalesce(new.email,'Manager'),'@',1))) on conflict(id) do nothing;return new;end$$;
+create trigger on_auth_user_created after insert on auth.users for each row execute function public.handle_new_user();
+create function public.create_league(p_name text,p_team_name text,p_size smallint) returns uuid language plpgsql security definer set search_path='' as $$declare v_user uuid:=(select auth.uid());v_id uuid;v_code text;begin if v_user is null then raise exception 'Authentication required';end if;if p_size not in(8,10,12) then raise exception 'League size must be 8, 10, or 12';end if;v_code:='XI-'||upper(substr(encode(gen_random_bytes(6),'hex'),1,6));insert into public.leagues(name,invite_code,size,commissioner_id) values(trim(p_name),v_code,p_size,v_user) returning id into v_id;insert into public.league_members(league_id,user_id,team_name,role,draft_slot) values(v_id,v_user,trim(p_team_name),'commissioner',1);return v_id;end$$;
+create function public.join_league(p_invite_code text,p_team_name text) returns uuid language plpgsql security definer set search_path='' as $$declare v_user uuid:=(select auth.uid());v_league public.leagues%rowtype;v_count int;begin if v_user is null then raise exception 'Authentication required';end if;select * into v_league from public.leagues where invite_code=upper(trim(p_invite_code)) for update;if not found then raise exception 'Invite code not found';end if;select count(*) into v_count from public.league_members where league_id=v_league.id;if v_count>=v_league.size then raise exception 'League is full';end if;insert into public.league_members(league_id,user_id,team_name,draft_slot) values(v_league.id,v_user,trim(p_team_name),v_count+1);return v_league.id;end$$;
+create function public.my_leagues() returns table(league_id uuid,league_name text,invite_code text,league_size smallint,manager_count bigint,team_name text,is_commissioner boolean) language sql security definer set search_path='' stable as $$select l.id,l.name,l.invite_code,l.size,(select count(*) from public.league_members x where x.league_id=l.id),m.team_name,m.role='commissioner' from public.league_members m join public.leagues l on l.id=m.league_id where m.user_id=(select auth.uid()) order by l.created_at desc$$;
+revoke all on function public.handle_new_user() from public,anon,authenticated;
+revoke all on function public.create_league(text,text,smallint),public.join_league(text,text),public.my_leagues() from public,anon;
+grant execute on function public.create_league(text,text,smallint),public.join_league(text,text),public.my_leagues() to authenticated;
+comment on function public.create_league(text,text,smallint) is 'Authenticated RPC; validates auth.uid and atomically creates league membership.';
+comment on function public.join_league(text,text) is 'Authenticated RPC; validates auth.uid and serializes capacity checks.';
+comment on function public.my_leagues() is 'Authenticated RPC; returns only memberships for auth.uid.';
