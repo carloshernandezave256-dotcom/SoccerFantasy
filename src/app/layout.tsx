@@ -4,6 +4,7 @@ import "./milestone.css";
 import "./draft.css";
 import "./lineup.css";
 import "./invites.css";
+import "./practice.css";
 
 export const metadata: Metadata = {
   title: "XI | Cross-League Fantasy",
