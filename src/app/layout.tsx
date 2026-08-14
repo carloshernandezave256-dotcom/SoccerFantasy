@@ -8,6 +8,7 @@ import "./practice.css";
 import "./gameweek.css";
 import "./trades.css";
 import "./quick-links.css";
+import "./team-demo.css";
 
 export const metadata: Metadata = {
   title: "XI | Cross-League Fantasy",
