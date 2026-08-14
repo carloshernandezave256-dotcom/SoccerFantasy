@@ -1,2 +1,5 @@
-import { PageShell } from "@/components/page-shell";
-export default function TeamPage(){return <PageShell eyebrow="BARRIO XI" title="My Team"><section className="panel empty-feature"><span>◉</span><h2>Your squad begins at the draft</h2><p>One goalkeeper, at least three defenders, midfielders and forwards, plus seven bench spots.</p><button className="primary-button">Draft room coming next</button></section></PageShell>}
+import { TeamManager } from "@/components/team-manager";
+
+export default function TeamPage() {
+  return <TeamManager />;
+}
