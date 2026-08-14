@@ -1,0 +1,1 @@
+.quick-grid>a{min-width:0;background:var(--surface);border:1px solid var(--line);border-radius:17px;padding:14px 10px;display:flex;flex-direction:column;gap:5px;text-decoration:none;color:var(--text)}.quick-grid>a .icon{color:var(--lime);font-size:20px}.quick-grid>a strong{font-size:12px}.quick-grid>a small{color:var(--muted);font-size:9px;line-height:1.25}

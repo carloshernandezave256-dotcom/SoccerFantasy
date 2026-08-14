@@ -1,0 +1,6 @@
+"use client";
+import { useMemo, useState } from "react";
+import Link from "next/link";
+import { PageShell } from "@/components/page-shell";
+import { playerCatalog } from "@/lib/player-catalog";
+export default function PlayersPage(){const[q,setQ]=useState("");const[pos,setPos]=useState("ALL");const filtered=useMemo(()=>playerCatalog.filter(p=>(pos==="ALL"||p.position===pos)&&`${p.name} ${p.club} ${p.league}`.toLowerCase().includes(q.toLowerCase())),[q,pos]);return <PageShell eyebrow="TOP FIVE LEAGUES" title="Player market"><Link className="primary-button practice-link" href="/practice-draft">Start practice draft</Link><div className="search-box">⌕<input aria-label="Search players" placeholder="Search player, club or league" value={q} onChange={e=>setQ(e.target.value)} /></div><div className="filter-row">{["ALL","GK","DEF","MID","FWD"].map(x=><button key={x} className={pos===x?"active":""} onClick={()=>setPos(x)}>{x}</button>)}</div><section className="panel player-list">{filtered.map(p=><article key={p.id}><span className={`position ${p.position.toLowerCase()}`}>{p.position}</span><div><strong>{p.name}</strong><small>{p.club} · {p.league}</small></div><Link aria-label={`Select ${p.name}`} href="/practice-draft">›</Link></article>)}</section></PageShell>}

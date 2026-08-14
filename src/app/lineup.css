@@ -1,0 +1,34 @@
+.league-select {
+  width: 100%;
+  margin-bottom: 1rem;
+  padding: 0.85rem 1rem;
+  color: var(--foreground);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0.8rem;
+}
+
+.formation-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  padding: 1rem;
+  color: white;
+  background: linear-gradient(135deg, #0d6437, #082b1c);
+  border-radius: 1rem;
+}
+
+.formation-card small,
+.formation-card strong { display: block; }
+.formation-card strong { font-size: 1.7rem; }
+.formation-counts { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.4rem; }
+.formation-counts span { padding: 0.35rem 0.55rem; background: #ffffff18; border-radius: 999px; font-size: 0.75rem; }
+.roster-list article.selected { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, var(--surface)); }
+.lineup-toggle { margin-left: auto; padding: 0.5rem 0.65rem; color: var(--foreground); background: transparent; border: 1px solid var(--border); border-radius: 0.6rem; font-weight: 700; }
+
+@media (max-width: 420px) {
+  .formation-card { align-items: flex-start; flex-direction: column; }
+  .formation-counts { justify-content: flex-start; }
+}
