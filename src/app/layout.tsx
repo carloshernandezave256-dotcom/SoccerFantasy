@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import "./milestone.css";
 import "./draft.css";
+import "./lineup.css";
 
 export const metadata: Metadata = {
   title: "XI | Cross-League Fantasy",
