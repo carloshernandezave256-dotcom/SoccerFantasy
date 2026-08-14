@@ -1,0 +1,2 @@
+import { PageShell } from "@/components/page-shell";
+export default function MatchupPage(){return <PageShell eyebrow="MATCHWEEK 9" title="Head to head"><section className="match-card"><div className="versus"><div><strong>54.5</strong><span>Barrio XI</span></div><div className="versus-mark">VS</div><div><strong>53.5</strong><span>Tiki Taka</span></div></div><div className="progress"><span style={{width:"51%"}}/></div><p className="muted">Detailed player scoring arrives with live match data.</p></section></PageShell>}
