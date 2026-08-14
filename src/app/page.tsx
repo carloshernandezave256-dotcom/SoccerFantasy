@@ -1,5 +1,6 @@
 import { BottomNav } from "@/components/bottom-nav";
 import { ScorePreview } from "@/components/score-preview";
+import Link from "next/link";
 
 const leaders = [
   { rank: 1, team: "Barrio XI", record: "7–2", points: 681 },
@@ -36,9 +37,9 @@ export default function Home() {
       </section>
 
       <section className="quick-grid" aria-label="League shortcuts">
-        <article><span className="icon">◎</span><strong>My Team</strong><small>Set your XI</small></article>
-        <article><span className="icon">↗</span><strong>Players</strong><small>Scout all five leagues</small></article>
-        <article><span className="icon">⇄</span><strong>Waivers</strong><small>Priority: 4th</small></article>
+        <Link href="/team"><span className="icon">◎</span><strong>My Team</strong><small>Set your XI</small></Link>
+        <Link href="/players"><span className="icon">↗</span><strong>Players</strong><small>Scout all five leagues</small></Link>
+        <Link href="/trades"><span className="icon">⇄</span><strong>Trades</strong><small>Build an offer</small></Link>
       </section>
 
       <section className="panel">
