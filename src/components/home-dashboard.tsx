@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { BottomNav } from "./bottom-nav";
+import { AccountMenu } from "./account-menu";
 import { supabase } from "@/lib/supabase";
 
 type League={league_id:string;league_name:string;invite_code:string;league_size:number;manager_count:number;team_name:string;is_commissioner:boolean};
@@ -79,7 +80,7 @@ export function HomeDashboard(){
   const targets={GK:2,DEF:6,MID:5,FWD:5};
 
   return <main className="app-shell home-dashboard">
-    <header className="topbar"><div><p className="eyebrow">{league?.league_name??"XI FANTASY"}</p><h1>{loading?"Loading your dashboard…":`Welcome, ${name}`}</h1></div><span className="avatar home-avatar">{initials||"XI"}</span></header>
+    <header className="topbar"><div><p className="eyebrow">{league?.league_name??"XI FANTASY"}</p><h1>{loading?"Loading your dashboard…":`Welcome, ${name}`}</h1></div><AccountMenu/></header>
     {!loading&&!signedIn?<section className="match-card home-empty"><p className="eyebrow">YOUR SEASON</p><h2>Sign in to open your dashboard.</h2><p>Your leagues, draft, roster and matchup will appear here.</p><Link className="primary-button" href="/login?next=/">Log in</Link></section>:null}
     {!loading&&signedIn&&!league?<section className="match-card home-empty"><p className="eyebrow">START HERE</p><h2>Create or join your first league.</h2><p>Once you join, this page becomes your live season command center.</p><Link className="primary-button" href="/league">Open leagues</Link></section>:null}
 
