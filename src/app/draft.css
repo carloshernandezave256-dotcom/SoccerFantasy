@@ -42,6 +42,7 @@
 .draft-search-label{display:block;margin:0 4px 6px;color:var(--muted);font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.08em}
 .player-result-count{margin:0 4px 8px;color:var(--muted);font-size:9px}
 .load-more{margin-top:10px}
+.roster-viewer{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:5px 10px;align-items:center;margin-bottom:10px;padding:12px 14px}.roster-viewer label{color:var(--muted);font-size:8px;font-weight:900;text-transform:uppercase;letter-spacing:.08em}.roster-viewer select{grid-column:1/-1;width:100%;border:1px solid var(--line);border-radius:10px;background:color-mix(in srgb,var(--surface) 82%,#000);color:var(--text);padding:10px 11px;font:inherit;font-size:11px;font-weight:800}.roster-viewer small{grid-column:1/-1;color:var(--muted);font-size:8px}
 .roster-needs{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-bottom:12px}
 .roster-needs article{display:flex;flex-direction:column;gap:3px;padding:11px 6px;background:var(--surface);border:1px solid var(--line);border-radius:12px;text-align:center}
 .roster-needs b{color:var(--muted);font-size:8px}
