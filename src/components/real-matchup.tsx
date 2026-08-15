@@ -34,7 +34,9 @@ export function RealMatchup(){
     if(!user){setMessage("Log in to open your league matchup.");setLoading(false);return}
     setUserId(user.id);
     const{data:leagueData}=await supabase.rpc("my_leagues");
-    const active=((leagueData??[]) as League[])[0]??null;
+    const leagues=(leagueData??[]) as League[];
+    const requested=new URLSearchParams(window.location.search).get("league");
+    const active=leagues.find(item=>item.league_id===requested)??leagues[0]??null;
     setLeague(active);
     if(!active){setMessage("Create or join a league to generate your schedule.");setLoading(false);return}
     const{error:scheduleError}=await supabase.rpc("ensure_league_schedule",{p_league_id:active.league_id});

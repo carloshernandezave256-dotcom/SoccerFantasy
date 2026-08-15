@@ -44,7 +44,7 @@ export default function LeaguePage(){
     if(id)await loadDetails(id);else{setManagers([]);setDraft(null)}
   }
 
-  useEffect(()=>{const inviteCode=new URLSearchParams(window.location.search).get("invite");if(inviteCode){setCode(inviteCode.toUpperCase());setTab("join");setShowMembership(true)}void load()},[]);
+  useEffect(()=>{const params=new URLSearchParams(window.location.search),inviteCode=params.get("invite"),requested=params.get("league")??undefined;if(inviteCode){setCode(inviteCode.toUpperCase());setTab("join");setShowMembership(true)}void load(requested)},[]);
 
   async function submit(event:FormEvent<HTMLFormElement>){
     event.preventDefault();setMessage("");const formElement=event.currentTarget;

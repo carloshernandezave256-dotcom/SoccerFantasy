@@ -52,7 +52,9 @@ export function TradeCenter(){
     const{data,error}=await supabase.rpc("my_leagues");
     if(error){setMessage(error.message);setLoading(false);return}
     const list=(data??[]) as League[];setLeagues(list);
-    if(list[0]){setLeague(list[0].league_id);await loadLeague(list[0].league_id,user.id)}else setLoading(false);
+    const requested=new URLSearchParams(window.location.search).get("league");
+    const active=list.find(item=>item.league_id===requested)??list[0];
+    if(active){setLeague(active.league_id);await loadLeague(active.league_id,user.id)}else setLoading(false);
   })()},[loadLeague]);
 
   const myRoster=useMemo(()=>picks.filter(pick=>pick.user_id===userId&&pick.players).map(pick=>pick.players as Player),[picks,userId]);
