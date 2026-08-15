@@ -30,7 +30,8 @@ export function DraftRoom({leagueId}:{leagueId:string}){
   const[query,setQuery]=useState("");
   const[position,setPosition]=useState("ALL");
   const[view,setView]=useState<"available"|"queue"|"team">("available");
-  const[visibleCount,setVisibleCount]=useState(30);
+  const[visibleCount,setVisibleCount]=useState(20);
+  const[viewedManagerId,setViewedManagerId]=useState<string|null>(null);
   const[message,setMessage]=useState("");
   const[now,setNow]=useState(Date.now());
   const[queue,setQueue]=useState<QueueItem[]>([]);
@@ -77,11 +78,14 @@ export function DraftRoom({leagueId}:{leagueId:string}){
   const pickedIds=useMemo(()=>new Set(picks.map(pick=>pick.player_id)),[picks]);
   const seconds=draft?.pick_deadline?Math.max(0,Math.ceil((new Date(draft.pick_deadline).getTime()-now)/1000)):0;
   const available=useMemo(()=>players.filter(player=>!pickedIds.has(player.id)&&(position==="ALL"||player.position===position)&&`${player.full_name} ${player.club}`.toLowerCase().includes(query.toLowerCase())),[players,pickedIds,position,query]);
-  const myPicks=useMemo(()=>picks.filter(pick=>pick.user_id===userId).sort((a,b)=>a.pick_number-b.pick_number).map(pick=>({pick,player:players.find(player=>player.id===pick.player_id)})),[picks,players,userId]);
-  const rosterCounts=useMemo(()=>myPicks.reduce((counts,item)=>{if(item.player)counts[item.player.position]=(counts[item.player.position]??0)+1;return counts},{GK:0,DEF:0,MID:0,FWD:0} as Record<string,number>),[myPicks]);
+  const myPicks=useMemo(()=>picks.filter(pick=>pick.user_id===userId),[picks,userId]);
+  const selectedManagerId=viewedManagerId??userId;
+  const selectedManager=order.find(manager=>manager.user_id===selectedManagerId);
+  const viewedPicks=useMemo(()=>picks.filter(pick=>pick.user_id===selectedManagerId).sort((a,b)=>a.pick_number-b.pick_number).map(pick=>({pick,player:players.find(player=>player.id===pick.player_id)})),[picks,players,selectedManagerId]);
+  const rosterCounts=useMemo(()=>viewedPicks.reduce((counts,item)=>{if(item.player)counts[item.player.position]=(counts[item.player.position]??0)+1;return counts},{GK:0,DEF:0,MID:0,FWD:0} as Record<string,number>),[viewedPicks]);
   const rosterTargets={GK:2,DEF:6,MID:5,FWD:5};
 
-  useEffect(()=>setVisibleCount(30),[query,position]);
+  useEffect(()=>setVisibleCount(20),[query,position]);
 
   async function start(){
     setMessage("");
@@ -201,7 +205,7 @@ export function DraftRoom({leagueId}:{leagueId:string}){
         <div><strong>{player.full_name}</strong><small>#{player.draft_rank??"—"} · {player.club} · {player.competition}</small></div>
         <div className="player-actions"><button className="queue-button" onClick={()=>addToQueue(player)} disabled={queueSaving||queue.some(item=>item.player_id===player.id)||queue.length>=25}>{queue.some(item=>item.player_id===player.id)?"QUEUED":"+ QUEUE"}</button><button className="draft-button" onClick={()=>pick(player.id)} disabled={!isMyTurn}>{isMyTurn?"DRAFT":"WAIT"}</button></div>
       </article>)}{available.length===0?<p className="queue-empty">No available players match that search.</p>:null}</section>
-      {visibleCount<available.length?<button className="secondary-button full-button load-more" onClick={()=>setVisibleCount(count=>count+30)}>Show 30 more</button>:null}
+      {visibleCount<available.length?<button className="secondary-button full-button load-more" onClick={()=>setVisibleCount(count=>count+20)}>Show 20 more</button>:null}
     </>:view==="queue"?<section ref={queueListRef} className={`panel draft-queue queue-tab-panel ${queueDrag?"is-reordering":""}`}>
       <div className="section-row"><div><h2>My auto-pick priority</h2><p>Drag the three-line handle to reorder. You can also draft directly from this list.</p></div><span className="muted-chip">{queue.length}/25</span></div>
       {queue.length===0?<p className="queue-empty">Your queue is empty. Open Available and tap + QUEUE beside players you want. If it remains empty, auto-pick uses the highest-ranked player your roster needs.</p>:queue.map((item,index)=><article data-queue-index={index} className={`${queueDrag?.index===index?"queue-drag-source":""} ${queueDrag?.target===index&&queueDrag.index!==index?(queueDrag.index<index?"queue-drop-after":"queue-drop-before"):""}`} key={item.player_id}>
@@ -211,8 +215,15 @@ export function DraftRoom({leagueId}:{leagueId:string}){
       </article>)}
       {queueDrag?(()=>{const item=queue[queueDrag.index];return <article className="queue-drag-ghost" aria-hidden="true" style={{top:queueDrag.top,left:queueDrag.left,width:queueDrag.width,height:queueDrag.height}}><span className="queue-drag ghost-handle">☰</span><span className={`position ${(item.players?.position??"").toLowerCase()}`}>{item.players?.position}</span><div><strong>{item.players?.full_name??`Player ${item.player_id}`}</strong><small>Drop at position {queueDrag.target+1}</small></div><b className="queue-ghost-rank">#{queueDrag.target+1}</b></article>})():null}
     </section>:<>
+      <section className="panel roster-viewer">
+        <label htmlFor="draft-roster-manager">View manager roster</label>
+        <select id="draft-roster-manager" value={selectedManagerId??""} onChange={event=>setViewedManagerId(event.target.value)}>
+          {order.map(manager=><option key={manager.user_id} value={manager.user_id}>{manager.user_id===userId?`My team · ${manager.team_name}`:manager.team_name}</option>)}
+        </select>
+        <small>{selectedManagerId===userId?"Your live draft roster":`${selectedManager?.team_name??"Manager"} · read only`}</small>
+      </section>
       <section className="roster-needs" aria-label="Roster progress">{(["GK","DEF","MID","FWD"] as const).map(pos=>{const have=rosterCounts[pos];const target=rosterTargets[pos];const missing=Math.max(0,target-have);return <article key={pos} className={missing===0?"complete":""}><b>{pos}</b><strong>{have}/{target}</strong><small>{missing===0?"Complete":`${missing} needed`}</small></article>})}</section>
-      <section className="panel player-list my-picks-list">{myPicks.map(({pick,player})=><article key={pick.id}><b className="owned-pick-number">#{pick.pick_number}</b><span className={`position ${(player?.position??"").toLowerCase()}`}>{player?.position}</span><div><strong>{player?.full_name??`Player ${pick.player_id}`}</strong><small>{player?.club}{pick.auto_picked?" · AUTO-PICK":""}</small></div></article>)}{myPicks.length===0?<p className="queue-empty">You have not drafted a player yet. Your picks will appear here as soon as they are made.</p>:null}</section>
+      <section className="panel player-list my-picks-list">{viewedPicks.map(({pick,player})=><article key={pick.id}><b className="owned-pick-number">#{pick.pick_number}</b><span className={`position ${(player?.position??"").toLowerCase()}`}>{player?.position}</span><div><strong>{player?.full_name??`Player ${pick.player_id}`}</strong><small>{player?.club}{pick.auto_picked?" · AUTO-PICK":""}</small></div></article>)}{viewedPicks.length===0?<p className="queue-empty">{selectedManagerId===userId?"You have not drafted a player yet. Your picks will appear here as soon as they are made.":`${selectedManager?.team_name??"This manager"} has not drafted a player yet.`}</p>:null}</section>
     </>}
 
     <section className="panel"><div className="section-row"><h2>Recent picks</h2><span className="muted-chip">{picks.length}</span></div>{picks.slice(0,8).map(pick=><div className="pick-row" key={pick.id}><b>#{pick.pick_number}</b><span>{pick.players?.full_name??`Player ${pick.player_id}`}</span><small>{order.find(manager=>manager.user_id===pick.user_id)?.team_name}{pick.auto_picked?" · AUTO":""}</small></div>)}</section>
