@@ -29,7 +29,8 @@ export async function GET(request:NextRequest){
   const leagueId=request.nextUrl.searchParams.get("league");
   if(!leagues.some((league:{league_id:string;is_commissioner:boolean})=>league.league_id===leagueId&&league.is_commissioner))return NextResponse.json({error:"Only this league’s commissioner can run an API test."},{status:403});
   const date=request.nextUrl.searchParams.get("date")??new Intl.DateTimeFormat("en-CA",{timeZone:"America/Los_Angeles",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
-  const season=Number(date.slice(0,4));
+  const year=Number(date.slice(0,4)),month=Number(date.slice(5,7));
+  const season=month<=6?year-1:year;
   try{
     const fixtureGroups=await Promise.all(competitions.map(async competition=>({competition,fixtures:await football(`fixtures?league=${competition.id}&season=${season}&date=${date}&timezone=America%2FLos_Angeles`,key)})));
     const fixtures=fixtureGroups.flatMap(group=>group.fixtures.map((fixture:{fixture:{id:number;date:string;status:{short:string}};teams:{home:{name:string};away:{name:string}}})=>({...fixture,competition:group.competition.name}))).filter(fixture=>!["TBD","NS","PST","CANC","ABD","AWD","WO"].includes(fixture.fixture.status.short));
