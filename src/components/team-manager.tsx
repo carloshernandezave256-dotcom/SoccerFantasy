@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { PageShell } from "./page-shell";
 import { TeamDemo } from "./team-demo";
 import { supabase } from "@/lib/supabase";
+import { resolveActiveLeague } from "@/lib/active-league";
 
 type League={league_id:string;league_name:string;team_name:string;game_format:string};
 type Player={id:number;full_name:string;position:string;club:string};
@@ -73,8 +74,7 @@ export function TeamManager(){
       const{data}=await supabase.rpc("my_leagues");
       const list=(data??[]) as League[];
       setLeagues(list);
-      const requested=new URLSearchParams(window.location.search).get("league");
-      const active=list.find(item=>item.league_id===requested)??list[0];
+      const active=resolveActiveLeague(list,new URLSearchParams(window.location.search).get("league"));
       if(active){setLeague(active.league_id);const{data:order}=await supabase.rpc("draft_order",{p_league_id:active.league_id});const managersList=(order??[]) as Manager[];setManagers(managersList);const owner=managersList.some(manager=>manager.user_id===user.id)?user.id:managersList[0]?.user_id??"";setViewedUser(owner);if(owner)await loadRoster(active.league_id,owner)}
       else setLoading(false);
     })();
@@ -112,7 +112,6 @@ export function TeamManager(){
 
   return <PageShell eyebrow={viewedManager?.team_name??leagues.find(item=>item.league_id===league)?.team_name??"MY CLUB"} title={isMine?"My Team":"Team Viewer"}>
     <div className="team-selectors">
-      <label>League<select className="league-select" value={league} onChange={event=>{const id=event.target.value;setLeague(id);void loadLeague(id)}}>{leagues.map(item=><option key={item.league_id} value={item.league_id}>{item.league_name}</option>)}</select></label>
       <label>View team<select className="league-select" value={viewedUser} onChange={event=>{setViewedUser(event.target.value);void loadRoster(league,event.target.value)}}>{managers.map(manager=><option key={manager.user_id} value={manager.user_id}>{manager.user_id===userId?"My Team":manager.team_name}</option>)}</select></label>
     </div>
 

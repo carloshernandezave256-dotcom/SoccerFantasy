@@ -4,15 +4,15 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { PageShell } from "@/components/page-shell";
 import { supabase } from "@/lib/supabase";
+import { resolveActiveLeague } from "@/lib/active-league";
 
-type League = { league_id: string; league_name: string; team_name: string; is_commissioner: boolean };
+type League = { league_id: string; league_name: string; team_name: string; is_commissioner: boolean; game_format?: string };
 type Player = { id: number; full_name: string; position: string; club: string; competition: string; draft_rank?: number };
 type Pick = { user_id: string; player_id: number; players: Player | null };
 type Claim = { id: string; user_id: string; add_player_id: number; drop_player_id: number | null; status: string; created_at: string; processed_at: string | null; note: string | null };
 type Priority = { rank: number; user_id: string; team_name: string };
 
 export default function WaiversPage() {
-  const [leagues, setLeagues] = useState<League[]>([]);
   const [league, setLeague] = useState<League | null>(null);
   const [players, setPlayers] = useState<Player[]>([]);
   const [picks, setPicks] = useState<Pick[]>([]);
@@ -57,9 +57,9 @@ export default function WaiversPage() {
       const { data, error } = await supabase.rpc("my_leagues");
       if (error) { setMessage(error.message); setLoading(false); return; }
       const list = (data ?? []) as League[];
-      const requested = new URLSearchParams(window.location.search).get("league");
-      const active = list.find((item) => item.league_id === requested) ?? list[0] ?? null;
-      setLeagues(list); setLeague(active); setUserId(user.id);
+      const active = resolveActiveLeague(list, new URLSearchParams(window.location.search).get("league")) ?? null;
+      if(active?.game_format==="pack"){window.location.replace(`/players?league=${active.league_id}`);return}
+      setLeague(active); setUserId(user.id);
       if (active) await loadLeague(active, user.id); else setLoading(false);
     }
     void start();
@@ -76,14 +76,6 @@ export default function WaiversPage() {
     const isOwned = ownedIds.has(player.id);
     return (marketFilter === "ALL" || (marketFilter === "AVAILABLE" && !isOwned) || (marketFilter === "OWNED" && isOwned)) && (position === "ALL" || player.position === position) && (!search || `${player.full_name} ${player.club} ${player.competition}`.toLowerCase().includes(search));
   }), [players, ownedIds, query, position, marketFilter]);
-
-  async function switchLeague(id: string) {
-    const active = leagues.find((item) => item.league_id === id);
-    if (!active) return;
-    setLeague(active); setMessage(""); setSelected(null);
-    window.history.replaceState({}, "", `/waivers?league=${id}`);
-    await loadLeague(active, userId);
-  }
 
   async function submitClaim() {
     if (!league || !selected || !dropId) return;
@@ -112,7 +104,6 @@ export default function WaiversPage() {
   return <PageShell eyebrow="ROSTER MOVES" title="Player market">
     <nav className="player-market-tabs two-tabs" aria-label="Player market sections"><button className={tab === "market" ? "active" : ""} onClick={() => { setTab("market"); window.history.replaceState({}, "", `${window.location.pathname}${window.location.search}#market`); }}>Player market</button><button className={tab === "claims" ? "active" : ""} onClick={() => { setTab("claims"); window.history.replaceState({}, "", `${window.location.pathname}${window.location.search}#claims`); }}>My claims</button></nav>
     {!userId && !loading ? <section className="panel empty-feature"><span>↻</span><h2>Sign in to manage waivers</h2><p>Your claims, roster, and waiver priority are private to your league.</p><Link className="primary-button" href="/login?next=/waivers">Log in</Link></section> : !league && !loading ? <section className="panel empty-feature"><span>＋</span><h2>Join a league first</h2><p>Waivers open for managers after a league draft is complete.</p><Link className="primary-button" href="/league">Open leagues</Link></section> : <>
-      {leagues.length > 1 ? <label className="waiver-league-select">League<select value={league?.league_id ?? ""} onChange={(event) => void switchLeague(event.target.value)}>{leagues.map((item) => <option key={item.league_id} value={item.league_id}>{item.league_name} · {item.team_name}</option>)}</select></label> : null}
       <section className="waiver-summary"><div><small>YOUR PRIORITY</small><strong>#{priority.find((item) => item.user_id === userId)?.rank ?? "—"}</strong></div><div><small>YOUR ROSTER</small><strong>{roster.length}/18</strong></div><div><small>PENDING</small><strong>{claims.filter((claim) => claim.user_id === userId && claim.status === "pending").length}</strong></div></section>
       {message ? <p className="panel waiver-message">{message}</p> : null}
       {tab === "market" ? <section className="panel"><div className="section-row"><div><h2>Player market</h2><small>Showing {Math.min(marketPlayers.length, 60)} of {marketPlayers.length}</small></div><span className="muted-chip">{loading ? "…" : players.length}</span></div><div className="market-status-filter">{(["ALL", "AVAILABLE", "OWNED"] as const).map((item) => <button key={item} className={marketFilter === item ? "active" : ""} onClick={() => setMarketFilter(item)}>{item}</button>)}</div><div className="search-box"><span>⌕</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search player, club, or league" /></div><div className="filter-row">{["ALL", "GK", "DEF", "MID", "FWD"].map((item) => <button key={item} className={position === item ? "active" : ""} onClick={() => setPosition(item)}>{item}</button>)}</div><div className="player-list waiver-player-list">{marketPlayers.slice(0, 60).map((player) => { const owner = ownerByPlayer.get(player.id); return <article key={player.id}><span className={`position ${player.position.toLowerCase()}`}>{player.position}</span><div><strong>{player.full_name}</strong><small>#{player.draft_rank ?? "—"} · {player.club} · {player.competition}</small>{owner ? <small className="ownership-label">Owned by {owner}</small> : <small className="available-label">Available</small>}</div>{owner ? <span className="owned-chip">OWNED</span> : <button className="claim-button" onClick={() => { setSelected(player); setDropId(""); }}>CLAIM</button>}</article>; })}{!loading && marketPlayers.length === 0 ? <p className="empty-state">No players match those filters.</p> : null}</div></section> : <><section className="panel waiver-priority"><div className="section-row"><h2>Waiver priority</h2>{league?.is_commissioner ? <button className="process-button" onClick={() => void processClaims()} disabled={busy || !claims.some((claim) => claim.status === "pending")}>Process claims</button> : null}</div>{priority.map((item) => <article key={item.user_id} className={item.user_id === userId ? "you" : ""}><span>{item.rank}</span><strong>{item.team_name}</strong>{item.user_id === userId ? <small>YOU</small> : null}</article>)}</section><section className="panel claim-history"><div className="section-row"><h2>Claim history</h2><span className="muted-chip">{claims.length}</span></div>{claims.length === 0 ? <p className="empty-state">No waiver claims yet.</p> : claims.map((claim) => { const add = playerMap.get(claim.add_player_id); const drop = claim.drop_player_id ? playerMap.get(claim.drop_player_id) : null; return <article key={claim.id}><div><span className={`claim-status ${claim.status}`}>{claim.status}</span><strong>{teamMap.get(claim.user_id) ?? "Your team"}: {add?.full_name ?? "Player"}</strong><small>{drop ? `Drop ${drop.full_name} · ` : ""}{new Date(claim.created_at).toLocaleString()}{claim.note ? ` · ${claim.note}` : ""}</small></div>{claim.user_id === userId && claim.status === "pending" ? <button onClick={() => void cancelClaim(claim.id)} disabled={busy}>Cancel</button> : null}</article>; })}</section></>}

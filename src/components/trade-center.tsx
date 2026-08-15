@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { PageShell } from "./page-shell";
 import { supabase } from "@/lib/supabase";
+import { resolveActiveLeague } from "@/lib/active-league";
 
 type League={league_id:string;league_name:string;team_name:string};
 type Manager={draft_slot:number;user_id:string;team_name:string};
@@ -52,8 +53,7 @@ export function TradeCenter(){
     const{data,error}=await supabase.rpc("my_leagues");
     if(error){setMessage(error.message);setLoading(false);return}
     const list=(data??[]) as League[];setLeagues(list);
-    const requested=new URLSearchParams(window.location.search).get("league");
-    const active=list.find(item=>item.league_id===requested)??list[0];
+    const active=resolveActiveLeague(list,new URLSearchParams(window.location.search).get("league"));
     if(active){setLeague(active.league_id);await loadLeague(active.league_id,user.id)}else setLoading(false);
   })()},[loadLeague]);
 
@@ -94,7 +94,7 @@ export function TradeCenter(){
 
   return <PageShell eyebrow="LEAGUE TRANSACTIONS" title="Trade Center">
     {!userId&&!loading?<section className="panel empty-feature"><span>⇄</span><h2>Sign in to trade</h2><p>Trade offers are available to managers inside the same league.</p><Link className="primary-button" href="/login?next=/trades">Log in</Link></section>:leagues.length===0&&!loading?<section className="panel empty-feature"><span>＋</span><h2>Join a league first</h2><p>Your real roster and league opponents will appear here after you draft.</p><Link className="primary-button" href="/league">Open leagues</Link></section>:<>
-      <div className="trade-selectors"><label>League<select value={league} onChange={event=>{const id=event.target.value;setLeague(id);void loadLeague(id,userId)}}>{leagues.map(item=><option key={item.league_id} value={item.league_id}>{item.league_name}</option>)}</select></label>{tab==="build"?<label>Trade with<select value={partner} onChange={event=>{setPartner(event.target.value);setRequested([])}}>{managers.filter(manager=>manager.user_id!==userId).map(manager=><option key={manager.user_id} value={manager.user_id}>{manager.team_name}</option>)}</select></label>:null}</div>
+      {tab==="build"?<div className="trade-selectors"><label>Trade with<select value={partner} onChange={event=>{setPartner(event.target.value);setRequested([])}}>{managers.filter(manager=>manager.user_id!==userId).map(manager=><option key={manager.user_id} value={manager.user_id}>{manager.team_name}</option>)}</select></label></div>:null}
       <nav className="trade-tabs"><button className={tab==="build"?"active":""} onClick={()=>setTab("build")}>Build trade</button><button className={tab==="offers"?"active":""} onClick={()=>setTab("offers")}>Offers {pendingCount?<span>{pendingCount}</span>:null}</button></nav>
       {message?<p className="panel trade-message">{message}</p>:null}
       {tab==="build"?<>{loading?<section className="panel empty-state">Loading league rosters…</section>:partner?<><section className="trade-summary"><div><small>YOU SEND</small><strong>{offered.length}</strong></div><span>⇄</span><div><small>YOU RECEIVE</small><strong>{requested.length}</strong></div></section><p className="trade-balance-note">Select the same number of players on each side.</p><section className="trade-grid"><TradeRoster title={leagues.find(item=>item.league_id===league)?.team_name??"Your team"} instruction="Select players to offer" roster={myRoster} selected={offered} onToggle={id=>toggle(id,"offer")}/><TradeRoster title={managerMap.get(partner)??"Other team"} instruction="Select players to request" roster={partnerRoster} selected={requested} onToggle={id=>toggle(id,"request")}/></section><section className="panel trade-compose"><div><small>OFFER</small><strong>{selectedOffered.map(player=>player.full_name).join(", ")||"No players selected"}</strong></div><span>for</span><div><small>REQUEST</small><strong>{selectedRequested.map(player=>player.full_name).join(", ")||"No players selected"}</strong></div><label>Message (optional)<textarea maxLength={280} value={note} onChange={event=>setNote(event.target.value)} placeholder="Add a note to the other manager"/></label></section><button className="primary-button full-button" onClick={()=>void propose()} disabled={!canPropose}>{busy?"Sending…":"Send trade offer"}</button></>:<section className="panel empty-state">Another manager must join this league before you can trade.</section>}</>:<TradeOffers trades={trades.filter(trade=>trade.proposer_id===userId||trade.recipient_id===userId)} userId={userId} managerMap={managerMap} busy={busy} onRespond={respond} onCancel={cancel}/>} 
