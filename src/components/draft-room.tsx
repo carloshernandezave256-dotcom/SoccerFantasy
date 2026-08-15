@@ -10,6 +10,7 @@ type Draft = { id:string; status:"waiting"|"live"|"paused"|"complete"; current_p
 type Pick = { id:number; pick_number:number; round:number; user_id:string; player_id:number; auto_picked:boolean; players?:{full_name:string}|null };
 type Manager = { draft_slot:number; user_id:string; team_name:string };
 type QueueItem = { player_id:number; priority:number; players?:Player|null };
+type QueueDrag = { index:number; target:number; top:number; left:number; width:number; height:number; pointerOffsetY:number };
 
 function managerAtPick(order:Manager[],pickNumber:number){
   const count=order.length;
@@ -34,8 +35,9 @@ export function DraftRoom({leagueId}:{leagueId:string}){
   const[now,setNow]=useState(Date.now());
   const[queue,setQueue]=useState<QueueItem[]>([]);
   const[queueSaving,setQueueSaving]=useState(false);
-  const[draggedQueueIndex,setDraggedQueueIndex]=useState<number|null>(null);
-  const touchDrag=useRef<{index:number;startY:number;target:number}|null>(null);
+  const[queueDrag,setQueueDrag]=useState<QueueDrag|null>(null);
+  const queueDragRef=useRef<QueueDrag|null>(null);
+  const queueListRef=useRef<HTMLElement|null>(null);
 
   const load=useCallback(async()=>{
     if(!leagueId)return;
@@ -109,6 +111,50 @@ export function DraftRoom({leagueId}:{leagueId:string}){
     void saveQueue(ids);
   }
 
+  function beginQueueDrag(event:React.PointerEvent<HTMLButtonElement>,index:number){
+    if(queueSaving)return;
+    const row=event.currentTarget.closest<HTMLElement>("[data-queue-index]");
+    if(!row)return;
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    const rect=row.getBoundingClientRect();
+    const drag={index,target:index,top:rect.top,left:rect.left,width:rect.width,height:rect.height,pointerOffsetY:event.clientY-rect.top};
+    queueDragRef.current=drag;
+    setQueueDrag(drag);
+  }
+
+  function updateQueueDrag(event:React.PointerEvent<HTMLButtonElement>){
+    const active=queueDragRef.current;
+    if(!active)return;
+    event.preventDefault();
+    const rows=Array.from(queueListRef.current?.querySelectorAll<HTMLElement>("[data-queue-index]")??[]);
+    let target=active.index;
+    for(const row of rows){
+      const index=Number(row.dataset.queueIndex);
+      if(index===active.index)continue;
+      const rect=row.getBoundingClientRect();
+      if(event.clientY>rect.top+rect.height/2)target=index;
+      else if(event.clientY<rect.top+rect.height/2){target=index;break}
+    }
+    if(event.clientY<rows[0]?.getBoundingClientRect().top!)target=0;
+    if(event.clientY>rows.at(-1)?.getBoundingClientRect().bottom!)target=queue.length-1;
+    const next={...active,target,top:event.clientY-active.pointerOffsetY};
+    queueDragRef.current=next;
+    setQueueDrag(next);
+    const edge=72;
+    if(event.clientY<edge)window.scrollBy({top:-12,behavior:"auto"});
+    else if(event.clientY>window.innerHeight-edge)window.scrollBy({top:12,behavior:"auto"});
+  }
+
+  function finishQueueDrag(event:React.PointerEvent<HTMLButtonElement>){
+    const active=queueDragRef.current;
+    if(!active)return;
+    if(event.currentTarget.hasPointerCapture(event.pointerId))event.currentTarget.releasePointerCapture(event.pointerId);
+    queueDragRef.current=null;
+    setQueueDrag(null);
+    moveQueue(active.index,active.target);
+  }
+
   function removeFromQueue(item:QueueItem){
     if(window.confirm(`Remove ${item.players?.full_name??"this player"} from your queue?`))void saveQueue(queue.filter(entry=>entry.player_id!==item.player_id).map(entry=>entry.player_id));
   }
@@ -156,13 +202,14 @@ export function DraftRoom({leagueId}:{leagueId:string}){
         <div className="player-actions"><button className="queue-button" onClick={()=>addToQueue(player)} disabled={queueSaving||queue.some(item=>item.player_id===player.id)||queue.length>=25}>{queue.some(item=>item.player_id===player.id)?"QUEUED":"+ QUEUE"}</button><button className="draft-button" onClick={()=>pick(player.id)} disabled={!isMyTurn}>{isMyTurn?"DRAFT":"WAIT"}</button></div>
       </article>)}{available.length===0?<p className="queue-empty">No available players match that search.</p>:null}</section>
       {visibleCount<available.length?<button className="secondary-button full-button load-more" onClick={()=>setVisibleCount(count=>count+30)}>Show 30 more</button>:null}
-    </>:view==="queue"?<section className="panel draft-queue queue-tab-panel">
+    </>:view==="queue"?<section ref={queueListRef} className={`panel draft-queue queue-tab-panel ${queueDrag?"is-reordering":""}`}>
       <div className="section-row"><div><h2>My auto-pick priority</h2><p>Drag the three-line handle to reorder. You can also draft directly from this list.</p></div><span className="muted-chip">{queue.length}/25</span></div>
-      {queue.length===0?<p className="queue-empty">Your queue is empty. Open Available and tap + QUEUE beside players you want. If it remains empty, auto-pick uses the highest-ranked player your roster needs.</p>:queue.map((item,index)=><article key={item.player_id}>
-        <button className="queue-drag" draggable disabled={queueSaving} onDragStart={()=>setDraggedQueueIndex(index)} onDragEnter={event=>event.preventDefault()} onDragOver={event=>event.preventDefault()} onDrop={()=>{if(draggedQueueIndex!==null)moveQueue(draggedQueueIndex,index);setDraggedQueueIndex(null)}} onDragEnd={()=>setDraggedQueueIndex(null)} onPointerDown={event=>{if(event.pointerType!=="mouse"){event.currentTarget.setPointerCapture(event.pointerId);touchDrag.current={index,startY:event.clientY,target:index}}}} onPointerMove={event=>{const active=touchDrag.current;if(active){const target=Math.max(0,Math.min(queue.length-1,active.index+Math.round((event.clientY-active.startY)/54)));active.target=target}}} onPointerUp={event=>{const active=touchDrag.current;if(active){event.currentTarget.releasePointerCapture(event.pointerId);touchDrag.current=null;moveQueue(active.index,active.target)}}} aria-label={`Reorder ${item.players?.full_name??"player"}`}>☰</button><span className={`position ${(item.players?.position??"").toLowerCase()}`}>{item.players?.position}</span>
+      {queue.length===0?<p className="queue-empty">Your queue is empty. Open Available and tap + QUEUE beside players you want. If it remains empty, auto-pick uses the highest-ranked player your roster needs.</p>:queue.map((item,index)=><article data-queue-index={index} className={`${queueDrag?.index===index?"queue-drag-source":""} ${queueDrag?.target===index&&queueDrag.index!==index?(queueDrag.index<index?"queue-drop-after":"queue-drop-before"):""}`} key={item.player_id}>
+        <button className="queue-drag" disabled={queueSaving} onPointerDown={event=>beginQueueDrag(event,index)} onPointerMove={updateQueueDrag} onPointerUp={finishQueueDrag} onPointerCancel={finishQueueDrag} aria-label={`Reorder ${item.players?.full_name??"player"}`}>☰</button><span className={`position ${(item.players?.position??"").toLowerCase()}`}>{item.players?.position}</span>
         <div><strong>{item.players?.full_name??`Player ${item.player_id}`}</strong><small>#{item.players?.draft_rank??"—"} · {item.players?.club}</small></div>
         <div className="queue-actions"><button className="draft-button" disabled={queueSaving||!isMyTurn} onClick={()=>pick(item.player_id)}>{isMyTurn?"DRAFT":"WAIT"}</button><button className="queue-remove" disabled={queueSaving} onClick={()=>removeFromQueue(item)} aria-label={`Remove ${item.players?.full_name??"player"}`}>×</button></div>
       </article>)}
+      {queueDrag?(()=>{const item=queue[queueDrag.index];return <article className="queue-drag-ghost" aria-hidden="true" style={{top:queueDrag.top,left:queueDrag.left,width:queueDrag.width,height:queueDrag.height}}><span className="queue-drag ghost-handle">☰</span><span className={`position ${(item.players?.position??"").toLowerCase()}`}>{item.players?.position}</span><div><strong>{item.players?.full_name??`Player ${item.player_id}`}</strong><small>Drop at position {queueDrag.target+1}</small></div><b className="queue-ghost-rank">#{queueDrag.target+1}</b></article>})():null}
     </section>:<>
       <section className="roster-needs" aria-label="Roster progress">{(["GK","DEF","MID","FWD"] as const).map(pos=>{const have=rosterCounts[pos];const target=rosterTargets[pos];const missing=Math.max(0,target-have);return <article key={pos} className={missing===0?"complete":""}><b>{pos}</b><strong>{have}/{target}</strong><small>{missing===0?"Complete":`${missing} needed`}</small></article>})}</section>
       <section className="panel player-list my-picks-list">{myPicks.map(({pick,player})=><article key={pick.id}><b className="owned-pick-number">#{pick.pick_number}</b><span className={`position ${(player?.position??"").toLowerCase()}`}>{player?.position}</span><div><strong>{player?.full_name??`Player ${pick.player_id}`}</strong><small>{player?.club}{pick.auto_picked?" · AUTO-PICK":""}</small></div></article>)}{myPicks.length===0?<p className="queue-empty">You have not drafted a player yet. Your picks will appear here as soon as they are made.</p>:null}</section>
