@@ -8,7 +8,7 @@ const items = [
 
 export function BottomNav() {
   const pathname = usePathname();
-  const isActive = (href: string) => pathname === href || (href === "/players" && pathname === "/waivers");
+  const isActive = (href: string) => pathname === href || (href === "/players" && (pathname === "/waivers" || pathname === "/packs"));
   return (
     <nav className="bottom-nav" aria-label="Primary navigation">
       {items.map(([icon, label, href]) => (

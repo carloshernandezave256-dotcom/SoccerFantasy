@@ -5,7 +5,7 @@ import { PageShell } from "./page-shell";
 import { TeamDemo } from "./team-demo";
 import { supabase } from "@/lib/supabase";
 
-type League={league_id:string;league_name:string;team_name:string};
+type League={league_id:string;league_name:string;team_name:string;game_format:string};
 type Player={id:number;full_name:string;position:string;club:string};
 type Manager={draft_slot:number;user_id:string;team_name:string};
 type LineupRow={player_id:number;is_starter:boolean;is_captain:boolean;bench_order:number|null};
@@ -43,12 +43,13 @@ export function TeamManager(){
 
   const loadRoster=useCallback(async(id:string,ownerId:string)=>{
     setLoading(true);setMessage("");
-    const[{data:picks},{data:lineup}]=await Promise.all([
+    const[{data:draftPicks},{data:packCards},{data:lineup}]=await Promise.all([
       supabase.from("draft_picks").select("player_id,players(id,full_name,position,club)").eq("league_id",id).eq("user_id",ownerId),
+      supabase.from("pack_cards").select("player_id,players(id,full_name,position,club)").eq("league_id",id).eq("user_id",ownerId).not("active_slot","is",null),
       supabase.from("lineup_players").select("player_id,is_starter,is_captain,bench_order").eq("league_id",id).eq("user_id",ownerId),
     ]);
     const saved=(lineup??[]) as LineupRow[];
-    const loadedRoster=(picks??[]).flatMap(row=>row.players?[row.players as unknown as Player]:[]);
+    const loadedRoster=[...(draftPicks??[]),...(packCards??[])].flatMap(row=>row.players?[row.players as unknown as Player]:[]);
     setRoster(loadedRoster);
     setStarters(saved.length?new Set(saved.filter(row=>row.is_starter).map(row=>row.player_id)):defaultStartingEleven(loadedRoster));
     setCaptain(saved.find(row=>row.is_captain)?.player_id??null);

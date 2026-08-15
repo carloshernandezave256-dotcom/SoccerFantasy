@@ -6,7 +6,7 @@ import { BottomNav } from "./bottom-nav";
 import { AccountMenu } from "./account-menu";
 import { supabase } from "@/lib/supabase";
 
-type League={league_id:string;league_name:string;invite_code:string;league_size:number;manager_count:number;team_name:string;is_commissioner:boolean};
+type League={league_id:string;league_name:string;invite_code:string;league_size:number;manager_count:number;team_name:string;is_commissioner:boolean;game_format:string};
 type Draft={status:"waiting"|"live"|"paused"|"complete";current_pick:number;pick_deadline:string|null;pick_seconds:number};
 type Manager={draft_slot:number;user_id:string;team_name:string};
 type Pick={id:number;pick_number:number;user_id:string;auto_picked:boolean;players?:{full_name:string;position:"GK"|"DEF"|"MID"|"FWD";club:string}|null};
@@ -91,7 +91,7 @@ export function HomeDashboard(){
       <Link className="primary-button home-primary-link" href={`/draft?league=${league.league_id}`}>{isMyTurn?"Make my pick":"Enter draft room"} →</Link>
     </section>:null}
 
-    {league&&!draft?<section className="match-card home-draft-card"><div className="section-row"><div><p className="eyebrow">LEAGUE LOBBY</p><h2>{league.manager_count} managers are ready.</h2></div><span className="muted-chip">{league.manager_count}/{league.league_size}</span></div><p className="home-card-copy">The commissioner can start the 18-round draft once at least three managers have joined.</p><Link className="primary-button home-primary-link" href={`/draft?league=${league.league_id}`}>Open draft room →</Link></section>:null}
+    {league&&!draft?<section className="match-card home-draft-card"><div className="section-row"><div><p className="eyebrow">{league.game_format==="pack"?"PACK LEAGUE":"LEAGUE LOBBY"}</p><h2>{league.game_format==="pack"?"Your collection is waiting.":`${league.manager_count} managers are ready.`}</h2></div><span className="muted-chip">{league.game_format==="pack"?"PACKS":`${league.manager_count}/${league.league_size}`}</span></div><p className="home-card-copy">{league.game_format==="pack"?"Open your balanced starter bundle, choose an active squad, and build through packs, trades, and your league auction house.":"The commissioner can start the 18-round draft once at least three managers have joined."}</p><Link className="primary-button home-primary-link" href={league.game_format==="pack"?`/packs?league=${league.league_id}`:`/draft?league=${league.league_id}`}>{league.game_format==="pack"?"Open Pack club":"Open draft room"} →</Link></section>:null}
     {league&&draft?.status==="complete"?<section className="match-card home-draft-card"><p className="eyebrow">DRAFT COMPLETE</p><h2>Your squad is ready.</h2><p className="home-card-copy">Set your starting XI, arrange the bench, and choose your captain.</p><Link className="primary-button home-primary-link" href="/team">Set my lineup →</Link></section>:null}
     {league&&draft?.status==="paused"?<section className="match-card home-draft-card"><p className="eyebrow">DRAFT PAUSED</p><h2>The player pool needs attention.</h2><Link className="primary-button home-primary-link" href={`/draft?league=${league.league_id}`}>Open draft room →</Link></section>:null}
 
