@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PageShell } from "./page-shell";
 import { supabase } from "@/lib/supabase";
 
@@ -33,6 +34,8 @@ export function DraftRoom({leagueId}:{leagueId:string}){
   const[now,setNow]=useState(Date.now());
   const[queue,setQueue]=useState<QueueItem[]>([]);
   const[queueSaving,setQueueSaving]=useState(false);
+  const[draggedQueueIndex,setDraggedQueueIndex]=useState<number|null>(null);
+  const touchDrag=useRef<{index:number;startY:number;target:number}|null>(null);
 
   const load=useCallback(async()=>{
     if(!leagueId)return;
@@ -99,15 +102,16 @@ export function DraftRoom({leagueId}:{leagueId:string}){
     void saveQueue([...queue.map(item=>item.player_id),player.id]);
   }
 
-  function moveQueue(index:number,direction:-1|1){
-    const target=index+direction;
-    if(target<0||target>=queue.length)return;
+  function moveQueue(index:number,target:number){
+    if(target<0||target>=queue.length||target===index)return;
     const ids=queue.map(item=>item.player_id);
-    [ids[index],ids[target]]=[ids[target],ids[index]];
+    const[moved]=ids.splice(index,1);ids.splice(target,0,moved);
     void saveQueue(ids);
   }
 
-  function removeFromQueue(id:number){void saveQueue(queue.filter(item=>item.player_id!==id).map(item=>item.player_id))}
+  function removeFromQueue(item:QueueItem){
+    if(window.confirm(`Remove ${item.players?.full_name??"this player"} from your queue?`))void saveQueue(queue.filter(entry=>entry.player_id!==item.player_id).map(entry=>entry.player_id));
+  }
 
   async function pick(id:number){
     if(!isMyTurn)return;
@@ -118,6 +122,8 @@ export function DraftRoom({leagueId}:{leagueId:string}){
   }
 
   if(!leagueId)return <PageShell eyebrow="LIVE DRAFT" title="Select a league"><section className="panel empty-state">Open the League tab and choose a league’s Draft Room.</section></PageShell>;
+
+  if(draft?.status==="complete")return <PageShell eyebrow="DRAFT COMPLETE" title="Your squad is ready"><section className="panel draft-finished"><span>✓</span><h2>The draft is now closed</h2><p>All 18 rounds are complete. Set your starting lineup and choose your captain.</p><Link className="primary-button" href={`/team?league=${leagueId}`}>Set your lineup</Link></section></PageShell>;
 
   return <PageShell eyebrow={`ROUND ${round} · PICK ${currentPick}`} title="Draft room">
     <section className={`draft-clock ${isMyTurn?"my-turn":""}`}>
@@ -133,7 +139,6 @@ export function DraftRoom({leagueId}:{leagueId:string}){
 
     {!draft?<><button className="primary-button full-button" onClick={start} disabled={managerCount<3}>{managerCount>=3?"Start 18-round draft":`Waiting for ${3-managerCount} more manager${3-managerCount===1?"":"s"}`}</button><p className="form-message">{managerCount}/3 managers required to start. League capacity stays unchanged.</p></>:null}
     {draft?.status==="paused"?<p className="draft-alert">Draft paused because the available player pool needs attention.</p>:null}
-    {draft?.status==="complete"?<p className="draft-complete">Draft complete.</p>:null}
     {message?<p className="form-message">{message}</p>:null}
 
     <section className="draft-order" aria-label="Draft order">{order.map(manager=><span className={manager.user_id===onClock?.user_id&&draft?.status==="live"?"active":""} key={manager.user_id}>{manager.draft_slot}. {manager.team_name}</span>)}</section>
@@ -152,11 +157,11 @@ export function DraftRoom({leagueId}:{leagueId:string}){
       </article>)}{available.length===0?<p className="queue-empty">No available players match that search.</p>:null}</section>
       {visibleCount<available.length?<button className="secondary-button full-button load-more" onClick={()=>setVisibleCount(count=>count+30)}>Show 30 more</button>:null}
     </>:view==="queue"?<section className="panel draft-queue queue-tab-panel">
-      <div className="section-row"><div><h2>My auto-pick priority</h2><p>Use the arrows to put your first choice at the top. Changes save automatically.</p></div><span className="muted-chip">{queue.length}/25</span></div>
+      <div className="section-row"><div><h2>My auto-pick priority</h2><p>Drag the three-line handle to reorder. You can also draft directly from this list.</p></div><span className="muted-chip">{queue.length}/25</span></div>
       {queue.length===0?<p className="queue-empty">Your queue is empty. Open Available and tap + QUEUE beside players you want. If it remains empty, auto-pick uses the highest-ranked player your roster needs.</p>:queue.map((item,index)=><article key={item.player_id}>
-        <b>{index+1}</b><span className={`position ${(item.players?.position??"").toLowerCase()}`}>{item.players?.position}</span>
+        <button className="queue-drag" draggable disabled={queueSaving} onDragStart={()=>setDraggedQueueIndex(index)} onDragEnter={event=>event.preventDefault()} onDragOver={event=>event.preventDefault()} onDrop={()=>{if(draggedQueueIndex!==null)moveQueue(draggedQueueIndex,index);setDraggedQueueIndex(null)}} onDragEnd={()=>setDraggedQueueIndex(null)} onPointerDown={event=>{if(event.pointerType!=="mouse"){event.currentTarget.setPointerCapture(event.pointerId);touchDrag.current={index,startY:event.clientY,target:index}}}} onPointerMove={event=>{const active=touchDrag.current;if(active){const target=Math.max(0,Math.min(queue.length-1,active.index+Math.round((event.clientY-active.startY)/54)));active.target=target}}} onPointerUp={event=>{const active=touchDrag.current;if(active){event.currentTarget.releasePointerCapture(event.pointerId);touchDrag.current=null;moveQueue(active.index,active.target)}}} aria-label={`Reorder ${item.players?.full_name??"player"}`}>☰</button><span className={`position ${(item.players?.position??"").toLowerCase()}`}>{item.players?.position}</span>
         <div><strong>{item.players?.full_name??`Player ${item.player_id}`}</strong><small>#{item.players?.draft_rank??"—"} · {item.players?.club}</small></div>
-        <div className="queue-actions"><button disabled={queueSaving||index===0} onClick={()=>moveQueue(index,-1)} aria-label="Move up">↑</button><button disabled={queueSaving||index===queue.length-1} onClick={()=>moveQueue(index,1)} aria-label="Move down">↓</button><button disabled={queueSaving} onClick={()=>removeFromQueue(item.player_id)} aria-label="Remove">×</button></div>
+        <div className="queue-actions"><button className="draft-button" disabled={queueSaving||!isMyTurn} onClick={()=>pick(item.player_id)}>{isMyTurn?"DRAFT":"WAIT"}</button><button className="queue-remove" disabled={queueSaving} onClick={()=>removeFromQueue(item)} aria-label={`Remove ${item.players?.full_name??"player"}`}>×</button></div>
       </article>)}
     </section>:<>
       <section className="roster-needs" aria-label="Roster progress">{(["GK","DEF","MID","FWD"] as const).map(pos=>{const have=rosterCounts[pos];const target=rosterTargets[pos];const missing=Math.max(0,target-have);return <article key={pos} className={missing===0?"complete":""}><b>{pos}</b><strong>{have}/{target}</strong><small>{missing===0?"Complete":`${missing} needed`}</small></article>})}</section>
