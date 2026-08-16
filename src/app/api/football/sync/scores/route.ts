@@ -66,10 +66,14 @@ export async function POST(request:NextRequest){
     const playerIds=[...new Set(lineupRows.map(row=>row.player_id))];
     if(!playerIds.length)return NextResponse.json({error:"No saved lineups exist in this league yet."},{status:409});
     const playersResponse=await fetch(`${supabaseUrl}/rest/v1/players?id=in.(${playerIds.join(",")})&select=id,api_football_id`,{headers:adminHeaders(serviceRoleKey),cache:"no-store"});
-    const players=playersResponse.ok?await playersResponse.json() as PlayerRow[]:[];
+    const lineupPlayers=playersResponse.ok?await playersResponse.json() as PlayerRow[]:[];
+    const playedApiIds=[...statsByApiId.keys()];
+    const playedResponse=playedApiIds.length?await fetch(`${supabaseUrl}/rest/v1/players?api_football_id=in.(${playedApiIds.join(",")})&select=id,api_football_id`,{headers:adminHeaders(serviceRoleKey),cache:"no-store"}):null;
+    const playedPlayers=playedResponse?.ok?await playedResponse.json() as PlayerRow[]:[];
+    const players=[...new Map([...lineupPlayers,...playedPlayers].map(player=>[player.id,player])).values()];
     const rows=players.map(player=>({league_id:body.leagueId,gameweek,player_id:player.id,minutes:0,goals:0,assists:0,shots_on_target:0,big_chances_missed:0,completed_passes:0,tackles_won:0,penalty_goals:0,penalties_missed:0,penalties_conceded:0,saves:0,penalties_saved:0,goals_conceded:0,yellow_cards:0,second_yellow_cards:0,red_cards:0,own_goals:0,man_of_the_match:false,status:roundStatus,source:"api-football-live",source_updated_at:new Date().toISOString(),updated_at:new Date().toISOString(),...(player.api_football_id?statsByApiId.get(player.api_football_id)??{}:{})}));
     const upsert=await fetch(`${supabaseUrl}/rest/v1/league_player_scores?on_conflict=league_id,gameweek,player_id`,{method:"POST",headers:{...adminHeaders(serviceRoleKey),Prefer:"resolution=merge-duplicates,return=minimal"},body:JSON.stringify(rows),cache:"no-store"});
     if(!upsert.ok)throw new Error((await upsert.text())||"Score database update failed");
-    return NextResponse.json({ok:true,competition,season,round,gameweek,status:roundStatus,fixturesStarted:activeFixtures.length,fixturesTotal:roundFixtures.length,playersWithStats:statsByApiId.size,lineupPlayersUpdated:rows.length,requestsUsed:1+activeFixtures.length,limitations:["Completed passes are estimated from total passes and API accuracy.","Big chances missed and Man of the Match remain unavailable from this endpoint and currently score zero."]});
+    return NextResponse.json({ok:true,competition,season,round,gameweek,status:roundStatus,fixturesStarted:activeFixtures.length,fixturesTotal:roundFixtures.length,playersWithStats:statsByApiId.size,playersUpdated:rows.length,lineupPlayersUpdated:lineupPlayers.length,requestsUsed:1+activeFixtures.length,limitations:["Completed passes are estimated from total passes and API accuracy.","Big chances missed and Man of the Match remain unavailable from this endpoint and currently score zero."]});
   }catch(error){return NextResponse.json({error:error instanceof Error?error.message:"Live score synchronization failed."},{status:502})}
 }
