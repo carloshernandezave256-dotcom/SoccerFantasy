@@ -14,6 +14,7 @@ import "./team-demo.css";
 import "./home.css";
 import "./waivers.css";
 import "./packs.css";
+import "./polish.css";
 
 export const metadata: Metadata = {
   title: "XI | Cross-League Fantasy",

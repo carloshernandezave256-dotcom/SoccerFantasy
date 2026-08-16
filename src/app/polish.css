@@ -1,0 +1,537 @@
+/* Final visual system: shared colors, touch targets, spacing and responsive safety. */
+:root,
+[data-theme="dark"] {
+  --bg: #07120c;
+  --surface: #0f2117;
+  --surface2: #172c20;
+  --surface3: #20382a;
+  --line: #31483a;
+  --line-strong: #45624f;
+  --text: #f5f7ef;
+  --muted: #a6b4aa;
+  --lime: #c8ff4f;
+  --lime-soft: #9fcf3f;
+  --red: #ff8078;
+  --warning: #ffd071;
+  --button-text: #12200c;
+  --shadow: 0 16px 42px rgba(0, 0, 0, .28);
+}
+
+[data-theme="light"] {
+  --bg: #edf2e7;
+  --surface: #ffffff;
+  --surface2: #f5f9ef;
+  --surface3: #e8f0df;
+  --line: #d4dfd0;
+  --line-strong: #b9cbb5;
+  --text: #102017;
+  --muted: #637269;
+  --lime: #527700;
+  --lime-soft: #6f920f;
+  --red: #b52d27;
+  --warning: #895f00;
+  --button-text: #ffffff;
+  --shadow: 0 14px 34px rgba(35, 57, 39, .12);
+}
+
+@media (prefers-color-scheme: light) {
+  html:not([data-theme]) {
+    --bg: #edf2e7;
+    --surface: #ffffff;
+    --surface2: #f5f9ef;
+    --surface3: #e8f0df;
+    --line: #d4dfd0;
+    --line-strong: #b9cbb5;
+    --text: #102017;
+    --muted: #637269;
+    --lime: #527700;
+    --lime-soft: #6f920f;
+    --red: #b52d27;
+    --warning: #895f00;
+    --button-text: #ffffff;
+    --shadow: 0 14px 34px rgba(35, 57, 39, .12);
+    color-scheme: light;
+  }
+}
+
+html {
+  color-scheme: dark;
+  min-width: 320px;
+  overflow-x: hidden;
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+}
+
+[data-theme="light"] { color-scheme: light; }
+
+body {
+  min-width: 320px;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  background:
+    radial-gradient(circle at 50% -8%, rgba(55, 112, 72, .42), transparent 34rem),
+    var(--bg);
+  font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  line-height: 1.45;
+  text-rendering: optimizeLegibility;
+}
+
+button,
+input,
+select,
+textarea { font: inherit; }
+
+button,
+a,
+select,
+label { -webkit-tap-highlight-color: transparent; }
+
+button,
+[role="button"] { touch-action: manipulation; }
+
+img { max-width: 100%; }
+
+p,
+small,
+strong,
+h1,
+h2,
+h3,
+code,
+.form-message,
+.empty-state { overflow-wrap: anywhere; }
+
+.app-shell {
+  width: min(100%, 560px);
+  padding: max(22px, env(safe-area-inset-top)) clamp(14px, 4vw, 22px) calc(112px + env(safe-area-inset-bottom));
+}
+
+.topbar,
+.sub-header { min-width: 0; }
+
+.topbar > div,
+.sub-header > div,
+.section-row > div { min-width: 0; }
+
+.topbar h1,
+.sub-header h1 { line-height: 1.12; }
+
+.eyebrow { line-height: 1.35; }
+
+.match-card,
+.panel {
+  min-width: 0;
+  border-color: var(--line);
+  background: linear-gradient(145deg, var(--surface2), var(--surface));
+  box-shadow: var(--shadow);
+}
+
+.section-row { align-items: flex-start; }
+
+.section-row > :last-child { flex: 0 0 auto; }
+
+.primary-button,
+.secondary-button,
+.decline-button,
+.counter-button,
+.cancel-trade-button,
+.process-button,
+.invite-button,
+.draft-button,
+.queue-button,
+.claim-button,
+.text-button,
+.trade-wizard-actions button,
+.lineup-edit-actions button {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border-radius: 13px;
+  line-height: 1.2;
+  text-align: center;
+  white-space: normal;
+}
+
+.primary-button {
+  color: var(--button-text);
+  background: linear-gradient(135deg, var(--lime), var(--lime-soft));
+  box-shadow: 0 8px 22px color-mix(in srgb, var(--lime) 19%, transparent);
+}
+
+.secondary-button {
+  border-color: var(--line-strong);
+  background: var(--surface2);
+}
+
+.primary-button:disabled,
+.secondary-button:disabled,
+button:disabled {
+  opacity: .46;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[role="button"]:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--lime) 62%, transparent);
+  outline-offset: 2px;
+}
+
+.full-button {
+  width: 100%;
+  min-height: 48px;
+  padding: 13px 16px;
+}
+
+.text-button {
+  min-height: 40px;
+  padding: 8px;
+}
+
+input,
+select,
+textarea,
+.league-select,
+.search-box {
+  min-width: 0;
+  border-color: var(--line-strong);
+}
+
+input,
+select,
+textarea,
+.league-select { min-height: 46px; }
+
+.search-box {
+  min-height: 50px;
+  background: var(--surface);
+}
+
+.search-box input { min-height: 46px; }
+
+.segmented,
+.draft-view-tabs,
+.trade-tabs,
+.player-market-tabs {
+  min-width: 0;
+  background: color-mix(in srgb, var(--surface) 86%, black);
+}
+
+.segmented button,
+.filter-row button,
+.draft-view-tabs button,
+.trade-tabs button,
+.player-market-tabs button,
+.player-market-tabs a {
+  min-height: 42px;
+}
+
+.filter-row {
+  scrollbar-width: none;
+  padding-bottom: 2px;
+}
+
+.filter-row::-webkit-scrollbar,
+.draft-order::-webkit-scrollbar { display: none; }
+
+.filter-row button { flex: 1 0 54px; }
+
+.league-row,
+.player-list article {
+  min-width: 0;
+  align-items: center;
+}
+
+.league-row > div,
+.player-list article > div { min-width: 0; }
+
+.player-list article > div:not(.player-actions) strong,
+.league-row strong {
+  line-height: 1.3;
+}
+
+.player-actions,
+.queue-actions {
+  flex: 0 0 auto;
+  min-width: 78px;
+}
+
+.player-actions .draft-button,
+.player-actions .queue-button,
+.queue-actions .draft-button {
+  min-width: 76px;
+  min-height: 38px;
+  padding: 8px 10px !important;
+}
+
+.queue-actions .queue-remove {
+  min-width: 38px;
+  min-height: 38px;
+}
+
+.draft-clock { gap: 14px; }
+
+.draft-clock > div { min-width: 0; }
+
+.draft-clock strong,
+.draft-clock span { overflow-wrap: anywhere; }
+
+.draft-clock > b { flex: 0 0 auto; }
+
+.draft-alert {
+  margin: 0 0 14px;
+  color: var(--warning);
+  background: color-mix(in srgb, var(--warning) 13%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--warning) 32%, var(--line));
+}
+
+.draft-queue article { min-width: 0; }
+
+.draft-queue article > div:not(.queue-actions) { overflow: hidden; }
+
+.formation-card {
+  color: #fff;
+  background: linear-gradient(135deg, #117345, #082f20);
+  box-shadow: inset 0 1px rgba(255, 255, 255, .08);
+}
+
+.team-controls {
+  align-items: stretch;
+  flex-wrap: wrap;
+}
+
+.team-controls button,
+.team-controls select {
+  min-height: 44px;
+}
+
+.team-controls .captain-select {
+  flex: 1 1 170px;
+  width: auto;
+  margin: 0;
+}
+
+.team-controls > span {
+  flex: 1 0 100%;
+  text-align: center;
+}
+
+.mini-pitch {
+  width: 100%;
+  min-height: clamp(500px, 78dvh, 650px);
+  padding-inline: clamp(5px, 2.5vw, 14px);
+}
+
+.pitch-row { width: 100%; }
+
+.saved-team-pitch .pitch-row {
+  grid-template-columns: repeat(var(--slot-count, 4), minmax(0, 1fr));
+}
+
+.saved-pitch-player,
+.pitch-row button {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.saved-team-bench .bench-scroll,
+.demo-bench .bench-scroll {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  overflow: visible;
+}
+
+.saved-bench-player,
+.bench-scroll > button {
+  min-width: 0;
+  min-height: 104px;
+}
+
+.saved-bench-player strong,
+.saved-bench-player small,
+.bench-scroll strong,
+.bench-scroll small {
+  width: 100%;
+  max-width: 100%;
+  text-align: center;
+}
+
+.lineup-edit-actions,
+.trade-wizard-actions,
+.trade-actions { align-items: stretch; }
+
+.trade-tabs { overflow: hidden; }
+
+.trade-tabs button { min-width: 0; }
+
+.trade-summary-sticky {
+  top: max(6px, env(safe-area-inset-top));
+}
+
+.trade-roster > button,
+.trade-manager-list button { min-height: 54px; }
+
+.trade-compose > div,
+.offer-sides > div { min-width: 0; }
+
+.offer-player { min-width: 0; }
+
+.offer-player strong { overflow-wrap: anywhere; }
+
+.waiver-player-list article { align-items: center; }
+
+.waiver-player-list article > div { min-width: 0; }
+
+.waiver-dialog,
+.confirm-card,
+.account-sheet {
+  overscroll-behavior: contain;
+}
+
+.account-overlay,
+.waiver-overlay,
+.confirm-overlay {
+  padding-inline: max(12px, env(safe-area-inset-left)) max(12px, env(safe-area-inset-right));
+}
+
+.account-sheet,
+.waiver-dialog,
+.confirm-card {
+  max-width: 520px;
+}
+
+.account-close,
+.stats-close,
+.ledger-close {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+.bottom-nav {
+  width: min(100%, 560px);
+  min-height: 68px;
+  padding: 8px max(6px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(6px, env(safe-area-inset-left));
+  border-color: var(--line-strong);
+}
+
+.bottom-nav button {
+  min-width: 0;
+  min-height: 49px;
+  padding: 4px 2px;
+  line-height: 1.15;
+}
+
+.bottom-nav button span { line-height: 1; }
+
+@media (max-width: 430px) {
+  .match-card,
+  .panel { padding: 17px; border-radius: 19px; }
+
+  .topbar { gap: 12px; margin-bottom: 20px; }
+
+  .topbar h1,
+  .sub-header h1 { font-size: 22px; }
+
+  .section-row { gap: 10px; }
+
+  .trade-tabs { grid-template-columns: repeat(2, 1fr); }
+
+  .trade-tabs button { padding: 9px 6px; }
+
+  .draft-view-tabs button { padding-inline: 4px; font-size: 9px; }
+
+  .player-list article {
+    display: grid;
+    grid-template-columns: 42px minmax(0, 1fr) auto;
+    gap: 10px;
+  }
+
+  .player-list article > .position { width: 42px; }
+
+  .player-list article > div.player-actions {
+    min-width: 72px;
+  }
+
+  .player-actions .draft-button,
+  .player-actions .queue-button { min-width: 70px; font-size: 7px !important; }
+
+  .draft-queue article {
+    grid-template-columns: 28px 38px minmax(0, 1fr) 76px;
+  }
+
+  .draft-queue .player-headshot {
+    width: 38px;
+    height: 38px;
+    flex-basis: 38px;
+  }
+
+  .formation-card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .formation-counts { justify-content: flex-start; }
+
+  .saved-team-bench .bench-scroll,
+  .demo-bench .bench-scroll { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+  .stats-grid { grid-template-columns: repeat(2, 1fr); }
+
+  .waiver-summary { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+  .waiver-summary > div { padding-inline: 5px; }
+
+  .trade-actions-three { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 350px) {
+  .app-shell { padding-inline: 10px; }
+
+  .match-card,
+  .panel { padding: 14px; }
+
+  .draft-clock { align-items: flex-start; }
+
+  .draft-clock > b { font-size: 22px; }
+
+  .draft-view-tabs { grid-template-columns: 1fr; }
+
+  .saved-team-bench .bench-scroll,
+  .demo-bench .bench-scroll { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+  .waiver-summary { grid-template-columns: 1fr; }
+
+  .bottom-nav button { font-size: 8px; }
+}
+
+@media (min-width: 760px) {
+  .app-shell { padding-top: 34px; }
+
+  .account-overlay,
+  .waiver-overlay,
+  .confirm-overlay { align-items: center; padding-block: 24px; }
+
+  .account-sheet,
+  .waiver-dialog,
+  .confirm-card {
+    border-radius: 26px;
+    max-height: calc(100dvh - 48px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}
