@@ -7,7 +7,7 @@ import { supabase } from "@/lib/supabase";
 import { resolveActiveLeague } from "@/lib/active-league";
 import { calculateScore, type Position } from "@/lib/scoring";
 
-type League = { league_id: string; league_name: string; team_name: string; is_commissioner: boolean; game_format?: string };
+type League = { league_id: string; league_name: string; team_name: string; is_commissioner: boolean; game_format?: string; player_pool?: string };
 type Player = { id: number; full_name: string; position: string; club: string; competition: string; draft_rank?: number };
 type Pick = { user_id: string; player_id: number; players: Player | null };
 type Claim = { id: string; user_id: string; add_player_id: number; drop_player_id: number | null; gameweek:number; claim_rank:number; status: string; created_at: string; processed_at: string | null; note: string | null };
@@ -49,7 +49,7 @@ export default function WaiversPage() {
     ]);
     const error = playerResult.error ?? pickResult.error ?? claimResult.error ?? priorityResult.error ?? scoreResult.error??windowResult.error;
     if (error) setMessage(error.message);
-    setPlayers((playerResult.data ?? []) as Player[]);
+    setPlayers(((playerResult.data ?? []) as Player[]).filter(player=>!active.player_pool||active.player_pool==="All Top Five"||player.competition===active.player_pool));
     setPicks((pickResult.data ?? []) as unknown as Pick[]);
     setClaims((claimResult.data ?? []) as Claim[]);
     setPriority((priorityResult.data ?? []) as Priority[]);
