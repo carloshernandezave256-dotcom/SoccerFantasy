@@ -19,12 +19,21 @@ export async function POST(request:NextRequest){
   const leagues=leaguesResponse.ok?await leaguesResponse.json():[];
   if(!leagues.some((league:{is_commissioner:boolean})=>league.is_commissioner))return NextResponse.json({error:"Commissioner access required."},{status:403});
   const now=new Date(),season=now.getUTCMonth()<6?now.getUTCFullYear()-1:now.getUTCFullYear();
+  const seasonCandidates=[season,season-1,season-2];
+  const seasonsUsed:Record<string,number>={};
+  const unavailable:string[]=[];
   let imported=0,requestsUsed=0;
   for(const competition of competitions){
-    let page=1,total=1;
+    let page=1,total=1,selectedSeason:number|null=null,body:ApiPage|null=null;
+    for(const candidate of seasonCandidates){
+      body=await apiFootball<ApiPage>(`players?league=${competition.id}&season=${candidate}&page=1`);requestsUsed++;
+      if(body.response.length){selectedSeason=candidate;break}
+    }
+    if(!body||selectedSeason===null){unavailable.push(competition.name);continue}
+    seasonsUsed[competition.name]=selectedSeason;
+    total=body.paging.total;
     while(page<=total){
-      const body=await apiFootball<ApiPage>(`players?league=${competition.id}&season=${season}&page=${page}`);requestsUsed++;
-      total=body.paging.total;
+      if(page>1){body=await apiFootball<ApiPage>(`players?league=${competition.id}&season=${selectedSeason}&page=${page}`);requestsUsed++}
       const players=body.response.flatMap(entry=>{const stat=entry.statistics[0];if(!stat?.team?.name)return[];return[{apiFootballId:entry.player.id,fullName:entry.player.name,nationality:entry.player.nationality,photoUrl:entry.player.photo??playerHeadshot(entry.player.id),position:stat.games.position??"Attacker",club:stat.team.name,competition:competition.name}]});
       for(let index=0;index<players.length;index+=500){
         const response=await fetch(`${supabaseUrl}/rest/v1/rpc/sync_api_football_players`,{method:"POST",headers:adminHeaders,body:JSON.stringify({p_players:players.slice(index,index+500)}),cache:"no-store"});
@@ -34,5 +43,5 @@ export async function POST(request:NextRequest){
       page++;
     }
   }
-  return NextResponse.json({ok:true,season,imported,requestsUsed});
+  return NextResponse.json({ok:true,requestedSeason:season,seasonsUsed,unavailable,imported,requestsUsed});
 }
