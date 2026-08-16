@@ -120,9 +120,8 @@ export function TeamManager(){
     void loadActiveLeague();
     const refresh=()=>{if(!dirty&&Date.now()>=suppressRefreshUntil.current)void loadActiveLeague()};
     window.addEventListener("pageshow",refresh);
-    window.addEventListener("focus",refresh);
     window.addEventListener("popstate",refresh);
-    return()=>{window.removeEventListener("pageshow",refresh);window.removeEventListener("focus",refresh);window.removeEventListener("popstate",refresh)};
+    return()=>{window.removeEventListener("pageshow",refresh);window.removeEventListener("popstate",refresh)};
   },[loadActiveLeague,dirty]);
 
   useEffect(()=>{
@@ -176,6 +175,7 @@ export function TeamManager(){
   }
 
   async function persistOrder(order:number[],rollback:number[]){
+    suppressRefreshUntil.current=Date.now()+4000;
     const start=[...order.filter(id=>starters.has(id)),...[...starters].filter(id=>!order.includes(id))];
     const{error}=await supabase.rpc("save_pitch_order",{p_league_id:league,p_starters:start});
     if(error){setStarterOrder(rollback);setUndoOrder(null);setDirty(false);setMessage(error.message)}
@@ -183,6 +183,7 @@ export function TeamManager(){
   }
 
   async function persistCaptain(nextCaptain:number,rollback:number|null){
+    suppressRefreshUntil.current=Date.now()+4000;
     const{error}=await supabase.rpc("set_lineup_captain",{p_league_id:league,p_captain:nextCaptain});
     if(error){setCaptain(rollback);setDirty(false);setMessage(error.message)}
     else{setDirty(false);setMessage(`${roster.find(player=>player.id===nextCaptain)?.full_name} is saved as captain.`)}
@@ -201,6 +202,7 @@ export function TeamManager(){
 
   async function save(){
     if(!isMine||!valid||captain===null){setMessage("Choose a valid starting XI and captain before saving.");return}
+    suppressRefreshUntil.current=Date.now()+4000;
     const start=[...starterOrder.filter(id=>starters.has(id)),...[...starters].filter(id=>!starterOrder.includes(id))];
     const bench=roster.filter(player=>!starters.has(player.id)).slice(0,7).map(player=>player.id);
     const{error}=await supabase.rpc("save_lineup",{p_league_id:league,p_starters:start,p_bench:bench,p_captain:captain});
