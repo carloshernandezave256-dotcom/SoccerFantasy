@@ -161,7 +161,6 @@ function SavedTeamPitch({roster,starters,starterOrder,captain,editing=false,capt
   const bench=roster.filter(player=>!starters.has(player.id)).sort((a,b)=>(positionRank[a.position]??9)-(positionRank[b.position]??9)||a.full_name.localeCompare(b.full_name));
   const groups={FWD:selected.filter(player=>player.position==="FWD"),MID:selected.filter(player=>player.position==="MID"),DEF:selected.filter(player=>player.position==="DEF"),GK:selected.filter(player=>player.position==="GK")};
   function beginPitchDrag(event:React.PointerEvent<HTMLButtonElement>,player:Player){
-    if(!editing){onInfo?.(player.id);return}
     if(captainMode)return;
     const slot=event.currentTarget.closest<HTMLElement>(".pitch-player-slot");if(!slot)return;
     const rect=slot.getBoundingClientRect();event.currentTarget.setPointerCapture(event.pointerId);
@@ -170,7 +169,7 @@ function SavedTeamPitch({roster,starters,starterOrder,captain,editing=false,capt
   }
   function updatePitchDrag(event:React.PointerEvent<HTMLButtonElement>){
     const active=pitchDragRef.current;if(!active)return;
-    const moved=active.moved||Math.hypot(event.clientX-(active.left+active.offsetX),event.clientY-(active.top+active.offsetY))>7;
+    const moved=editing&&(active.moved||Math.hypot(event.clientX-(active.left+active.offsetX),event.clientY-(active.top+active.offsetY))>7);
     const slots=Array.from(document.querySelectorAll<HTMLElement>(`.pitch-player-slot[data-position="${active.position}"]`));
     let targetId=active.id,best=Infinity;
     for(const slot of slots){const rect=slot.getBoundingClientRect(),distance=Math.abs(event.clientX-(rect.left+rect.width/2));if(distance<best){best=distance;targetId=Number(slot.dataset.playerId)}}
