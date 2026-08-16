@@ -2,9 +2,19 @@ import {NextRequest,NextResponse} from "next/server";
 import {apiFootball,playerHeadshot} from "@/lib/api-football-server";
 
 const competitions=[{id:39,name:"Premier League"},{id:140,name:"La Liga"},{id:135,name:"Serie A"},{id:78,name:"Bundesliga"},{id:61,name:"Ligue 1"}];
-type ApiPage={paging:{current:number;total:number};response:Array<{player:{id:number;name:string;firstname?:string|null;lastname?:string|null;nationality:string|null;photo:string|null};statistics:Array<{team:{name:string};games:{position:string|null}}>} >};
+type ApiStat={team:{name:string};games:{position:string|null;appearences?:number|null;minutes?:number|null;rating?:string|null}};
+type ApiEntry={player:{id:number;name:string;firstname?:string|null;lastname?:string|null;nationality:string|null;photo:string|null};statistics:ApiStat[]};
+type ApiPage={paging:{current:number;total:number};response:ApiEntry[]};
 
 export const maxDuration=300;
+
+function bestStat(entry:ApiEntry){
+  return [...entry.statistics].sort((a,b)=>(b.games.minutes??0)-(a.games.minutes??0)||(b.games.appearences??0)-(a.games.appearences??0))[0];
+}
+function performance(stat:ApiStat){
+  const rating=Number(stat.games.rating)||0,minutes=stat.games.minutes??0,apps=stat.games.appearences??0;
+  return rating*100+minutes+apps*90;
+}
 
 export async function POST(request:NextRequest){
   const authorization=request.headers.get("authorization")??"";
@@ -18,33 +28,42 @@ export async function POST(request:NextRequest){
   const leaguesResponse=await fetch(`${supabaseUrl}/rest/v1/rpc/my_leagues`,{method:"POST",headers:userHeaders,body:"{}",cache:"no-store"});
   const leagues=leaguesResponse.ok?await leaguesResponse.json():[];
   if(!leagues.some((league:{is_commissioner:boolean})=>league.is_commissioner))return NextResponse.json({error:"Commissioner access required."},{status:403});
-  const now=new Date(),season=now.getUTCMonth()<6?now.getUTCFullYear()-1:now.getUTCFullYear();
-  const seasonCandidates=[season,season-1,season-2];
-  const seasonsUsed:Record<string,number>={};
-  const unavailable:string[]=[];
+
+  const season=2026,seasonsUsed:Record<string,number>={},unavailable:string[]=[];
+  const eligibleApiIds:number[]=[];
   let imported=0,requestsUsed=0;
   for(const competition of competitions){
-    let page=1,total=1,selectedSeason:number|null=null,body:ApiPage|null=null;
-    for(const candidate of seasonCandidates){
-      body=await apiFootball<ApiPage>(`players?league=${competition.id}&season=${candidate}&page=1`);requestsUsed++;
-      if(body.response.length){selectedSeason=candidate;break}
-    }
-    if(!body||selectedSeason===null){unavailable.push(competition.name);continue}
-    seasonsUsed[competition.name]=selectedSeason;
-    total=body.paging.total;
+    let page=1,total=1;
+    const entries:ApiEntry[]=[];
     while(page<=total){
-      if(page>1){body=await apiFootball<ApiPage>(`players?league=${competition.id}&season=${selectedSeason}&page=${page}`);requestsUsed++}
-      const players=body.response.flatMap(entry=>{const stat=entry.statistics[0];if(!stat?.team?.name)return[];const officialName=[entry.player.firstname,entry.player.lastname].filter(Boolean).join(" ").trim()||entry.player.name;return[{apiFootballId:entry.player.id,fullName:officialName,nationality:entry.player.nationality,photoUrl:entry.player.photo??playerHeadshot(entry.player.id),position:stat.games.position??"Attacker",club:stat.team.name,competition:competition.name}]});
-      for(let index=0;index<players.length;index+=500){
-        const response=await fetch(`${supabaseUrl}/rest/v1/rpc/sync_api_football_players`,{method:"POST",headers:userHeaders,body:JSON.stringify({p_players:players.slice(index,index+500)}),cache:"no-store"});
-        if(!response.ok)throw new Error((await response.text())||"Player database sync failed");
-        imported+=Number(await response.json())||0;
-      }
-      page++;
+      const body=await apiFootball<ApiPage>(`players?league=${competition.id}&season=${season}&page=${page}`);requestsUsed++;
+      if(page===1&&body.response.length===0){unavailable.push(competition.name);break}
+      total=body.paging.total;entries.push(...body.response);page++;
+    }
+    if(entries.length===0)continue;
+    seasonsUsed[competition.name]=season;
+    const byClub=new Map<string,Array<{entry:ApiEntry;stat:ApiStat;score:number}>>();
+    for(const entry of entries){
+      const stat=bestStat(entry);if(!stat?.team?.name)continue;
+      const row={entry,stat,score:performance(stat)};
+      byClub.set(stat.team.name,[...(byClub.get(stat.team.name)??[]),row]);
+    }
+    const selected=[...byClub.values()].flatMap(players=>players.sort((a,b)=>b.score-a.score||a.entry.player.name.localeCompare(b.entry.player.name)).slice(0,25))
+      .sort((a,b)=>b.score-a.score||a.entry.player.name.localeCompare(b.entry.player.name));
+    const players=selected.map(({entry,stat},index)=>{
+      const officialName=[entry.player.firstname,entry.player.lastname].filter(Boolean).join(" ").trim()||entry.player.name;
+      eligibleApiIds.push(entry.player.id);
+      return {apiFootballId:entry.player.id,fullName:officialName,nationality:entry.player.nationality,photoUrl:entry.player.photo??playerHeadshot(entry.player.id),position:stat.games.position??"Attacker",club:stat.team.name,competition:competition.name,draftRank:index+1};
+    });
+    for(let index=0;index<players.length;index+=500){
+      const response=await fetch(`${supabaseUrl}/rest/v1/rpc/sync_api_football_players`,{method:"POST",headers:userHeaders,body:JSON.stringify({p_players:players.slice(index,index+500)}),cache:"no-store"});
+      if(!response.ok)throw new Error((await response.text())||"Player database sync failed");
+      imported+=Number(await response.json())||0;
     }
   }
-  const reconcileResponse=await fetch(`${supabaseUrl}/rest/v1/rpc/reconcile_api_football_players`,{method:"POST",headers:adminHeaders,body:"{}",cache:"no-store"});
-  if(!reconcileResponse.ok)throw new Error((await reconcileResponse.text())||"Player identity reconciliation failed");
-  const reconciled=Number(await reconcileResponse.json())||0;
-  return NextResponse.json({ok:true,requestedSeason:season,seasonsUsed,unavailable,imported,reconciled,requestsUsed});
+  if(eligibleApiIds.length===0)return NextResponse.json({error:"The 2026 API season returned no eligible players.",season,unavailable,requestsUsed},{status:502});
+  const finalizeResponse=await fetch(`${supabaseUrl}/rest/v1/rpc/finalize_api_football_draft_pool`,{method:"POST",headers:adminHeaders,body:JSON.stringify({p_api_ids:eligibleApiIds}),cache:"no-store"});
+  if(!finalizeResponse.ok)throw new Error((await finalizeResponse.text())||"Draft pool finalization failed");
+  const eligible=Number(await finalizeResponse.json())||0;
+  return NextResponse.json({ok:true,season,seasonsUsed,unavailable,imported,eligible,clubLimit:25,requestsUsed});
 }
