@@ -1,0 +1,75 @@
+import {NextRequest,NextResponse} from "next/server";
+import {apiFootball} from "@/lib/api-football-server";
+
+const competitions:Record<string,number>={"Premier League":39,"La Liga":140,"Serie A":135,"Bundesliga":78,"Ligue 1":61};
+const finalStatuses=new Set(["FT","AET","PEN"]);
+const unstartedStatuses=new Set(["TBD","NS","PST","CANC","ABD","AWD","WO"]);
+
+type Fixture={fixture:{id:number;date:string;status:{short:string}};league:{round:string};teams:{home:{name:string};away:{name:string}}};
+type FixturePage={response:Fixture[]};
+type ApiPlayer={player:{id:number};statistics:Array<{games:{minutes:number|null};shots:{on:number|null};goals:{total:number|null;assists:number|null;conceded:number|null;saves:number|null};passes:{total:number|null;accuracy:number|string|null};tackles:{total:number|null};cards:{yellow:number|null;red:number|null};penalty:{scored:number|null;missed:number|null;saved:number|null;commited:number|null}}>};
+type PlayersPage={response:Array<{players:ApiPlayer[]}>};
+type LeagueRow={calendar_competition:string};
+type PlayerRow={id:number;api_football_id:number|null};
+
+export const maxDuration=300;
+
+function adminHeaders(key:string){return{apikey:key,Authorization:`Bearer ${key}`,"Content-Type":"application/json"}}
+function parseGameweek(round:string){const match=round.match(/(\d+)\s*$/);return match?Number(match[1]):1}
+
+export async function POST(request:NextRequest){
+  const authorization=request.headers.get("authorization")??"";
+  if(!authorization.startsWith("Bearer "))return NextResponse.json({error:"Sign in is required."},{status:401});
+  const body=await request.json().catch(()=>({})) as {leagueId?:string};
+  if(!body.leagueId)return NextResponse.json({error:"Choose a league first."},{status:400});
+  const supabaseUrl=process.env.NEXT_PUBLIC_SUPABASE_URL??"https://ocabrgbrkqmsnalbfzvx.supabase.co";
+  const publishableKey=process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY??"sb_publishable_DA08c5KwmYXpru6CdrRfHA_4Qe2z3M-";
+  const serviceRoleKey=process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if(!serviceRoleKey)return NextResponse.json({error:"Server database credential is not configured."},{status:503});
+  const userHeaders={apikey:publishableKey,Authorization:authorization,"Content-Type":"application/json"};
+  const leaguesResponse=await fetch(`${supabaseUrl}/rest/v1/rpc/my_leagues`,{method:"POST",headers:userHeaders,body:"{}",cache:"no-store"});
+  const memberships=leaguesResponse.ok?await leaguesResponse.json():[];
+  if(!memberships.some((league:{league_id:string;is_commissioner:boolean})=>league.league_id===body.leagueId&&league.is_commissioner))return NextResponse.json({error:"Only this league's commissioner can run an immediate score sync."},{status:403});
+
+  const leagueResponse=await fetch(`${supabaseUrl}/rest/v1/leagues?id=eq.${encodeURIComponent(body.leagueId)}&select=calendar_competition`,{headers:adminHeaders(serviceRoleKey),cache:"no-store"});
+  const leagueRows=leagueResponse.ok?await leagueResponse.json() as LeagueRow[]:[];
+  const competition=leagueRows[0]?.calendar_competition;
+  const competitionId=competition?competitions[competition]:undefined;
+  if(!competitionId)return NextResponse.json({error:"This league does not have a supported Fantasy Calendar."},{status:400});
+
+  const now=new Date();
+  const season=now.getUTCMonth()<=5?now.getUTCFullYear()-1:now.getUTCFullYear();
+  try{
+    const fixtureBody=await apiFootball<FixturePage>(`fixtures?league=${competitionId}&season=${season}`);
+    const started=fixtureBody.response.filter(item=>!unstartedStatuses.has(item.fixture.status.short)&&new Date(item.fixture.date)<=now);
+    const anchor=[...started].sort((a,b)=>Math.abs(now.getTime()-new Date(a.fixture.date).getTime())-Math.abs(now.getTime()-new Date(b.fixture.date).getTime()))[0];
+    if(!anchor)return NextResponse.json({error:`No ${competition} matchweek has started yet for the ${season} season.`},{status:409});
+    const round=anchor.league.round;
+    const roundFixtures=fixtureBody.response.filter(item=>item.league.round===round);
+    const activeFixtures=roundFixtures.filter(item=>!unstartedStatuses.has(item.fixture.status.short)&&new Date(item.fixture.date)<=now);
+    const allFinal=roundFixtures.length>0&&roundFixtures.every(item=>finalStatuses.has(item.fixture.status.short));
+    const roundStatus=allFinal?"final":"live";
+    const gameweek=parseGameweek(round);
+
+    const fixturePlayers=await Promise.all(activeFixtures.map(async fixture=>({fixture,body:await apiFootball<PlayersPage>(`fixtures/players?fixture=${fixture.fixture.id}`)})));
+    const statsByApiId=new Map<number,Record<string,number>>();
+    for(const {body:playerBody} of fixturePlayers){
+      for(const team of playerBody.response)for(const entry of team.players){
+        const stat=entry.statistics[0];if(!stat)continue;
+        const accuracy=Number(String(stat.passes.accuracy??"0").replace("%",""))||0;
+        statsByApiId.set(entry.player.id,{minutes:stat.games.minutes??0,goals:stat.goals.total??0,assists:stat.goals.assists??0,shots_on_target:stat.shots.on??0,big_chances_missed:0,completed_passes:Math.round((stat.passes.total??0)*accuracy/100),tackles_won:stat.tackles.total??0,penalty_goals:stat.penalty.scored??0,penalties_missed:stat.penalty.missed??0,penalties_conceded:stat.penalty.commited??0,saves:stat.goals.saves??0,penalties_saved:stat.penalty.saved??0,goals_conceded:stat.goals.conceded??0,yellow_cards:stat.cards.yellow??0,second_yellow_cards:0,red_cards:stat.cards.red??0,own_goals:0});
+      }
+    }
+
+    const lineupResponse=await fetch(`${supabaseUrl}/rest/v1/lineup_players?league_id=eq.${encodeURIComponent(body.leagueId)}&select=player_id`,{headers:adminHeaders(serviceRoleKey),cache:"no-store"});
+    const lineupRows=lineupResponse.ok?await lineupResponse.json() as Array<{player_id:number}>:[];
+    const playerIds=[...new Set(lineupRows.map(row=>row.player_id))];
+    if(!playerIds.length)return NextResponse.json({error:"No saved lineups exist in this league yet."},{status:409});
+    const playersResponse=await fetch(`${supabaseUrl}/rest/v1/players?id=in.(${playerIds.join(",")})&select=id,api_football_id`,{headers:adminHeaders(serviceRoleKey),cache:"no-store"});
+    const players=playersResponse.ok?await playersResponse.json() as PlayerRow[]:[];
+    const rows=players.map(player=>({league_id:body.leagueId,gameweek,player_id:player.id,minutes:0,goals:0,assists:0,shots_on_target:0,big_chances_missed:0,completed_passes:0,tackles_won:0,penalty_goals:0,penalties_missed:0,penalties_conceded:0,saves:0,penalties_saved:0,goals_conceded:0,yellow_cards:0,second_yellow_cards:0,red_cards:0,own_goals:0,man_of_the_match:false,status:roundStatus,source:"api-football-live",source_updated_at:new Date().toISOString(),updated_at:new Date().toISOString(),...(player.api_football_id?statsByApiId.get(player.api_football_id)??{}:{})}));
+    const upsert=await fetch(`${supabaseUrl}/rest/v1/league_player_scores?on_conflict=league_id,gameweek,player_id`,{method:"POST",headers:{...adminHeaders(serviceRoleKey),Prefer:"resolution=merge-duplicates,return=minimal"},body:JSON.stringify(rows),cache:"no-store"});
+    if(!upsert.ok)throw new Error((await upsert.text())||"Score database update failed");
+    return NextResponse.json({ok:true,competition,season,round,gameweek,status:roundStatus,fixturesStarted:activeFixtures.length,fixturesTotal:roundFixtures.length,playersWithStats:statsByApiId.size,lineupPlayersUpdated:rows.length,requestsUsed:1+activeFixtures.length,limitations:["Completed passes are estimated from total passes and API accuracy.","Big chances missed and Man of the Match remain unavailable from this endpoint and currently score zero."]});
+  }catch(error){return NextResponse.json({error:error instanceof Error?error.message:"Live score synchronization failed."},{status:502})}
+}
