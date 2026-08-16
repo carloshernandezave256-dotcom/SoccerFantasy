@@ -56,7 +56,8 @@ export function TeamManager(){
   const[message,setMessage]=useState("");
   const[loading,setLoading]=useState(true);
   const[infoPlayer,setInfoPlayer]=useState<Player|null>(null);
-  const[draftComplete,setDraftComplete]=useState(false);\n  const suppressRefreshUntil=useRef(0);
+  const[draftComplete,setDraftComplete]=useState(false);
+  const suppressRefreshUntil=useRef(0);
 
   const loadRoster=useCallback(async(id:string,ownerId:string)=>{
     setLoading(true);setMessage("");setRoster([]);setStarters(new Set());setStarterOrder([]);setCaptain(null);setInfoPlayer(null);setUndoOrder(null);
