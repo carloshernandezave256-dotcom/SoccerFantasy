@@ -42,19 +42,21 @@ export function DraftRoom({leagueId}:{leagueId:string}){
 
   const load=useCallback(async()=>{
     if(!leagueId)return;
-    const[auth,draftResult,picksResult,orderResult,playersResult,queueResult]=await Promise.all([
+    const[auth,draftResult,picksResult,orderResult,playersResult,queueResult,settingsResult]=await Promise.all([
       supabase.auth.getUser(),
       supabase.from("drafts").select("id,status,current_pick,pick_deadline,pick_seconds").eq("league_id",leagueId).maybeSingle(),
       supabase.from("draft_picks").select("id,pick_number,round,user_id,player_id,auto_picked,players(full_name)").eq("league_id",leagueId).order("pick_number",{ascending:false}),
       supabase.rpc("draft_order",{p_league_id:leagueId}),
       supabase.from("players").select("id,full_name,position,club,competition,draft_rank").eq("active",true).order("draft_rank",{ascending:true,nullsFirst:false}),
       supabase.from("draft_queue").select("player_id,priority,players(id,full_name,position,club,competition,draft_rank)").eq("league_id",leagueId).order("priority"),
+      supabase.rpc("league_settings",{p_league_id:leagueId}),
     ]);
     setUserId(auth.data.user?.id??null);
     setDraft((draftResult.data as Draft|null)??null);
     setPicks((picksResult.data??[]) as unknown as Pick[]);
     setOrder((orderResult.data??[]) as Manager[]);
-    setPlayers((playersResult.data??[]) as Player[]);
+    const pool=String(settingsResult.data?.[0]?.player_pool??"All Top Five");
+    setPlayers(((playersResult.data??[]) as Player[]).filter(player=>pool==="All Top Five"||player.competition===pool));
     setQueue((queueResult.data??[]) as unknown as QueueItem[]);
   },[leagueId]);
 
