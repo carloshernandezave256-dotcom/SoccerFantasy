@@ -38,6 +38,7 @@ export function HomeDashboard(){
   const[signedIn,setSignedIn]=useState(true);
   const[now,setNow]=useState(Date.now());
   const[parodyOpen,setParodyOpen]=useState(false);
+  const[unreadTrades,setUnreadTrades]=useState(0);
 
   const load=useCallback(async()=>{
     const{data:{user}}=await supabase.auth.getUser();
@@ -49,14 +50,16 @@ export function HomeDashboard(){
     const active=resolveActiveLeague(list,new URLSearchParams(window.location.search).get("league"))??null;
     setLeague(active);
     if(!active){setDraft(null);setOrder([]);setPicks([]);setLoading(false);return}
-    const[draftResult,orderResult,picksResult]=await Promise.all([
+    const[draftResult,orderResult,picksResult,tradeResult]=await Promise.all([
       supabase.from("drafts").select("status,current_pick,pick_deadline,pick_seconds").eq("league_id",active.league_id).maybeSingle(),
       supabase.rpc("draft_order",{p_league_id:active.league_id}),
       supabase.from("draft_picks").select("id,pick_number,user_id,auto_picked,players(full_name,position,club)").eq("league_id",active.league_id).order("pick_number",{ascending:false}),
+      supabase.rpc("unread_trade_count",{p_league_id:active.league_id}),
     ]);
     setDraft((draftResult.data as Draft|null)??null);
     setOrder((orderResult.data??[]) as Manager[]);
     setPicks((picksResult.data??[]) as unknown as Pick[]);
+    setUnreadTrades(Number(tradeResult.data??0));
     setLoading(false);
   },[]);
 
@@ -102,7 +105,7 @@ export function HomeDashboard(){
         <div className="section-row"><div><p className="eyebrow">PREVIEW FEED</p><h2 id="player-news-title">Player news</h2></div><span className="muted-chip">Swipe →</span></div>
         <div className="news-scroll">{newsPreview.map(item=><article key={item.tag} className={item.parody?"breaking-parody":""} onClick={item.parody?()=>setParodyOpen(true):undefined} role={item.parody?"button":undefined} tabIndex={item.parody?0:undefined} onKeyDown={item.parody?event=>{if(event.key==="Enter"||event.key===" ")setParodyOpen(true)}:undefined}>{item.parody?<img className="breaking-news-image" src="https://raw.githubusercontent.com/carloshernandezave256-dotcom/SoccerFantasy/main/public/news/haaland-barcelona-parody.webp" alt="Parody transfer graphic of Erling Haaland wearing Barcelona colors" width={768} height={512}/>:null}<div className="news-card-top"><span className="news-icon">{item.icon}</span><b>{item.tag}</b></div><strong>{item.title}</strong><p>{item.copy}</p><small>{item.parody?"XI TRANSFER DESK · TAP FOR SOURCE":"SAMPLE · LIVE SOURCE COMING NEXT"}</small></article>)}</div>
       </section>
-      <section className="quick-grid home-actions" aria-label="League shortcuts"><Link href={`/team?league=${league.league_id}`}><span className="icon">◎</span><strong>My Team</strong><small>{myPicks.length}/18 drafted</small></Link><Link href={`/players?league=${league.league_id}`}><span className="icon">⌕</span><strong>Players</strong><small>{league.game_format==="pack"?"Packs & collection":"Market & waivers"}</small></Link><Link href={league.game_format==="pack"?`/packs?league=${league.league_id}#auction`:`/trades?league=${league.league_id}`}><span className="icon">⇄</span><strong>{league.game_format==="pack"?"Auction":"Trades"}</strong><small>{league.game_format==="pack"?"League card market":"Build an offer"}</small></Link></section>
+      <section className="quick-grid home-actions" aria-label="League shortcuts"><Link href={`/team?league=${league.league_id}`}><span className="icon">◎</span><strong>My Team</strong><small>{myPicks.length}/18 drafted</small></Link><Link href={`/players?league=${league.league_id}`}><span className="icon">⌕</span><strong>Players</strong><small>{league.game_format==="pack"?"Packs & collection":"Market & waivers"}</small></Link><Link className="trade-shortcut" href={league.game_format==="pack"?`/packs?league=${league.league_id}#auction`:`/trades?league=${league.league_id}`}><span className="icon">⇄</span>{league.game_format!=="pack"&&unreadTrades?<b className="trade-alert-count">{unreadTrades}</b>:null}<strong>{league.game_format==="pack"?"Auction":"Trades"}</strong><small>{league.game_format==="pack"?"League card market":unreadTrades?`${unreadTrades} new offer${unreadTrades===1?"":"s"}`:"Build an offer"}</small></Link></section>
       <section className="panel home-roster"><div className="section-row"><div><p className="eyebrow">MY SQUAD</p><h2>{league.team_name}</h2></div><Link className="text-button" href="/team">Open team</Link></div><div className="home-position-grid">{(["GK","DEF","MID","FWD"] as const).map(pos=><div key={pos}><span>{pos}</span><strong>{counts[pos]}</strong><small>of {targets[pos]}</small></div>)}</div><div className="progress"><span style={{width:`${Math.min(100,(myPicks.length/18)*100)}%`}}/></div><p className="muted">{18-myPicks.length>0?`${18-myPicks.length} roster spots remaining`:"Full 18-player squad"}</p></section>
       <section className="panel home-activity"><div className="section-row"><div><p className="eyebrow">LEAGUE ACTIVITY</p><h2>Recent picks</h2></div><Link className="text-button" href={`/draft?league=${league.league_id}`}>Draft room</Link></div>{picks.slice(0,5).map(pick=><div className="home-pick-row" key={pick.id}><b>#{pick.pick_number}</b><span><strong>{pick.players?.full_name??"Player"}</strong><small>{order.find(manager=>manager.user_id===pick.user_id)?.team_name??"Manager"}</small></span>{pick.auto_picked?<em>AUTO</em>:null}</div>)}{picks.length===0?<p className="empty-state">Draft picks will appear here as they happen.</p>:null}</section>
     </>:null}
