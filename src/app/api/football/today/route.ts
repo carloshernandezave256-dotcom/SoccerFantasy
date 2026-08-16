@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-
-// API-Football requests stay server-side so provider credentials are never exposed.
+import {apiFootballKey} from "@/lib/api-football-server";
 
 const competitions=[
   {id:39,name:"Premier League"},{id:140,name:"La Liga"},{id:135,name:"Serie A"},{id:78,name:"Bundesliga"},{id:61,name:"Ligue 1"},
@@ -31,10 +30,9 @@ async function football(path:string,key:string){
 }
 
 export async function GET(request:NextRequest){
-  const key=process.env.API_FOOTBALL_KEY;
+  let key:string;try{key=apiFootballKey()}catch{return NextResponse.json({error:"API_FOOTBALL_KEY is not configured for this deployment."},{status:503})}
   const supabaseUrl=process.env.NEXT_PUBLIC_SUPABASE_URL??"https://ocabrgbrkqmsnalbfzvx.supabase.co";
   const publishableKey=process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY??"sb_publishable_DA08c5KwmYXpru6CdrRfHA_4Qe2z3M-";
-  if(!key)return NextResponse.json({error:"API_FOOTBALL_KEY is not configured for this deployment."},{status:503});
   const authorization=request.headers.get("authorization")??"";
   if(!authorization.startsWith("Bearer "))return NextResponse.json({error:"Sign in is required."},{status:401});
   const userResponse=await fetch(`${supabaseUrl}/auth/v1/user`,{headers:{apikey:publishableKey,Authorization:authorization},cache:"no-store"});
