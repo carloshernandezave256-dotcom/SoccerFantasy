@@ -11,8 +11,11 @@ export async function POST(request:NextRequest){
   if(!authorization.startsWith("Bearer "))return NextResponse.json({error:"Sign in is required."},{status:401});
   const supabaseUrl=process.env.NEXT_PUBLIC_SUPABASE_URL??"https://ocabrgbrkqmsnalbfzvx.supabase.co";
   const publishableKey=process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY??"sb_publishable_DA08c5KwmYXpru6CdrRfHA_4Qe2z3M-";
-  const common={apikey:publishableKey,Authorization:authorization,"Content-Type":"application/json"};
-  const leaguesResponse=await fetch(`${supabaseUrl}/rest/v1/rpc/my_leagues`,{method:"POST",headers:common,body:"{}",cache:"no-store"});
+  const serviceRoleKey=process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if(!serviceRoleKey)return NextResponse.json({error:"Server database credential is not configured."},{status:503});
+  const userHeaders={apikey:publishableKey,Authorization:authorization,"Content-Type":"application/json"};
+  const adminHeaders={apikey:serviceRoleKey,Authorization:`Bearer ${serviceRoleKey}`,"Content-Type":"application/json"};
+  const leaguesResponse=await fetch(`${supabaseUrl}/rest/v1/rpc/my_leagues`,{method:"POST",headers:userHeaders,body:"{}",cache:"no-store"});
   const leagues=leaguesResponse.ok?await leaguesResponse.json():[];
   if(!leagues.some((league:{is_commissioner:boolean})=>league.is_commissioner))return NextResponse.json({error:"Commissioner access required."},{status:403});
   const now=new Date(),season=now.getUTCMonth()<6?now.getUTCFullYear()-1:now.getUTCFullYear();
@@ -24,7 +27,7 @@ export async function POST(request:NextRequest){
       total=body.paging.total;
       const players=body.response.flatMap(entry=>{const stat=entry.statistics[0];if(!stat?.team?.name)return[];return[{apiFootballId:entry.player.id,fullName:entry.player.name,nationality:entry.player.nationality,photoUrl:entry.player.photo??playerHeadshot(entry.player.id),position:stat.games.position??"Attacker",club:stat.team.name,competition:competition.name}]});
       for(let index=0;index<players.length;index+=500){
-        const response=await fetch(`${supabaseUrl}/rest/v1/rpc/sync_api_football_players`,{method:"POST",headers:common,body:JSON.stringify({p_players:players.slice(index,index+500)}),cache:"no-store"});
+        const response=await fetch(`${supabaseUrl}/rest/v1/rpc/sync_api_football_players`,{method:"POST",headers:adminHeaders,body:JSON.stringify({p_players:players.slice(index,index+500)}),cache:"no-store"});
         if(!response.ok)throw new Error((await response.text())||"Player database sync failed");
         imported+=Number(await response.json())||0;
       }
