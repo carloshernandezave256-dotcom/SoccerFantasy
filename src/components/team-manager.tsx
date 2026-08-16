@@ -55,6 +55,7 @@ export function TeamManager(){
   const[message,setMessage]=useState("");
   const[loading,setLoading]=useState(true);
   const[infoPlayer,setInfoPlayer]=useState<Player|null>(null);
+  const[draftComplete,setDraftComplete]=useState(false);
 
   const loadRoster=useCallback(async(id:string,ownerId:string)=>{
     setLoading(true);setMessage("");setRoster([]);setStarters(new Set());setStarterOrder([]);setCaptain(null);setInfoPlayer(null);
@@ -105,6 +106,7 @@ export function TeamManager(){
       const{data:{user}}=await supabase.auth.getUser();
       if(!user){setLoading(false);return}
       setUserId(user.id);
+      setDraftComplete(new URLSearchParams(window.location.search).get("draft")==="complete");
       const{data}=await supabase.rpc("my_leagues");
       const list=(data??[]) as League[];
       setLeagues(list);
@@ -194,6 +196,7 @@ export function TeamManager(){
   }
 
   return <PageShell eyebrow={viewedManager?.team_name??leagues.find(item=>item.league_id===league)?.team_name??"MY CLUB"} title={isMine?"My Team":"Team Viewer"}>
+    {draftComplete&&isMine?<section className="panel draft-finished"><span>✓</span><h2>Draft complete — set your lineup</h2><p>Your 4-3-3 has been created. Choose a captain, make any changes, and save.</p></section>:null}
     <div className="team-selectors">
       <label>View team<select className="league-select" value={viewedUser} onChange={event=>{setViewedUser(event.target.value);void loadRoster(league,event.target.value)}}>{managers.map(manager=><option key={manager.user_id} value={manager.user_id}>{manager.user_id===userId?"My Team":manager.team_name}</option>)}</select></label>
     </div>

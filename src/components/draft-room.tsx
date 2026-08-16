@@ -71,6 +71,12 @@ export function DraftRoom({leagueId}:{leagueId:string}){
     return()=>{clearInterval(timer);void supabase.removeChannel(channel)};
   },[leagueId,load]);
 
+  useEffect(()=>{
+    if(draft?.status!=="complete")return;
+    const timer=window.setTimeout(()=>window.location.replace(`/team?league=${leagueId}&draft=complete`),900);
+    return()=>window.clearTimeout(timer);
+  },[draft?.status,leagueId]);
+
   const managerCount=order.length;
   const currentPick=draft?.current_pick??1;
   const round=managerCount?Math.floor((currentPick-1)/managerCount)+1:1;
@@ -175,7 +181,7 @@ export function DraftRoom({leagueId}:{leagueId:string}){
 
   if(!leagueId)return <PageShell eyebrow="LIVE DRAFT" title="Select a league"><section className="panel empty-state">Open the League tab and choose a league’s Draft Room.</section></PageShell>;
 
-  if(draft?.status==="complete")return <PageShell eyebrow="DRAFT COMPLETE" title="Your squad is ready"><section className="panel draft-finished"><span>✓</span><h2>The draft is now closed</h2><p>All 18 rounds are complete. Set your starting lineup and choose your captain.</p><Link className="primary-button" href={`/team?league=${leagueId}`}>Set your lineup</Link></section></PageShell>;
+  if(draft?.status==="complete")return <PageShell eyebrow="DRAFT COMPLETE" title="Your squad is ready"><section className="panel draft-finished"><span>✓</span><h2>Draft complete — set your lineup</h2><p>The Draft Room is permanently closed. Opening My Team…</p><Link className="primary-button" href={`/team?league=${leagueId}&draft=complete`}>Set your lineup now</Link></section></PageShell>;
 
   return <PageShell eyebrow={`ROUND ${round} · PICK ${currentPick}`} title="Draft room">
     <section className={`draft-clock ${isMyTurn?"my-turn":""}`}>
