@@ -232,7 +232,7 @@ function SavedTeamPitch({roster,starters,starterOrder,captain,editing=false,allo
   function beginPitchDrag(event:React.PointerEvent<HTMLButtonElement>,player:Player){
     if(captainMode)return;
     const slot=event.currentTarget.closest<HTMLElement>(".pitch-player-slot");if(!slot)return;
-    const rect=slot.getBoundingClientRect();event.currentTarget.setPointerCapture(event.pointerId);
+    const rect=event.currentTarget.getBoundingClientRect();event.currentTarget.setPointerCapture(event.pointerId);
     const drag={id:player.id,targetId:player.id,position:player.position,top:rect.top,left:rect.left,width:rect.width,height:rect.height,offsetX:event.clientX-rect.left,offsetY:event.clientY-rect.top,moved:false};
     pitchDragRef.current=drag;setPitchDrag(drag);
   }
