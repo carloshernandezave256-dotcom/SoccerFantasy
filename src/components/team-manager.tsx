@@ -26,10 +26,10 @@ function defaultStartingEleven(roster:Player[]){
   const chosen:Player[]=[];
   const add=(players:Player[],limit:number)=>players.slice(0,limit).forEach(player=>{if(!chosen.some(item=>item.id===player.id))chosen.push(player)});
   add(roster.filter(player=>player.position==="GK"),1);
-  add(roster.filter(player=>player.position==="DEF"),3);
-  add(roster.filter(player=>player.position==="MID"),1);
-  add(roster.filter(player=>player.position==="FWD"),1);
-  add(roster.filter(player=>!chosen.some(item=>item.id===player.id)),11-chosen.length);
+  add(roster.filter(player=>player.position==="DEF"),4);
+  add(roster.filter(player=>player.position==="MID"),3);
+  add(roster.filter(player=>player.position==="FWD"),3);
+  add(roster.filter(player=>player.position!=="GK"&&!chosen.some(item=>item.id===player.id)),11-chosen.length);
   return new Set(chosen.map(player=>player.id));
 }
 
@@ -65,13 +65,16 @@ export function TeamManager(){
     const saved=(lineup??[]) as LineupRow[];
     const loadedRoster=[...(draftPicks??[]),...(packCards??[])].flatMap(row=>row.players?[row.players as unknown as Player]:[]);
     setRoster(loadedRoster);
-    const starterIds=saved.length?new Set(saved.filter(row=>row.is_starter).map(row=>row.player_id)):defaultStartingEleven(loadedRoster);
+    const savedStarterIds=new Set(saved.filter(row=>row.is_starter).map(row=>row.player_id));
+    const savedLineupIsValid=formationIsValid(loadedRoster,savedStarterIds);
+    const starterIds=savedLineupIsValid?savedStarterIds:defaultStartingEleven(loadedRoster);
     const savedOrder=saved.filter(row=>row.is_starter).sort((a,b)=>(a.pitch_order??999)-(b.pitch_order??999)).map(row=>row.player_id);
     const fallbackOrder=loadedRoster.filter(player=>starterIds.has(player.id)).map(player=>player.id);
     setStarters(starterIds);
-    setStarterOrder(saved.some(row=>row.is_starter&&row.pitch_order!==null)?savedOrder:centerHaaland(fallbackOrder,loadedRoster));
-    setCaptain(saved.find(row=>row.is_captain)?.player_id??null);
-    setEditing(saved.length===0);setCaptainMode(false);setSelectedBench(null);setLoading(false);
+    setStarterOrder(savedLineupIsValid&&saved.some(row=>row.is_starter&&row.pitch_order!==null)?savedOrder:centerHaaland(fallbackOrder,loadedRoster));
+    const savedCaptain=saved.find(row=>row.is_captain)?.player_id??null;
+    setCaptain(savedLineupIsValid&&savedCaptain!==null&&starterIds.has(savedCaptain)?savedCaptain:null);
+    setEditing(!savedLineupIsValid);setCaptainMode(false);setSelectedBench(null);setLoading(false);
   },[]);
 
   const loadLeague=useCallback(async(id:string,preferredUser?:string)=>{
@@ -191,7 +194,7 @@ function SavedTeamPitch({roster,starters,starterOrder,captain,editing=false,allo
     if(active.moved&&active.targetId!==active.id)onReorder?.(active.id,active.targetId);else if(!active.moved){if(captainMode||selectedBench!==null)onStarter?.(active.id);else onInfo?.(active.id)}
   }
   const draggedPlayer=pitchDrag?roster.find(player=>player.id===pitchDrag.id):null;
-  return <><section className={`mini-pitch saved-team-pitch ${captainMode?"captain-mode":""} ${pitchDrag?.moved?"is-reordering":""}`} aria-label="Starting eleven mini pitch"><div className="pitch-box top-box"/><div className="center-line"/><div className="center-circle"/><div className="pitch-box bottom-box"/>{(["FWD","MID","DEF","GK"] as const).map(position=><div className={`pitch-row row-${position.toLowerCase()}`} key={position}>{groups[position].map(player=><PitchPlayer key={player.id} player={player} editing={editing} captain={captain} captainMode={captainMode} selectedBench={selectedBench} showPackCards={showPackCards} pitchDrag={pitchDrag} onPointerDown={beginPitchDrag} onPointerMove={updatePitchDrag} onPointerUp={finishPitchDrag} onStarter={onStarter}/>)}</div>)}</section>{pitchDrag?.moved&&draggedPlayer?<PitchDragGhost player={draggedPlayer} drag={pitchDrag} showPackCards={showPackCards}/>:null}<section className="panel demo-bench saved-team-bench"><div className="section-row"><div><h2>Bench</h2><small>{editing?"Select one, then replace a starter above":"Your substitutes"}</small></div><span className="muted-chip">{bench.length}/7</span></div><div className="bench-scroll">{bench.map((player,index)=><button type="button" className={`saved-bench-player ${selectedBench===player.id?"selected":""}`} key={player.id} onClick={()=>onBench?.(player.id)} aria-disabled={!editing}><span>{index+1}</span><i className={`position ${player.position.toLowerCase()}`}>{player.position}</i><strong>{player.full_name}</strong><small>{player.club}</small></button>)}</div></section></>;
+  return <><section className={`mini-pitch saved-team-pitch ${captainMode?"captain-mode":""} ${pitchDrag?.moved?"is-reordering":""}`} aria-label="Starting eleven mini pitch"><div className="pitch-box top-box"/><div className="center-line"/><div className="center-circle"/><div className="pitch-box bottom-box"/>{(["FWD","MID","DEF","GK"] as const).map(position=><div className={`pitch-row row-${position.toLowerCase()}`} style={{gridTemplateColumns:`repeat(${Math.max(groups[position].length,1)}, minmax(0, 1fr))`}} key={position}>{groups[position].map(player=><PitchPlayer key={player.id} player={player} editing={editing} captain={captain} captainMode={captainMode} selectedBench={selectedBench} showPackCards={showPackCards} pitchDrag={pitchDrag} onPointerDown={beginPitchDrag} onPointerMove={updatePitchDrag} onPointerUp={finishPitchDrag} onStarter={onStarter}/>)}</div>)}</section>{pitchDrag?.moved&&draggedPlayer?<PitchDragGhost player={draggedPlayer} drag={pitchDrag} showPackCards={showPackCards}/>:null}<section className="panel demo-bench saved-team-bench"><div className="section-row"><div><h2>Bench</h2><small>{editing?"Select one, then replace a starter above":"Your substitutes"}</small></div><span className="muted-chip">{bench.length}/7</span></div><div className="bench-scroll">{bench.map((player,index)=><button type="button" className={`saved-bench-player ${selectedBench===player.id?"selected":""}`} key={player.id} onClick={()=>onBench?.(player.id)} aria-disabled={!editing}><span>{index+1}</span><i className={`position ${player.position.toLowerCase()}`}>{player.position}</i><strong>{player.full_name}</strong><small>{player.club}</small></button>)}</div></section></>;
 }
 
 type PitchDrag={id:number;targetId:number;position:string;top:number;left:number;width:number;height:number;offsetX:number;offsetY:number;moved:boolean};
