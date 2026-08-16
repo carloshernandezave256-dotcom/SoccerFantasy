@@ -58,7 +58,7 @@ export function TeamManager(){
     setLoading(true);setMessage("");
     const[{data:draftPicks},{data:packCards},{data:lineup}]=await Promise.all([
       supabase.from("draft_picks").select("player_id,players(id,full_name,position,club,competition)").eq("league_id",id).eq("user_id",ownerId),
-      supabase.from("pack_cards").select("player_id,players(id,full_name,position,club,competition)").eq("league_id",id).eq("user_id",ownerId).not("active_slot","is",null),
+      supabase.from("pack_cards").select("player_id,active_slot,players(id,full_name,position,club,competition)").eq("league_id",id).eq("user_id",ownerId).not("active_slot","is",null).order("active_slot"),
       supabase.from("lineup_players").select("player_id,is_starter,is_captain,bench_order,pitch_order").eq("league_id",id).eq("user_id",ownerId),
     ]);
     const saved=(lineup??[]) as LineupRow[];
