@@ -10,7 +10,7 @@ import { PlayerStatsDialog } from "./player-stats-dialog";
 import { getPackHeroCard } from "@/lib/pack-hero-cards";
 
 type League={league_id:string;league_name:string;team_name:string;game_format:string};
-type Player={id:number;full_name:string;position:string;club:string;competition?:string};
+type Player={id:number;full_name:string;position:string;club:string;competition?:string;photo_url?:string|null};
 type Manager={draft_slot:number;user_id:string;team_name:string};
 type LineupRow={player_id:number;is_starter:boolean;is_captain:boolean;bench_order:number|null;pitch_order:number|null};
 
@@ -60,8 +60,8 @@ export function TeamManager(){
   const loadRoster=useCallback(async(id:string,ownerId:string)=>{
     setLoading(true);setMessage("");setRoster([]);setStarters(new Set());setStarterOrder([]);setCaptain(null);setInfoPlayer(null);
     const[{data:draftPicks},{data:packCards},{data:lineup}]=await Promise.all([
-      supabase.from("draft_picks").select("player_id,players(id,full_name,position,club,competition)").eq("league_id",id).eq("user_id",ownerId),
-      supabase.from("pack_cards").select("player_id,active_slot,players(id,full_name,position,club,competition)").eq("league_id",id).eq("user_id",ownerId).not("active_slot","is",null).order("active_slot"),
+      supabase.from("draft_picks").select("player_id,players(id,full_name,position,club,competition,photo_url)").eq("league_id",id).eq("user_id",ownerId),
+      supabase.from("pack_cards").select("player_id,active_slot,players(id,full_name,position,club,competition,photo_url)").eq("league_id",id).eq("user_id",ownerId).not("active_slot","is",null).order("active_slot"),
       supabase.from("lineup_players").select("player_id,is_starter,is_captain,bench_order,pitch_order").eq("league_id",id).eq("user_id",ownerId),
     ]);
     let saved=(lineup??[]) as LineupRow[];
@@ -246,10 +246,10 @@ type PitchDrag={id:number;targetId:number;position:string;top:number;left:number
 
 function PitchPlayer({player,editing,captain,captainMode,selectedBench,showPackCards,pitchDrag,onPointerDown,onPointerMove,onPointerUp,onStarter}:{player:Player;editing:boolean;captain:number|null;captainMode:boolean;selectedBench:number|null;showPackCards:boolean;pitchDrag:PitchDrag|null;onPointerDown:(event:React.PointerEvent<HTMLButtonElement>,player:Player)=>void;onPointerMove:(event:React.PointerEvent<HTMLButtonElement>)=>void;onPointerUp:(event:React.PointerEvent<HTMLButtonElement>)=>void;onStarter?:((id:number)=>void)}){
  const hero=showPackCards?getPackHeroCard(player.full_name):null;
- return <div className={`pitch-player-slot ${pitchDrag?.moved&&pitchDrag.id===player.id?"pitch-drag-source":""} ${pitchDrag?.moved&&pitchDrag.targetId===player.id&&pitchDrag.id!==player.id?"pitch-drop-target":""}`} data-position={player.position} data-player-id={player.id}><button type="button" className="saved-pitch-player" onPointerDown={event=>onPointerDown(event,player)} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerUp} onClick={event=>{event.preventDefault();if(captainMode)onStarter?.(player.id)}} aria-disabled={!editing}><span className={`shirt shirt-${player.position.toLowerCase()} ${hero?"mini-card-shirt":""}`}>{hero?<img src={hero.src} alt=""/>:null}{captain===player.id?<b>C</b>:null}</span><strong>{player.full_name}</strong><small>{player.club}</small></button></div>
+ return <div className={`pitch-player-slot ${pitchDrag?.moved&&pitchDrag.id===player.id?"pitch-drag-source":""} ${pitchDrag?.moved&&pitchDrag.targetId===player.id&&pitchDrag.id!==player.id?"pitch-drop-target":""}`} data-position={player.position} data-player-id={player.id}><button type="button" className="saved-pitch-player" onPointerDown={event=>onPointerDown(event,player)} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerUp} onClick={event=>{event.preventDefault();if(captainMode)onStarter?.(player.id)}} aria-disabled={!editing}><span className={`shirt shirt-${player.position.toLowerCase()} ${hero?"mini-card-shirt":""}`}>{hero?<img src={hero.src} alt=""/>:player.photo_url?<img className="api-headshot" src={player.photo_url} alt="" onError={event=>{event.currentTarget.style.display="none"}}/>:null}{captain===player.id?<b>C</b>:null}</span><strong>{player.full_name}</strong><small>{player.club}</small></button></div>
 }
 
 function PitchDragGhost({player,drag,showPackCards}:{player:Player;drag:PitchDrag;showPackCards:boolean}){
  const hero=showPackCards?getPackHeroCard(player.full_name):null;
- return <div className="pitch-drag-ghost" aria-hidden="true" style={{top:drag.top,left:drag.left,width:drag.width,height:drag.height}}><span className={`shirt shirt-${player.position.toLowerCase()} ${hero?"mini-card-shirt":""}`}>{hero?<img src={hero.src} alt=""/>:null}</span><strong>{player.full_name}</strong><small>{player.position} row</small></div>
+ return <div className="pitch-drag-ghost" aria-hidden="true" style={{top:drag.top,left:drag.left,width:drag.width,height:drag.height}}><span className={`shirt shirt-${player.position.toLowerCase()} ${hero?"mini-card-shirt":""}`}>{hero?<img src={hero.src} alt=""/>:player.photo_url?<img className="api-headshot" src={player.photo_url} alt="" onError={event=>{event.currentTarget.style.display="none"}}/>:null}</span><strong>{player.full_name}</strong><small>{player.position} row</small></div>
 }

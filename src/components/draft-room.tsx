@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PageShell } from "./page-shell";
 import { supabase } from "@/lib/supabase";
 
-type Player = { id:number; full_name:string; position:string; club:string; competition:string; draft_rank:number|null };
+type Player = { id:number; full_name:string; position:string; club:string; competition:string; draft_rank:number|null; photo_url?:string|null };
 type Draft = { id:string; status:"waiting"|"live"|"paused"|"complete"; current_pick:number; pick_deadline:string|null; pick_seconds:number };
 type Pick = { id:number; pick_number:number; round:number; user_id:string; player_id:number; auto_picked:boolean; players?:{full_name:string}|null };
 type Manager = { draft_slot:number; user_id:string; team_name:string };
@@ -47,8 +47,8 @@ export function DraftRoom({leagueId}:{leagueId:string}){
       supabase.from("drafts").select("id,status,current_pick,pick_deadline,pick_seconds").eq("league_id",leagueId).maybeSingle(),
       supabase.from("draft_picks").select("id,pick_number,round,user_id,player_id,auto_picked,players(full_name)").eq("league_id",leagueId).order("pick_number",{ascending:false}),
       supabase.rpc("draft_order",{p_league_id:leagueId}),
-      supabase.from("players").select("id,full_name,position,club,competition,draft_rank").eq("active",true).order("draft_rank",{ascending:true,nullsFirst:false}),
-      supabase.from("draft_queue").select("player_id,priority,players(id,full_name,position,club,competition,draft_rank)").eq("league_id",leagueId).order("priority"),
+      supabase.from("players").select("id,full_name,position,club,competition,draft_rank,photo_url").eq("active",true).order("draft_rank",{ascending:true,nullsFirst:false}),
+      supabase.from("draft_queue").select("player_id,priority,players(id,full_name,position,club,competition,draft_rank,photo_url)").eq("league_id",leagueId).order("priority"),
       supabase.rpc("league_settings",{p_league_id:leagueId}),
     ]);
     setUserId(auth.data.user?.id??null);

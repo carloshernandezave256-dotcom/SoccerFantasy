@@ -8,7 +8,7 @@ import { resolveActiveLeague } from "@/lib/active-league";
 import { calculateScore, type Position } from "@/lib/scoring";
 
 type League = { league_id: string; league_name: string; team_name: string; is_commissioner: boolean; game_format?: string; player_pool?: string };
-type Player = { id: number; full_name: string; position: string; club: string; competition: string; draft_rank?: number };
+type Player = { id: number; full_name: string; position: string; club: string; competition: string; draft_rank?: number; photo_url?:string|null };
 type Pick = { user_id: string; player_id: number; players: Player | null };
 type Claim = { id: string; user_id: string; add_player_id: number; drop_player_id: number | null; gameweek:number; claim_rank:number; status: string; created_at: string; processed_at: string | null; note: string | null };
 type Priority = { rank: number; user_id: string; team_name: string };
