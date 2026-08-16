@@ -5,7 +5,7 @@ const competitions:Record<string,number>={"Premier League":39,"La Liga":140,"Ser
 const finalStatuses=new Set(["FT","AET","PEN"]);
 const unstartedStatuses=new Set(["TBD","NS","PST","CANC","ABD","AWD","WO"]);
 
-type Fixture={fixture:{id:number;date:string;status:{short:string}};league:{round:string};teams:{home:{name:string};away:{name:string}}};
+type Fixture={fixture:{id:number;date:string;status:{short:string}};league:{round:string};teams:{home:{name:string};away:{name:string}};goals:{home:number|null;away:number|null}};
 type FixturePage={response:Fixture[]};
 type ApiPlayer={player:{id:number};statistics:Array<{games:{minutes:number|null};shots:{on:number|null};goals:{total:number|null;assists:number|null;conceded:number|null;saves:number|null};passes:{total:number|null;accuracy:number|string|null};tackles:{total:number|null};cards:{yellow:number|null;red:number|null};penalty:{scored:number|null;missed:number|null;saved:number|null;commited:number|null}}>};
 type PlayersPage={response:Array<{players:ApiPlayer[]}>};
@@ -50,6 +50,10 @@ export async function POST(request:NextRequest){
     const allFinal=roundFixtures.length>0&&roundFixtures.every(item=>finalStatuses.has(item.fixture.status.short));
     const roundStatus=allFinal?"final":"live";
     const gameweek=parseGameweek(round);
+
+    const fixtureRows=roundFixtures.map(item=>({league_id:body.leagueId,fixture_id:item.fixture.id,gameweek,competition,round_name:round,kickoff:item.fixture.date,status:item.fixture.status.short,home_team:item.teams.home.name,away_team:item.teams.away.name,home_score:item.goals.home,away_score:item.goals.away,updated_at:new Date().toISOString()}));
+    const fixtureUpsert=await fetch(`${supabaseUrl}/rest/v1/league_headline_fixtures?on_conflict=league_id,fixture_id`,{method:"POST",headers:{...adminHeaders(serviceRoleKey),Prefer:"resolution=merge-duplicates,return=minimal"},body:JSON.stringify(fixtureRows),cache:"no-store"});
+    if(!fixtureUpsert.ok)throw new Error((await fixtureUpsert.text())||"Fixture database update failed");
 
     const fixturePlayers=await Promise.all(activeFixtures.map(async fixture=>({fixture,body:await apiFootball<PlayersPage>(`fixtures/players?fixture=${fixture.fixture.id}`)})));
     const statsByApiId=new Map<number,Record<string,number>>();
