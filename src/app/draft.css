@@ -17,6 +17,7 @@
 .draft-button{font-size:8px!important;font-weight:900!important;color:#14200b!important;background:var(--lime)!important;padding:8px!important;border-radius:8px!important}
 .draft-button:disabled{opacity:.35}
 .pick-row{display:grid;grid-template-columns:34px 1fr auto;gap:8px;align-items:center;padding:11px 0;border-top:1px solid var(--line);font-size:11px}
+.pick-row.recent-pick-row{grid-template-columns:34px 42px minmax(0,1fr) auto}
 .pick-row small{color:var(--muted);font-size:9px}
 .league-row>div:last-child{align-items:flex-end}
 .draft-queue{margin-bottom:14px}

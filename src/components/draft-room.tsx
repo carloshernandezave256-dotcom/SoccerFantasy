@@ -4,10 +4,11 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PageShell } from "./page-shell";
 import { supabase } from "@/lib/supabase";
+import { PlayerHeadshot } from "./player-headshot";
 
 type Player = { id:number; full_name:string; position:string; club:string; competition:string; draft_rank:number|null; photo_url?:string|null };
 type Draft = { id:string; status:"waiting"|"live"|"paused"|"complete"; current_pick:number; pick_deadline:string|null; pick_seconds:number };
-type Pick = { id:number; pick_number:number; round:number; user_id:string; player_id:number; auto_picked:boolean; players?:{full_name:string}|null };
+type Pick = { id:number; pick_number:number; round:number; user_id:string; player_id:number; auto_picked:boolean; players?:{full_name:string;position:string;photo_url?:string|null}|null };
 type Manager = { draft_slot:number; user_id:string; team_name:string };
 type QueueItem = { player_id:number; priority:number; players?:Player|null };
 type QueueDrag = { index:number; target:number; top:number; left:number; width:number; height:number; pointerOffsetY:number };
@@ -45,7 +46,7 @@ export function DraftRoom({leagueId}:{leagueId:string}){
     const[auth,draftResult,picksResult,orderResult,playersResult,queueResult,settingsResult]=await Promise.all([
       supabase.auth.getUser(),
       supabase.from("drafts").select("id,status,current_pick,pick_deadline,pick_seconds").eq("league_id",leagueId).maybeSingle(),
-      supabase.from("draft_picks").select("id,pick_number,round,user_id,player_id,auto_picked,players(full_name)").eq("league_id",leagueId).order("pick_number",{ascending:false}),
+      supabase.from("draft_picks").select("id,pick_number,round,user_id,player_id,auto_picked,players(full_name,position,photo_url)").eq("league_id",leagueId).order("pick_number",{ascending:false}),
       supabase.rpc("draft_order",{p_league_id:leagueId}),
       supabase.from("players").select("id,full_name,position,club,competition,draft_rank,photo_url").eq("active",true).order("draft_rank",{ascending:true,nullsFirst:false}),
       supabase.from("draft_queue").select("player_id,priority,players(id,full_name,position,club,competition,draft_rank,photo_url)").eq("league_id",leagueId).order("priority"),
@@ -209,7 +210,7 @@ export function DraftRoom({leagueId}:{leagueId:string}){
       <div className="filter-row">{["ALL","GK","DEF","MID","FWD"].map(value=><button key={value} className={position===value?"active":""} onClick={()=>setPosition(value)}>{value}</button>)}</div>
       <p className="player-result-count">Showing {Math.min(visibleCount,available.length)} of {available.length} available players</p>
       <section className="panel player-list draft-list">{available.slice(0,visibleCount).map(player=><article key={player.id}>
-        <span className={`position ${player.position.toLowerCase()}`}>{player.position}</span>
+        <PlayerHeadshot name={player.full_name} position={player.position} photoUrl={player.photo_url}/>
         <div><strong>{player.full_name}</strong><small>#{player.draft_rank??"—"} · {player.club} · {player.competition}</small></div>
         <div className="player-actions"><button className="queue-button" onClick={()=>addToQueue(player)} disabled={queueSaving||queue.some(item=>item.player_id===player.id)||queue.length>=25}>{queue.some(item=>item.player_id===player.id)?"QUEUED":"+ QUEUE"}</button><button className="draft-button" onClick={()=>pick(player.id)} disabled={!isMyTurn}>{isMyTurn?"DRAFT":"WAIT"}</button></div>
       </article>)}{available.length===0?<p className="queue-empty">No available players match that search.</p>:null}</section>
@@ -217,11 +218,11 @@ export function DraftRoom({leagueId}:{leagueId:string}){
     </>:view==="queue"?<section ref={queueListRef} className={`panel draft-queue queue-tab-panel ${queueDrag?"is-reordering":""}`}>
       <div className="section-row"><div><h2>My auto-pick priority</h2><p>Drag the three-line handle to reorder. You can also draft directly from this list.</p></div><span className="muted-chip">{queue.length}/25</span></div>
       {queue.length===0?<p className="queue-empty">Your queue is empty. Open Available and tap + QUEUE beside players you want. If it remains empty, auto-pick uses the highest-ranked player your roster needs.</p>:queue.map((item,index)=><article data-queue-index={index} className={`${queueDrag?.index===index?"queue-drag-source":""} ${queueDrag?.target===index&&queueDrag.index!==index?(queueDrag.index<index?"queue-drop-after":"queue-drop-before"):""}`} key={item.player_id}>
-        <button className="queue-drag" disabled={queueSaving} onPointerDown={event=>beginQueueDrag(event,index)} onPointerMove={updateQueueDrag} onPointerUp={finishQueueDrag} onPointerCancel={finishQueueDrag} aria-label={`Reorder ${item.players?.full_name??"player"}`}>☰</button><span className={`position ${(item.players?.position??"").toLowerCase()}`}>{item.players?.position}</span>
+        <button className="queue-drag" disabled={queueSaving} onPointerDown={event=>beginQueueDrag(event,index)} onPointerMove={updateQueueDrag} onPointerUp={finishQueueDrag} onPointerCancel={finishQueueDrag} aria-label={`Reorder ${item.players?.full_name??"player"}`}>☰</button>{item.players?<PlayerHeadshot name={item.players.full_name} position={item.players.position} photoUrl={item.players.photo_url}/>:<span className="position">—</span>}
         <div><strong>{item.players?.full_name??`Player ${item.player_id}`}</strong><small>#{item.players?.draft_rank??"—"} · {item.players?.club}</small></div>
         <div className="queue-actions"><button className="draft-button" disabled={queueSaving||!isMyTurn} onClick={()=>pick(item.player_id)}>{isMyTurn?"DRAFT":"WAIT"}</button><button className="queue-remove" disabled={queueSaving} onClick={()=>removeFromQueue(item)} aria-label={`Remove ${item.players?.full_name??"player"}`}>×</button></div>
       </article>)}
-      {queueDrag?(()=>{const item=queue[queueDrag.index];return <article className="queue-drag-ghost" aria-hidden="true" style={{top:queueDrag.top,left:queueDrag.left,width:queueDrag.width,height:queueDrag.height}}><span className="queue-drag ghost-handle">☰</span><span className={`position ${(item.players?.position??"").toLowerCase()}`}>{item.players?.position}</span><div><strong>{item.players?.full_name??`Player ${item.player_id}`}</strong><small>Drop at position {queueDrag.target+1}</small></div><b className="queue-ghost-rank">#{queueDrag.target+1}</b></article>})():null}
+      {queueDrag?(()=>{const item=queue[queueDrag.index];return <article className="queue-drag-ghost" aria-hidden="true" style={{top:queueDrag.top,left:queueDrag.left,width:queueDrag.width,height:queueDrag.height}}><span className="queue-drag ghost-handle">☰</span>{item.players?<PlayerHeadshot name={item.players.full_name} position={item.players.position} photoUrl={item.players.photo_url} decorative/>:<span className="position">—</span>}<div><strong>{item.players?.full_name??`Player ${item.player_id}`}</strong><small>Drop at position {queueDrag.target+1}</small></div><b className="queue-ghost-rank">#{queueDrag.target+1}</b></article>})():null}
     </section>:<>
       <section className="panel roster-viewer">
         <label htmlFor="draft-roster-manager">View manager roster</label>
@@ -231,9 +232,9 @@ export function DraftRoom({leagueId}:{leagueId:string}){
         <small>{selectedManagerId===userId?"Your live draft roster":`${selectedManager?.team_name??"Manager"} · read only`}</small>
       </section>
       <section className="roster-needs" aria-label="Roster progress">{(["GK","DEF","MID","FWD"] as const).map(pos=>{const have=rosterCounts[pos];const target=rosterTargets[pos];const missing=Math.max(0,target-have);return <article key={pos} className={missing===0?"complete":""}><b>{pos}</b><strong>{have}/{target}</strong><small>{missing===0?"Complete":`${missing} needed`}</small></article>})}</section>
-      <section className="panel player-list my-picks-list">{viewedPicks.map(({pick,player})=><article key={pick.id}><b className="owned-pick-number">#{pick.pick_number}</b><span className={`position ${(player?.position??"").toLowerCase()}`}>{player?.position}</span><div><strong>{player?.full_name??`Player ${pick.player_id}`}</strong><small>{player?.club}{pick.auto_picked?" · AUTO-PICK":""}</small></div></article>)}{viewedPicks.length===0?<p className="queue-empty">{selectedManagerId===userId?"You have not drafted a player yet. Your picks will appear here as soon as they are made.":`${selectedManager?.team_name??"This manager"} has not drafted a player yet.`}</p>:null}</section>
+      <section className="panel player-list my-picks-list">{viewedPicks.map(({pick,player})=><article key={pick.id}><b className="owned-pick-number">#{pick.pick_number}</b>{player?<PlayerHeadshot name={player.full_name} position={player.position} photoUrl={player.photo_url}/>:<span className="position">—</span>}<div><strong>{player?.full_name??`Player ${pick.player_id}`}</strong><small>{player?.club}{pick.auto_picked?" · AUTO-PICK":""}</small></div></article>)}{viewedPicks.length===0?<p className="queue-empty">{selectedManagerId===userId?"You have not drafted a player yet. Your picks will appear here as soon as they are made.":`${selectedManager?.team_name??"This manager"} has not drafted any players yet.`}</p>:null}</section>
     </>}
 
-    <section className="panel"><div className="section-row"><h2>Recent picks</h2><span className="muted-chip">{picks.length}</span></div>{picks.slice(0,8).map(pick=><div className="pick-row" key={pick.id}><b>#{pick.pick_number}</b><span>{pick.players?.full_name??`Player ${pick.player_id}`}</span><small>{order.find(manager=>manager.user_id===pick.user_id)?.team_name}{pick.auto_picked?" · AUTO":""}</small></div>)}</section>
+    <section className="panel"><div className="section-row"><h2>Recent picks</h2><span className="muted-chip">{picks.length}</span></div>{picks.slice(0,8).map(pick=><div className="pick-row recent-pick-row" key={pick.id}><b>#{pick.pick_number}</b>{pick.players?<PlayerHeadshot name={pick.players.full_name} position={pick.players.position} photoUrl={pick.players.photo_url}/>:<span className="position">—</span>}<span>{pick.players?.full_name??`Player ${pick.player_id}`}</span><small>{order.find(manager=>manager.user_id===pick.user_id)?.team_name}{pick.auto_picked?" · AUTO":""}</small></div>)}</section>
   </PageShell>;
 }

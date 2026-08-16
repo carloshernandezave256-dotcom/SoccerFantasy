@@ -1,0 +1,10 @@
+.player-headshot{position:relative;display:grid;place-items:center;flex:0 0 42px;width:42px;height:42px;overflow:hidden;border:1px solid color-mix(in srgb,var(--line) 74%,white);border-radius:50%;background:var(--surface2)}
+.player-headshot img{width:100%;height:100%;object-fit:cover;object-position:center top}
+.player-headshot.player-headshot-fallback{border-radius:10px;font-size:9px}
+.player-headshot-lg{width:74px;height:74px;flex-basis:74px;border-width:2px}
+.player-profile-identity{display:flex;align-items:center;gap:14px;padding-right:38px}
+.player-profile-identity>div{min-width:0}
+.player-profile-identity h2{margin:5px 0 2px}
+.offer-player{display:flex;align-items:center;gap:7px}
+.offer-player .player-headshot{width:30px;height:30px;flex-basis:30px}
+.offer-player strong{min-width:0}

@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import "./player-headshot.css";
 import "./account.css";
 import "./milestone.css";
 import "./draft.css";
