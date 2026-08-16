@@ -47,7 +47,8 @@ export async function POST(request:NextRequest){
     }
     const teams=await apiFootball<TeamsPage>(`teams?league=${competition.id}&season=${season}`);requestsUsed++;
     if(!teams.response.length){unavailable.push(competition.name);continue}
-    const squadResponses:SquadPage[]=[];\n    for(const {team} of teams.response){squadResponses.push(await apiFootball<SquadPage>(`players/squads?team=${team.id}`));requestsUsed++}
+    const squadResponses:SquadPage[]=[];
+    for(const {team} of teams.response){squadResponses.push(await apiFootball<SquadPage>(`players/squads?team=${team.id}`));requestsUsed++}
     const selected=squadResponses.flatMap(body=>body.response.flatMap(squad=>{
       return [...squad.players].sort((a,b)=>(priorById.get(b.id)?.score??0)-(priorById.get(a.id)?.score??0)||a.name.localeCompare(b.name)).slice(0,25)
         .map(player=>({player,team:squad.team,score:priorById.get(player.id)?.score??0,prior:priorById.get(player.id)?.entry}));
