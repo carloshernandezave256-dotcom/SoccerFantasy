@@ -34,7 +34,7 @@ export async function POST(request:NextRequest){
   if(!leagues.some((league:{is_commissioner:boolean})=>league.is_commissioner))return NextResponse.json({error:"Commissioner access required."},{status:403});
 
   const season=2026,rankingSeason=2025,seasonsUsed:Record<string,number>={},unavailable:string[]=[];
-  const eligibleApiIds:number[]=[];
+  const eligiblePlayers:Array<{id:number;score:number}>=[];
   let imported=0,requestsUsed=0;
   for(const competition of competitions){
     const priorById=new Map<number,{entry:ApiEntry;score:number}>();
@@ -55,9 +55,9 @@ export async function POST(request:NextRequest){
     })).sort((a,b)=>b.score-a.score||a.player.name.localeCompare(b.player.name));
     if(!selected.length){unavailable.push(competition.name);continue}
     seasonsUsed[competition.name]=season;
-    const players=selected.map(({player,team,prior},index)=>{
+    const players=selected.map(({player,team,prior,score},index)=>{
       const officialName=prior?[prior.player.firstname,prior.player.lastname].filter(Boolean).join(" ").trim()||player.name:player.name;
-      eligibleApiIds.push(player.id);
+      eligiblePlayers.push({id:player.id,score});
       return {apiFootballId:player.id,fullName:officialName,nationality:prior?.player.nationality??null,photoUrl:player.photo??prior?.player.photo??playerHeadshot(player.id),position:player.position,club:team.name,competition:competition.name,draftRank:index+1};
     });
     for(let index=0;index<players.length;index+=500){
@@ -66,7 +66,7 @@ export async function POST(request:NextRequest){
       imported+=Number(await response.json())||0;
     }
   }
-  const uniqueEligible=[...new Set(eligibleApiIds)];
+  const uniqueEligible=[...new Map(eligiblePlayers.sort((a,b)=>b.score-a.score||a.id-b.id).map(player=>[player.id,player])).values()].map(player=>player.id);
   if(uniqueEligible.length===0)return NextResponse.json({error:"The API returned no current 2026 squad players.",season,rankingSeason,unavailable,requestsUsed},{status:502});
   const finalizeResponse=await fetch(`${supabaseUrl}/rest/v1/rpc/finalize_api_football_draft_pool`,{method:"POST",headers:adminHeaders,body:JSON.stringify({p_api_ids:uniqueEligible}),cache:"no-store"});
   if(!finalizeResponse.ok)throw new Error((await finalizeResponse.text())||"Draft pool finalization failed");
