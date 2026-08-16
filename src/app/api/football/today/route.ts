@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
+// API-Football requests stay server-side so provider credentials are never exposed.
+
 const competitions=[
   {id:39,name:"Premier League"},{id:140,name:"La Liga"},{id:135,name:"Serie A"},{id:78,name:"Bundesliga"},{id:61,name:"Ligue 1"},
 ];
