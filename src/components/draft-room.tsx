@@ -11,6 +11,7 @@ type Draft = { id:string; status:"waiting"|"live"|"paused"|"complete"; current_p
 type Pick = { id:number; pick_number:number; round:number; user_id:string; player_id:number; auto_picked:boolean; players?:{full_name:string;position:string;photo_url?:string|null}|null };
 type Manager = { draft_slot:number; user_id:string; team_name:string };
 type QueueItem = { player_id:number; priority:number; players?:Player|null };
+type Lobby = {league_size:number;manager_count:number;ready_count:number;is_commissioner:boolean;my_ready:boolean;player_pool:string;gk_count:number;def_count:number;mid_count:number;fwd_count:number;club_count:number};
 type QueueDrag = { index:number; target:number; top:number; left:number; width:number; height:number; pointerOffsetY:number };
 
 function managerAtPick(order:Manager[],pickNumber:number){
@@ -38,12 +39,15 @@ export function DraftRoom({leagueId}:{leagueId:string}){
   const[queue,setQueue]=useState<QueueItem[]>([]);
   const[queueSaving,setQueueSaving]=useState(false);
   const[queueDrag,setQueueDrag]=useState<QueueDrag|null>(null);
+  const[lobby,setLobby]=useState<Lobby|null>(null);
+  const[ready,setReady]=useState(false);
+  const[liveState,setLiveState]=useState<"connecting"|"live"|"reconnecting">("connecting");
   const queueDragRef=useRef<QueueDrag|null>(null);
   const queueListRef=useRef<HTMLElement|null>(null);
 
   const load=useCallback(async()=>{
     if(!leagueId)return;
-    const[auth,draftResult,picksResult,orderResult,playersResult,queueResult,settingsResult]=await Promise.all([
+    const[auth,draftResult,picksResult,orderResult,playersResult,queueResult,settingsResult,lobbyResult]=await Promise.all([
       supabase.auth.getUser(),
       supabase.from("drafts").select("id,status,current_pick,pick_deadline,pick_seconds").eq("league_id",leagueId).maybeSingle(),
       supabase.from("draft_picks").select("id,pick_number,round,user_id,player_id,auto_picked,players(full_name,position,photo_url)").eq("league_id",leagueId).order("pick_number",{ascending:false}),
@@ -51,6 +55,7 @@ export function DraftRoom({leagueId}:{leagueId:string}){
       supabase.from("players").select("id,full_name,position,club,competition,draft_rank,photo_url").eq("active",true).order("draft_rank",{ascending:true,nullsFirst:false}),
       supabase.from("draft_queue").select("player_id,priority,players(id,full_name,position,club,competition,draft_rank,photo_url)").eq("league_id",leagueId).order("priority"),
       supabase.rpc("league_settings",{p_league_id:leagueId}),
+      supabase.rpc("draft_lobby_status",{p_league_id:leagueId}),
     ]);
     setUserId(auth.data.user?.id??null);
     setDraft((draftResult.data as Draft|null)??null);
@@ -59,6 +64,8 @@ export function DraftRoom({leagueId}:{leagueId:string}){
     const pool=String(settingsResult.data?.[0]?.player_pool??"All Top Five");
     setPlayers(((playersResult.data??[]) as Player[]).filter(player=>pool==="All Top Five"||player.competition===pool));
     setQueue((queueResult.data??[]) as unknown as QueueItem[]);
+    const nextLobby=(lobbyResult.data?.[0] as Lobby|undefined)??null;
+    setLobby(nextLobby);setReady(Boolean(nextLobby?.my_ready));
   },[leagueId]);
 
   useEffect(()=>{
@@ -68,7 +75,7 @@ export function DraftRoom({leagueId}:{leagueId:string}){
     const channel=supabase.channel(`draft:${leagueId}`)
       .on("postgres_changes",{event:"*",schema:"public",table:"drafts",filter:`league_id=eq.${leagueId}`},()=>void load())
       .on("postgres_changes",{event:"INSERT",schema:"public",table:"draft_picks",filter:`league_id=eq.${leagueId}`},()=>void load())
-      .subscribe();
+      .subscribe(status=>setLiveState(status==="SUBSCRIBED"?"live":status==="CHANNEL_ERROR"||status==="TIMED_OUT"?"reconnecting":"connecting"));
     return()=>{clearInterval(timer);void supabase.removeChannel(channel)};
   },[leagueId,load]);
 
@@ -98,9 +105,30 @@ export function DraftRoom({leagueId}:{leagueId:string}){
 
   async function start(){
     setMessage("");
-    const{error}=await supabase.rpc("start_draft",{p_league_id:leagueId,p_pick_seconds:90});
+    if(!lobby?.is_commissioner)return;
+    const missing=(lobby.league_size??0)-(lobby.manager_count??0);
+    const unready=(lobby.manager_count??0)-(lobby.ready_count??0);
+    let force=false;
+    if(missing>0||unready>0){
+      force=window.confirm(`Start this draft now?${missing>0?` ${missing} league place${missing===1?"":"s"} will close permanently.`:""}${unready>0?` ${unready} manager${unready===1?" is":"s are"} not marked ready.`:""}`);
+      if(!force)return;
+    }
+    const{error}=await supabase.rpc("start_draft",{p_league_id:leagueId,p_pick_seconds:90,p_force_start:force});
     setMessage(error?.message??"Draft started. The first manager is on the clock.");
     await load();
+  }
+
+  async function toggleReady(){
+    const next=!ready;setReady(next);setMessage("");
+    const{error}=await supabase.rpc("set_draft_ready",{p_league_id:leagueId,p_ready:next});
+    if(error){setReady(!next);setMessage(error.message)}else setMessage(next?"You are ready to draft.":"Ready status removed.");
+    await load();
+  }
+
+  async function resume(){
+    setMessage("");
+    const{error}=await supabase.rpc("resume_paused_draft",{p_league_id:leagueId});
+    setMessage(error?.message??"Draft resumed. The current manager has a fresh clock.");await load();
   }
 
   async function saveQueue(ids:number[]){
@@ -194,10 +222,11 @@ export function DraftRoom({leagueId}:{leagueId:string}){
       <b>{String(Math.floor(seconds/60)).padStart(2,"0")}:{String(seconds%60).padStart(2,"0")}</b>
     </section>
 
-    {draft?.status==="live"?<p className="draft-help">{seconds>0?`Each pick gets ${draft.pick_seconds} seconds. At 00:00, auto-pick uses that manager’s first valid queued player, then the highest-ranked player that fits the roster.`:"Time expired — processing the automatic pick…"}</p>:null}
+    <p className="draft-help">Connection: {liveState==="live"?"Live":liveState==="reconnecting"?"Reconnecting…":"Connecting…"}</p>
+    {draft?.status==="live"?<p className="draft-help">{seconds>0?`Each pick gets ${draft.pick_seconds} seconds. At 00:00, auto-pick uses that manager’s first valid queued player, then the highest-ranked eligible player that fits the roster.`:"Time expired — automatic pick processing within a few seconds…"}</p>:null}
 
-    {!draft?<><button className="primary-button full-button" onClick={start} disabled={managerCount<3}>{managerCount>=3?"Start 18-round draft":`Waiting for ${3-managerCount} more manager${3-managerCount===1?"":"s"}`}</button><p className="form-message">{managerCount}/3 managers required to start. League capacity stays unchanged.</p></>:null}
-    {draft?.status==="paused"?<p className="draft-alert">Draft paused because the available player pool needs attention.</p>:null}
+    {!draft?<><button className="secondary-button full-button" onClick={toggleReady}>{ready?"✓ Ready — tap to undo":"I’m ready to draft"}</button>{lobby?.is_commissioner?<button className="primary-button full-button" onClick={start} disabled={managerCount<3}>{managerCount>=3?managerCount<lobby.league_size?`Start early with ${managerCount}/${lobby.league_size}`:"Start 18-round draft":`Waiting for ${3-managerCount} more manager${3-managerCount===1?"":"s"}`}</button>:<p className="draft-alert">Waiting for the commissioner to start the draft.</p>}<p className="form-message">{lobby?.ready_count??0}/{managerCount} managers ready · {managerCount}/{lobby?.league_size??managerCount} places filled.</p></>:null}
+    {draft?.status==="paused"?<><p className="draft-alert">Draft paused because no eligible player could complete the current roster. The commissioner can retry after checking the player pool.</p>{lobby?.is_commissioner?<button className="primary-button full-button" onClick={resume}>Resume draft with a fresh clock</button>:null}</>:null}
     {message?<p className="form-message">{message}</p>:null}
 
     <section className="draft-order" aria-label="Draft order">{order.map(manager=><span className={manager.user_id===onClock?.user_id&&draft?.status==="live"?"active":""} key={manager.user_id}>{manager.draft_slot}. {manager.team_name}</span>)}</section>
