@@ -5,9 +5,10 @@ import { PageShell } from "./page-shell";
 import { TeamDemo } from "./team-demo";
 import { supabase } from "@/lib/supabase";
 import { resolveActiveLeague } from "@/lib/active-league";
+import { PlayerStatsDialog } from "./player-stats-dialog";
 
 type League={league_id:string;league_name:string;team_name:string;game_format:string};
-type Player={id:number;full_name:string;position:string;club:string};
+type Player={id:number;full_name:string;position:string;club:string;competition?:string};
 type Manager={draft_slot:number;user_id:string;team_name:string};
 type LineupRow={player_id:number;is_starter:boolean;is_captain:boolean;bench_order:number|null;pitch_order:number|null};
 
@@ -50,12 +51,13 @@ export function TeamManager(){
   const[editing,setEditing]=useState(false);
   const[message,setMessage]=useState("");
   const[loading,setLoading]=useState(true);
+  const[infoPlayer,setInfoPlayer]=useState<Player|null>(null);
 
   const loadRoster=useCallback(async(id:string,ownerId:string)=>{
     setLoading(true);setMessage("");
     const[{data:draftPicks},{data:packCards},{data:lineup}]=await Promise.all([
-      supabase.from("draft_picks").select("player_id,players(id,full_name,position,club)").eq("league_id",id).eq("user_id",ownerId),
-      supabase.from("pack_cards").select("player_id,players(id,full_name,position,club)").eq("league_id",id).eq("user_id",ownerId).not("active_slot","is",null),
+      supabase.from("draft_picks").select("player_id,players(id,full_name,position,club,competition)").eq("league_id",id).eq("user_id",ownerId),
+      supabase.from("pack_cards").select("player_id,players(id,full_name,position,club,competition)").eq("league_id",id).eq("user_id",ownerId).not("active_slot","is",null),
       supabase.from("lineup_players").select("player_id,is_starter,is_captain,bench_order,pitch_order").eq("league_id",id).eq("user_id",ownerId),
     ]);
     const saved=(lineup??[]) as LineupRow[];
@@ -143,13 +145,14 @@ export function TeamManager(){
 
     {loading?<section className="panel empty-state">Loading squad…</section>:roster.length===0?(isMine?<TeamDemo/>:<section className="panel empty-state"><strong>{viewedManager?.team_name} has no players yet.</strong><p>Their drafted squad will appear here as picks are made.</p></section>):<>
       <section className="formation-card"><div><small>{isMine?"STARTING XI":viewedManager?.team_name?.toUpperCase()}</small><strong>{starters.size===11?`${counts.DEF??0}-${counts.MID??0}-${counts.FWD??0}`:`${starters.size}/11`}</strong></div><div className="formation-counts"><span>GK {counts.GK??0}</span><span>DEF {counts.DEF??0}</span><span>MID {counts.MID??0}</span><span>FWD {counts.FWD??0}</span></div></section>
-      {isMine&&editing?<><div className="team-controls"><button className={captainMode?"active":""} onClick={()=>{setCaptainMode(active=>!active);setSelectedBench(null);setMessage("Captain mode: tap one of your starters on the pitch.")}}>© Set captain</button><span className={valid?"valid":"invalid"}>{valid?"✓ Ready to save":"! Choose a captain"}</span></div><p className="team-instruction">{message||"Press and drag a starter within their position row, or tap a bench player to substitute."}</p><SavedTeamPitch roster={roster} starters={starters} starterOrder={starterOrder} captain={captain} editing captainMode={captainMode} selectedBench={selectedBench} onStarter={tapStarter} onReorder={reorderStarter} onBench={id=>{setCaptainMode(false);setSelectedBench(id);setMessage(`${roster.find(player=>player.id===id)?.full_name} selected. Now tap a starter on the pitch.`)}}/><button className="primary-button full-button" disabled={!valid} onClick={save}>Save lineup</button></>:<><SavedTeamPitch roster={roster} starters={starters} starterOrder={starterOrder} captain={captain}/>{isMine?<button className="primary-button full-button edit-lineup-button" onClick={()=>{setEditing(true);setSelectedBench(null);setMessage("Press and drag a starter within their position row, or tap a bench player to substitute.")}}>Edit lineup</button>:<div className="view-only-banner">Viewing {viewedManager?.team_name} · Read only</div>}</>}
+      {isMine&&editing?<><div className="team-controls"><button className={captainMode?"active":""} onClick={()=>{setCaptainMode(active=>!active);setSelectedBench(null);setMessage("Captain mode: tap one of your starters on the pitch.")}}>© Set captain</button><span className={valid?"valid":"invalid"}>{valid?"✓ Ready to save":"! Choose a captain"}</span></div><p className="team-instruction">{message||"Tap for player info, or press and drag a starter within their position row."}</p><SavedTeamPitch roster={roster} starters={starters} starterOrder={starterOrder} captain={captain} editing captainMode={captainMode} selectedBench={selectedBench} onInfo={id=>setInfoPlayer(roster.find(player=>player.id===id)??null)} onStarter={tapStarter} onReorder={reorderStarter} onBench={id=>{setCaptainMode(false);setSelectedBench(id);setMessage(`${roster.find(player=>player.id===id)?.full_name} selected. Now tap a starter on the pitch.`)}}/><button className="primary-button full-button" disabled={!valid} onClick={save}>Save lineup</button></>:<><SavedTeamPitch roster={roster} starters={starters} starterOrder={starterOrder} captain={captain} onInfo={id=>setInfoPlayer(roster.find(player=>player.id===id)??null)} onBench={id=>setInfoPlayer(roster.find(player=>player.id===id)??null)}/>{isMine?<button className="primary-button full-button edit-lineup-button" onClick={()=>{setEditing(true);setSelectedBench(null);setMessage("Tap for player info, or press and drag a starter within their position row.")}}>Edit lineup</button>:<div className="view-only-banner">Viewing {viewedManager?.team_name} · Read only</div>}</>}
     </>}
     {message&&isMine?<p className="form-message">{message}</p>:null}
+    {infoPlayer?<PlayerStatsDialog leagueId={league} player={infoPlayer} onClose={()=>setInfoPlayer(null)}/>:null}
   </PageShell>;
 }
 
-function SavedTeamPitch({roster,starters,starterOrder,captain,editing=false,captainMode=false,selectedBench=null,onStarter,onBench,onReorder}:{roster:Player[];starters:Set<number>;starterOrder:number[];captain:number|null;editing?:boolean;captainMode?:boolean;selectedBench?:number|null;onStarter?:(id:number)=>void;onBench?:(id:number)=>void;onReorder?:(id:number,targetId:number)=>void}){
+function SavedTeamPitch({roster,starters,starterOrder,captain,editing=false,captainMode=false,selectedBench=null,onStarter,onBench,onReorder,onInfo}:{roster:Player[];starters:Set<number>;starterOrder:number[];captain:number|null;editing?:boolean;captainMode?:boolean;selectedBench?:number|null;onStarter?:(id:number)=>void;onBench?:(id:number)=>void;onReorder?:(id:number,targetId:number)=>void;onInfo?:(id:number)=>void}){
   const[pitchDrag,setPitchDrag]=useState<{id:number;targetId:number;position:string;top:number;left:number;width:number;height:number;offsetX:number;offsetY:number;moved:boolean}|null>(null);
   const pitchDragRef=useRef<typeof pitchDrag>(null);
   const selected=[...starterOrder.filter(id=>starters.has(id)),...[...starters].filter(id=>!starterOrder.includes(id))].flatMap(id=>{const player=roster.find(item=>item.id===id);return player?[player]:[]});
@@ -157,7 +160,8 @@ function SavedTeamPitch({roster,starters,starterOrder,captain,editing=false,capt
   const bench=roster.filter(player=>!starters.has(player.id)).sort((a,b)=>(positionRank[a.position]??9)-(positionRank[b.position]??9)||a.full_name.localeCompare(b.full_name));
   const groups={FWD:selected.filter(player=>player.position==="FWD"),MID:selected.filter(player=>player.position==="MID"),DEF:selected.filter(player=>player.position==="DEF"),GK:selected.filter(player=>player.position==="GK")};
   function beginPitchDrag(event:React.PointerEvent<HTMLButtonElement>,player:Player){
-    if(!editing||captainMode)return;
+    if(!editing){onInfo?.(player.id);return}
+    if(captainMode)return;
     const slot=event.currentTarget.closest<HTMLElement>(".pitch-player-slot");if(!slot)return;
     const rect=slot.getBoundingClientRect();event.currentTarget.setPointerCapture(event.pointerId);
     const drag={id:player.id,targetId:player.id,position:player.position,top:rect.top,left:rect.left,width:rect.width,height:rect.height,offsetX:event.clientX-rect.left,offsetY:event.clientY-rect.top,moved:false};
@@ -175,7 +179,7 @@ function SavedTeamPitch({roster,starters,starterOrder,captain,editing=false,capt
     const active=pitchDragRef.current;if(!active)return;
     if(event.currentTarget.hasPointerCapture(event.pointerId))event.currentTarget.releasePointerCapture(event.pointerId);
     pitchDragRef.current=null;setPitchDrag(null);
-    if(active.moved&&active.targetId!==active.id)onReorder?.(active.id,active.targetId);else if(!active.moved)onStarter?.(active.id);
+    if(active.moved&&active.targetId!==active.id)onReorder?.(active.id,active.targetId);else if(!active.moved){if(captainMode||selectedBench!==null)onStarter?.(active.id);else onInfo?.(active.id)}
   }
   const draggedPlayer=pitchDrag?roster.find(player=>player.id===pitchDrag.id):null;
   return <><section className={`mini-pitch saved-team-pitch ${captainMode?"captain-mode":""} ${pitchDrag?.moved?"is-reordering":""}`} aria-label="Starting eleven mini pitch"><div className="pitch-box top-box"/><div className="center-line"/><div className="center-circle"/><div className="pitch-box bottom-box"/>{(["FWD","MID","DEF","GK"] as const).map(position=><div className={`pitch-row row-${position.toLowerCase()}`} key={position}>{groups[position].map(player=><div className={`pitch-player-slot ${pitchDrag?.moved&&pitchDrag.id===player.id?"pitch-drag-source":""} ${pitchDrag?.moved&&pitchDrag.targetId===player.id&&pitchDrag.id!==player.id?"pitch-drop-target":""}`} data-position={player.position} data-player-id={player.id} key={player.id}><button type="button" className="saved-pitch-player" onPointerDown={event=>beginPitchDrag(event,player)} onPointerMove={updatePitchDrag} onPointerUp={finishPitchDrag} onPointerCancel={finishPitchDrag} onClick={event=>{event.preventDefault();if(captainMode)onStarter?.(player.id)}} aria-disabled={!editing}><span className={`shirt shirt-${player.position.toLowerCase()} ${player.full_name==="Virgil van Dijk"||player.full_name==="Erling Haaland"?"mini-card-shirt":""}`}>{player.full_name==="Virgil van Dijk"?<img src="https://raw.githubusercontent.com/carloshernandezave256-dotcom/SoccerFantasy/main/public/cards/van-dijk-captain.webp" alt=""/>:player.full_name==="Erling Haaland"?<img src="https://raw.githubusercontent.com/carloshernandezave256-dotcom/SoccerFantasy/main/public/cards/haaland-superstar.webp" alt=""/>:null}{captain===player.id?<b>C</b>:null}</span><strong>{player.full_name}</strong><small>{player.club}</small></button></div>)}</div>)}</section>{pitchDrag?.moved&&draggedPlayer?<div className="pitch-drag-ghost" aria-hidden="true" style={{top:pitchDrag.top,left:pitchDrag.left,width:pitchDrag.width,height:pitchDrag.height}}><span className={`shirt shirt-${draggedPlayer.position.toLowerCase()} ${draggedPlayer.full_name==="Virgil van Dijk"||draggedPlayer.full_name==="Erling Haaland"?"mini-card-shirt":""}`}>{draggedPlayer.full_name==="Virgil van Dijk"?<img src="https://raw.githubusercontent.com/carloshernandezave256-dotcom/SoccerFantasy/main/public/cards/van-dijk-captain.webp" alt=""/>:draggedPlayer.full_name==="Erling Haaland"?<img src="https://raw.githubusercontent.com/carloshernandezave256-dotcom/SoccerFantasy/main/public/cards/haaland-superstar.webp" alt=""/>:null}</span><strong>{draggedPlayer.full_name}</strong><small>{draggedPlayer.position} row</small></div>:null}<section className="panel demo-bench saved-team-bench"><div className="section-row"><div><h2>Bench</h2><small>{editing?"Select one, then replace a starter above":"Your substitutes"}</small></div><span className="muted-chip">{bench.length}/7</span></div><div className="bench-scroll">{bench.map((player,index)=><button type="button" className={`saved-bench-player ${selectedBench===player.id?"selected":""}`} key={player.id} onClick={()=>onBench?.(player.id)} aria-disabled={!editing}><span>{index+1}</span><i className={`position ${player.position.toLowerCase()}`}>{player.position}</i><strong>{player.full_name}</strong><small>{player.club}</small></button>)}</div></section></>;
