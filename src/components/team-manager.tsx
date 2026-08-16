@@ -57,6 +57,7 @@ export function TeamManager(){
   const[infoPlayer,setInfoPlayer]=useState<Player|null>(null);
   const[draftComplete,setDraftComplete]=useState(false);
   const suppressRefreshUntil=useRef(0);
+  const dirtyRef=useRef(false);
 
   const loadRoster=useCallback(async(id:string,ownerId:string)=>{
     setLoading(true);setMessage("");setRoster([]);setStarters(new Set());setStarterOrder([]);setCaptain(null);setInfoPlayer(null);setUndoOrder(null);
@@ -118,17 +119,19 @@ export function TeamManager(){
       else setLoading(false);
   },[loadRoster]);
 
+  useEffect(()=>{dirtyRef.current=dirty},[dirty]);
+
   useEffect(()=>{
     void loadActiveLeague();
-    const refresh=()=>{if(!dirty&&Date.now()>=suppressRefreshUntil.current)void loadActiveLeague()};
+    const refresh=()=>{if(!dirtyRef.current&&Date.now()>=suppressRefreshUntil.current)void loadActiveLeague()};
     window.addEventListener("pageshow",refresh);
     window.addEventListener("popstate",refresh);
     return()=>{window.removeEventListener("pageshow",refresh);window.removeEventListener("popstate",refresh)};
-  },[loadActiveLeague,dirty]);
+  },[loadActiveLeague]);
 
   useEffect(()=>{
     if(!league||!viewedUser)return;
-    const refresh=()=>{if(!dirty&&Date.now()>=suppressRefreshUntil.current)void loadRoster(league,viewedUser)};
+    const refresh=()=>{if(!dirtyRef.current&&Date.now()>=suppressRefreshUntil.current)void loadRoster(league,viewedUser)};
     const channel=supabase.channel(`my-team-${league}-${viewedUser}`)
       .on("postgres_changes",{event:"*",schema:"public",table:"lineup_players",filter:`league_id=eq.${league}`},refresh)
       .on("postgres_changes",{event:"*",schema:"public",table:"draft_picks",filter:`league_id=eq.${league}`},refresh)
@@ -137,7 +140,7 @@ export function TeamManager(){
     const visible=()=>{if(document.visibilityState==="visible")refresh()};
     document.addEventListener("visibilitychange",visible);
     return()=>{document.removeEventListener("visibilitychange",visible);void supabase.removeChannel(channel)};
-  },[dirty,league,loadRoster,viewedUser]);
+  },[league,loadRoster,viewedUser]);
 
   useEffect(()=>{const warn=(event:BeforeUnloadEvent)=>{if(dirty){event.preventDefault();event.returnValue=""}};window.addEventListener("beforeunload",warn);return()=>window.removeEventListener("beforeunload",warn)},[dirty]);
 
