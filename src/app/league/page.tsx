@@ -36,8 +36,17 @@ type TransactionWindow = {
   roster_lock_at: string;
   phase: string;
 };
+type LeagueSnapshot = {
+  leagues: League[];
+  activeId: string;
+  managers: Manager[];
+  draft: Draft;
+  settings: Settings | null;
+  transactionWindow: TransactionWindow | null;
+};
 
 type GameFormat = "draft" | "pack" | "auction";
+const LEAGUE_SNAPSHOT_KEY = "xi-fantasy-league-snapshot";
 
 const GAME_FORMATS: Array<{
   id: GameFormat;
@@ -137,6 +146,15 @@ export default function LeaguePage() {
   const selectedFormat =
     GAME_FORMATS.find((format) => format.id === gameFormat) ?? GAME_FORMATS[0];
 
+  function applySnapshot(snapshot: LeagueSnapshot) {
+    setLeagues(snapshot.leagues);
+    setActiveId(snapshot.activeId);
+    setManagers(snapshot.managers);
+    setDraft(snapshot.draft);
+    setSettings(snapshot.settings);
+    setTransactionWindow(snapshot.transactionWindow);
+  }
+
   async function loadDetails(id: string) {
     const [orderResult, draftResult, settingsResult, windowResult] =
       await Promise.all([
@@ -149,18 +167,59 @@ export default function LeaguePage() {
         supabase.rpc("league_settings", { p_league_id: id }),
         supabase.rpc("transaction_window", { p_league_id: id }),
       ]);
+    const nextManagers = orderResult.error
+      ? []
+      : ((orderResult.data ?? []) as Manager[]);
+    const nextDraft = (draftResult.data as Draft) ?? null;
+    const nextSettings = settingsResult.error
+      ? null
+      : (((settingsResult.data ?? [])[0] as Settings) ?? null);
+    const nextWindow = windowResult.error
+      ? null
+      : (((windowResult.data ?? [])[0] as TransactionWindow) ?? null);
     if (orderResult.error) setMessage(orderResult.error.message);
-    else setManagers((orderResult.data ?? []) as Manager[]);
-    setDraft((draftResult.data as Draft) ?? null);
     if (settingsResult.error) setMessage(settingsResult.error.message);
-    else setSettings(((settingsResult.data ?? [])[0] as Settings) ?? null);
-    if (!windowResult.error)
-      setTransactionWindow(
-        ((windowResult.data ?? [])[0] as TransactionWindow) ?? null,
-      );
+    setManagers(nextManagers);
+    setDraft(nextDraft);
+    setSettings(nextSettings);
+    setTransactionWindow(nextWindow);
+    return {
+      managers: nextManagers,
+      draft: nextDraft,
+      settings: nextSettings,
+      transactionWindow: nextWindow,
+    };
   }
 
   async function load(preferred?: string) {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    const cachedUserId = session?.user.id;
+    if (cachedUserId) {
+      try {
+        const cached = window.sessionStorage.getItem(
+          `${LEAGUE_SNAPSHOT_KEY}:${cachedUserId}`,
+        );
+        if (cached) {
+          const snapshot = JSON.parse(cached) as LeagueSnapshot;
+          const cachedActive = preferred
+            ? snapshot.leagues.find((league) => league.league_id === preferred)
+            : snapshot.leagues.find(
+                (league) => league.league_id === snapshot.activeId,
+              );
+          if (cachedActive) {
+            applySnapshot({ ...snapshot, activeId: cachedActive.league_id });
+            setSignedIn(true);
+            setInitialLoading(false);
+          }
+        }
+      } catch {
+        window.sessionStorage.removeItem(
+          `${LEAGUE_SNAPSHOT_KEY}:${cachedUserId}`,
+        );
+      }
+    }
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -178,18 +237,29 @@ export default function LeaguePage() {
     const list = (data ?? []) as League[];
     const selected = resolveActiveLeague(list, preferred);
     const id = selected?.league_id ?? "";
-    setLeagues(
+    const sorted =
       id
         ? [...list].sort(
             (a, b) => Number(b.league_id === id) - Number(a.league_id === id),
           )
-        : list,
-    );
+        : list;
+    setLeagues(sorted);
     setActiveId(id);
-    if (id) await loadDetails(id);
-    else {
+    if (id) {
+      const details = await loadDetails(id);
+      const snapshot: LeagueSnapshot = {
+        leagues: sorted,
+        activeId: id,
+        ...details,
+      };
+      window.sessionStorage.setItem(
+        `${LEAGUE_SNAPSHOT_KEY}:${user.id}`,
+        JSON.stringify(snapshot),
+      );
+    } else {
       setManagers([]);
       setDraft(null);
+      window.sessionStorage.removeItem(`${LEAGUE_SNAPSHOT_KEY}:${user.id}`);
     }
     setInitialLoading(false);
   }
@@ -373,12 +443,7 @@ export default function LeaguePage() {
             : "Your leagues"
       }
     >
-      {initialLoading ? (
-        <section className="panel empty-state" aria-busy="true">
-          <strong>Loading your league…</strong>
-          <p>Getting the standings and settings for your selected league.</p>
-        </section>
-      ) : signedIn === false ? (
+      {initialLoading ? null : signedIn === false ? (
         <section className="panel empty-state">
           <strong>Log in to create or join a league.</strong>
           <p>
