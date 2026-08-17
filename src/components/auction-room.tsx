@@ -309,10 +309,16 @@ export function AuctionRoom({ leagueId }: { leagueId: string }) {
             eligible player, while the server reserves enough money to complete
             all 18 roster spots.
           </p>
+          {league.is_commissioner && managers.length === 1 ? (
+            <p className="auction-rule">
+              Beta test mode: you can start alone to preview the complete live
+              auction flow.
+            </p>
+          ) : null}
           {league.is_commissioner ? (
             <button
               className="primary-button full-button"
-              disabled={busy || managers.length < 3}
+              disabled={busy}
               onClick={() =>
                 void act(
                   "start_auction",
@@ -321,9 +327,7 @@ export function AuctionRoom({ leagueId }: { leagueId: string }) {
                 )
               }
             >
-              {managers.length < 3
-                ? `Waiting for ${3 - managers.length} more manager${3 - managers.length === 1 ? "" : "s"}`
-                : "Randomize order and start"}
+              {busy ? "Starting auction…" : "Randomize order and start"}
             </button>
           ) : null}
         </section>
