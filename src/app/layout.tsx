@@ -14,6 +14,7 @@ import "./team-demo.css";
 import "./home.css";
 import "./waivers.css";
 import "./packs.css";
+import "./auction.css";
 import "./polish.css";
 
 export const metadata: Metadata = {
@@ -27,7 +28,9 @@ export const viewport: Viewport = {
   themeColor: "#08110d",
 };
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+export default function RootLayout({
+  children,
+}: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
       <body>{children}</body>

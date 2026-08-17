@@ -298,7 +298,7 @@ export function HomeDashboard() {
     );
     setWindowState(transactionWindow);
     setStandings((s.data ?? []) as Standing[]);
-      setPlayerPulse(pulse);
+    setPlayerPulse(pulse);
     setHeadlineFixtures((fixtureResult.data ?? []) as RealFixture[]);
     setMatchup(
       matches.find(
@@ -403,15 +403,42 @@ export function HomeDashboard() {
     if (!league) return null;
     if (draft?.status === "live")
       return {
-        eyebrow: isMyTurn ? "YOUR TURN" : "LIVE DRAFT",
-        title: isMyTurn
-          ? "You’re on the clock."
-          : `${current?.team_name ?? "A manager"} is picking.`,
-        copy: isMyTurn
-          ? "Your queue is ready. Make the next selection before time expires."
-          : `Pick ${draft.current_pick} of ${totalPicks} is underway.`,
-        href: `/draft?league=${league.league_id}`,
-        label: isMyTurn ? "Make my pick" : "Enter draft room",
+        eyebrow:
+          league.game_format === "auction"
+            ? "LIVE AUCTION"
+            : isMyTurn
+              ? "YOUR TURN"
+              : "LIVE DRAFT",
+        title:
+          league.game_format === "auction"
+            ? "The bidding room is open."
+            : isMyTurn
+              ? "You’re on the clock."
+              : `${current?.team_name ?? "A manager"} is picking.`,
+        copy:
+          league.game_format === "auction"
+            ? "Track the current player, every manager’s budget and the live leading bid."
+            : isMyTurn
+              ? "Your queue is ready. Make the next selection before time expires."
+              : `Pick ${draft.current_pick} of ${totalPicks} is underway.`,
+        href:
+          league.game_format === "auction"
+            ? `/auction?league=${league.league_id}`
+            : `/draft?league=${league.league_id}`,
+        label:
+          league.game_format === "auction"
+            ? "Enter auction room"
+            : isMyTurn
+              ? "Make my pick"
+              : "Enter draft room",
+      };
+    if (league.game_format === "auction" && !draft)
+      return {
+        eyebrow: "AUCTION LOBBY",
+        title: "The $2B auction is waiting.",
+        copy: "Join the room before the commissioner randomizes the nomination order and starts live bidding.",
+        href: `/auction?league=${league.league_id}`,
+        label: "Open auction lobby",
       };
     if (league.game_format === "pack" && rosterCount === 0)
       return {
