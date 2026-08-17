@@ -128,6 +128,7 @@ export default function LeaguePage() {
   const [code, setCode] = useState("");
   const [message, setMessage] = useState("");
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const active =
     leagues.find((league) => league.league_id === activeId) ??
@@ -164,10 +165,14 @@ export default function LeaguePage() {
       data: { user },
     } = await supabase.auth.getUser();
     setSignedIn(Boolean(user));
-    if (!user) return;
+    if (!user) {
+      setInitialLoading(false);
+      return;
+    }
     const { data, error } = await supabase.rpc("my_leagues");
     if (error) {
       setMessage(error.message);
+      setInitialLoading(false);
       return;
     }
     const list = (data ?? []) as League[];
@@ -186,6 +191,7 @@ export default function LeaguePage() {
       setManagers([]);
       setDraft(null);
     }
+    setInitialLoading(false);
   }
 
   useEffect(() => {
@@ -359,9 +365,20 @@ export default function LeaguePage() {
   return (
     <PageShell
       eyebrow="PRIVATE COMPETITION"
-      title={active && !showMembership ? active.league_name : "Your leagues"}
+      title={
+        initialLoading
+          ? "League"
+          : active && !showMembership
+            ? active.league_name
+            : "Your leagues"
+      }
     >
-      {signedIn === false ? (
+      {initialLoading ? (
+        <section className="panel empty-state" aria-busy="true">
+          <strong>Loading your league…</strong>
+          <p>Getting the standings and settings for your selected league.</p>
+        </section>
+      ) : signedIn === false ? (
         <section className="panel empty-state">
           <strong>Log in to create or join a league.</strong>
           <p>
