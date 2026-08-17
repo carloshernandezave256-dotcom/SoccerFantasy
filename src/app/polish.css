@@ -1,18 +1,20 @@
 /* Final visual system: shared colors, touch targets, spacing and responsive safety. */
 :root,
 [data-theme="dark"] {
-  --bg: #07120c;
-  --surface: #0f2117;
-  --surface2: #172c20;
-  --surface3: #20382a;
-  --line: #31483a;
-  --line-strong: #45624f;
-  --text: #f5f7ef;
-  --muted: #a6b4aa;
+  --bg: #08110d;
+  --surface: #151b18;
+  --surface2: #1c2520;
+  --surface3: #27322c;
+  --line: #3b4840;
+  --line-strong: #58665d;
+  --text: #f5f0e4;
+  --muted: #aaa99f;
   --lime: #c8ff4f;
   --lime-soft: #9fcf3f;
-  --red: #ff8078;
-  --warning: #ffd071;
+  --gold: #d7b86a;
+  --gold-soft: #a98842;
+  --red: #ef8175;
+  --warning: #d7b86a;
   --button-text: #12200c;
   --shadow: 0 16px 42px rgba(0, 0, 0, .28);
 }
@@ -28,6 +30,8 @@
   --muted: #637269;
   --lime: #527700;
   --lime-soft: #6f920f;
+  --gold: #886719;
+  --gold-soft: #a27e27;
   --red: #b52d27;
   --warning: #895f00;
   --button-text: #ffffff;
@@ -46,6 +50,8 @@
     --muted: #637269;
     --lime: #527700;
     --lime-soft: #6f920f;
+    --gold: #886719;
+    --gold-soft: #a27e27;
     --red: #b52d27;
     --warning: #895f00;
     --button-text: #ffffff;
@@ -69,11 +75,48 @@ body {
   min-height: 100dvh;
   overflow-x: hidden;
   background:
-    radial-gradient(circle at 50% -8%, rgba(55, 112, 72, .42), transparent 34rem),
+    radial-gradient(circle at 50% -8%, rgba(87, 104, 72, .34), transparent 34rem),
     var(--bg);
   font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   line-height: 1.45;
   text-rendering: optimizeLegibility;
+}
+
+/* Dark mode keeps green for live/action states and uses warm gold for hierarchy. */
+[data-theme="dark"] .match-card,
+[data-theme="dark"] .panel {
+  background: linear-gradient(145deg, color-mix(in srgb, var(--surface2) 94%, var(--gold) 6%), var(--surface));
+}
+
+[data-theme="dark"] .eyebrow,
+[data-theme="dark"] .score-total,
+[data-theme="dark"] .standing-row b,
+[data-theme="dark"] .pack-squad > .section-row > strong {
+  color: var(--gold);
+}
+
+[data-theme="dark"] .muted-chip,
+[data-theme="dark"] .simulation-chip {
+  color: var(--gold);
+  background: color-mix(in srgb, var(--gold) 10%, var(--surface2));
+}
+
+[data-theme="dark"] .secondary-button,
+[data-theme="dark"] .invite-button {
+  color: var(--gold);
+  border-color: color-mix(in srgb, var(--gold) 52%, var(--line));
+}
+
+[data-theme="dark"] .captain-badge {
+  color: #241b09;
+  background: linear-gradient(135deg, #eed487, var(--gold));
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--gold) 18%, transparent);
+}
+
+[data-theme="dark"] .account-trigger,
+[data-theme="dark"] .appearance-options button.active,
+[data-theme="dark"] .active-league-field {
+  border-color: color-mix(in srgb, var(--gold) 55%, var(--line));
 }
 
 button,
