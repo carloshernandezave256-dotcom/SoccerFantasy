@@ -4,6 +4,131 @@
 .auction-style-choice > button:nth-child(2):last-child {
   grid-column: auto;
 }
+.league-format-step {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.league-format-heading {
+  padding: 10px 4px 0;
+}
+.league-format-heading h2 {
+  margin: 5px 0 8px;
+  font-size: 27px;
+  line-height: 1.08;
+}
+.league-format-heading > p:last-child {
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.55;
+}
+.league-format-gallery {
+  display: grid;
+  gap: 10px;
+}
+.league-format-poster {
+  position: relative;
+  min-height: 154px;
+  overflow: hidden;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  background: var(--surface);
+  color: #fff;
+  text-align: left;
+  transition: border-color 160ms ease, transform 160ms ease;
+}
+.league-format-poster::after {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(3, 14, 10, 0.94), rgba(3, 14, 10, 0.28));
+  content: "";
+}
+.league-format-draft {
+  background: radial-gradient(circle at 86% 22%, #3f9460, #102d22 68%);
+}
+.league-format-pack {
+  background: radial-gradient(circle at 86% 22%, #4953a9, #151932 68%);
+}
+.league-format-auction {
+  background: radial-gradient(circle at 86% 22%, #9b7024, #2c210f 68%);
+}
+.league-format-poster > * {
+  position: relative;
+  z-index: 1;
+  display: block;
+}
+.league-format-poster.active {
+  border-color: var(--gold);
+  box-shadow: inset 0 0 0 2px var(--gold), 0 12px 30px rgba(0, 0, 0, 0.18);
+  transform: translateY(-2px);
+}
+.league-format-icon {
+  position: absolute;
+  top: 18px;
+  right: 20px;
+  color: var(--gold);
+  font-size: 35px;
+}
+.league-format-poster small {
+  margin-bottom: 25px;
+  color: var(--gold);
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+.league-format-poster strong {
+  margin-bottom: 7px;
+  font-size: 24px;
+}
+.league-format-poster > span:last-child {
+  max-width: 78%;
+  color: rgba(255, 255, 255, 0.76);
+  font-size: 10px;
+  line-height: 1.45;
+}
+.league-format-explainer {
+  padding: 20px;
+  border: 1px solid color-mix(in srgb, var(--gold) 55%, var(--line));
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--gold) 7%, var(--surface));
+}
+.league-format-explainer h3 {
+  margin: 7px 0 15px;
+  font-size: 16px;
+  line-height: 1.35;
+}
+.league-format-explainer div {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.league-format-explainer span {
+  color: var(--muted);
+  font-size: 10px;
+}
+.creation-format-back {
+  margin-bottom: 12px;
+}
+.creation-selected-format {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 18px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: var(--surface2);
+}
+.creation-selected-format span {
+  color: var(--gold);
+  font-size: 22px;
+}
+.creation-selected-format strong {
+  font-size: 12px;
+}
 .auction-lobby p,
 .auction-nomination p,
 .auction-reveal p {

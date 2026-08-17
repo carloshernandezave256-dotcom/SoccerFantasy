@@ -37,6 +37,57 @@ type TransactionWindow = {
   phase: string;
 };
 
+type GameFormat = "draft" | "pack" | "auction";
+
+const GAME_FORMATS: Array<{
+  id: GameFormat;
+  icon: string;
+  title: string;
+  kicker: string;
+  description: string;
+  details: string[];
+}> = [
+  {
+    id: "draft",
+    icon: "⇄",
+    title: "Draft League",
+    kicker: "Classic fantasy",
+    description:
+      "Managers take turns building exclusive squads in a live snake draft.",
+    details: [
+      "Only one manager can own each player",
+      "Randomized order reverses every round",
+      "Best for a competitive, traditional draft night",
+    ],
+  },
+  {
+    id: "pack",
+    icon: "▣",
+    title: "Pack League",
+    kicker: "Collect and trade",
+    description:
+      "Open packs, build a card collection and trade in a shared league economy.",
+    details: [
+      "Different managers can own the same player",
+      "Starter packs, pack tokens and a 50-card limit",
+      "Includes trading and the league auction house",
+    ],
+  },
+  {
+    id: "auction",
+    icon: "◉",
+    title: "Auction League",
+    kicker: "Live open bidding",
+    description:
+      "Every manager receives a $2B budget and can bid live for exclusive players.",
+    details: [
+      "Every manager can bid on every player",
+      "Highest bid wins one exclusive copy",
+      "Choose nominations or mystery reveals in settings",
+    ],
+  },
+];
+
 function withTimeout<T>(
   request: PromiseLike<T>,
   milliseconds = 12000,
@@ -64,9 +115,10 @@ export default function LeaguePage() {
     useState<TransactionWindow | null>(null);
   const [showMembership, setShowMembership] = useState(false);
   const [tab, setTab] = useState<"create" | "join">("create");
-  const [gameFormat, setGameFormat] = useState<"draft" | "pack" | "auction">(
-    "draft",
+  const [creationStep, setCreationStep] = useState<"format" | "settings">(
+    "format",
   );
+  const [gameFormat, setGameFormat] = useState<GameFormat>("draft");
   const [auctionStyle, setAuctionStyle] = useState<"nomination" | "mystery">(
     "nomination",
   );
@@ -81,6 +133,8 @@ export default function LeaguePage() {
     leagues.find((league) => league.league_id === activeId) ??
     leagues[0] ??
     null;
+  const selectedFormat =
+    GAME_FORMATS.find((format) => format.id === gameFormat) ?? GAME_FORMATS[0];
 
   async function loadDetails(id: string) {
     const [orderResult, draftResult, settingsResult, windowResult] =
@@ -147,6 +201,8 @@ export default function LeaguePage() {
   }, []);
 
   function openMembership() {
+    setTab("create");
+    setCreationStep("format");
     setShowMembership(true);
     setMessage("");
     window.requestAnimationFrame(() =>
@@ -808,19 +864,98 @@ export default function LeaguePage() {
           <section className="segmented">
             <button
               className={tab === "create" ? "active" : ""}
-              onClick={() => setTab("create")}
+              onClick={() => {
+                setTab("create");
+                setCreationStep("format");
+                setMessage("");
+              }}
             >
               Create
             </button>
             <button
               className={tab === "join" ? "active" : ""}
-              onClick={() => setTab("join")}
+              onClick={() => {
+                setTab("join");
+                setMessage("");
+              }}
             >
               Join
             </button>
           </section>
-          {tab === "create" ? (
+          {tab === "create" && creationStep === "format" ? (
+            <section
+              className="league-format-step"
+              aria-labelledby="format-title"
+            >
+              <div className="league-format-heading">
+                <p className="eyebrow">CHOOSE YOUR GAME</p>
+                <h2 id="format-title">Three ways to build a champion</h2>
+                <p>
+                  Pick a format to see how it works. You will choose the league
+                  rules on the next screen.
+                </p>
+              </div>
+              <div className="league-format-gallery">
+                {GAME_FORMATS.map((format) => (
+                  <button
+                    key={format.id}
+                    type="button"
+                    className={`league-format-poster league-format-${format.id}${
+                      gameFormat === format.id ? " active" : ""
+                    }`}
+                    aria-pressed={gameFormat === format.id}
+                    onClick={() => setGameFormat(format.id)}
+                  >
+                    <span className="league-format-icon" aria-hidden="true">
+                      {format.icon}
+                    </span>
+                    <small>{format.kicker}</small>
+                    <strong>{format.title}</strong>
+                    <span>{format.description}</span>
+                  </button>
+                ))}
+              </div>
+              <div className="league-format-explainer">
+                <p className="eyebrow">{selectedFormat.title.toUpperCase()}</p>
+                <h3>{selectedFormat.description}</h3>
+                <div>
+                  {selectedFormat.details.map((detail) => (
+                    <span key={detail}>✓ {detail}</span>
+                  ))}
+                </div>
+              </div>
+              <button
+                type="button"
+                className="primary-button"
+                onClick={() => {
+                  setCreationStep("settings");
+                  window.requestAnimationFrame(() =>
+                    window.scrollTo({ top: 0, behavior: "smooth" }),
+                  );
+                }}
+              >
+                Continue with {selectedFormat.title}
+              </button>
+            </section>
+          ) : null}
+          {tab === "create" && creationStep === "settings" ? (
             <section className="panel form-card">
+              <button
+                type="button"
+                className="text-button creation-format-back"
+                onClick={() => {
+                  setCreationStep("format");
+                  window.requestAnimationFrame(() =>
+                    window.scrollTo({ top: 0, behavior: "smooth" }),
+                  );
+                }}
+              >
+                ← Change game type
+              </button>
+              <p className="creation-selected-format">
+                <span>{selectedFormat.icon}</span>
+                <strong>{selectedFormat.title} settings</strong>
+              </p>
               <div className="form-section-title">
                 <p className="eyebrow">PLAYER POOL</p>
                 <strong>Choose who can be owned in this league</strong>
@@ -899,12 +1034,13 @@ export default function LeaguePage() {
               </p>
             </section>
           ) : null}
-          <form
-            className="panel form-card create-league-form"
-            onSubmit={submit}
-          >
-            {tab === "create" ? (
-              <>
+          {tab === "join" || creationStep === "settings" ? (
+            <form
+              className="panel form-card create-league-form"
+              onSubmit={submit}
+            >
+              {tab === "create" ? (
+                <>
                 <div className="form-section-title">
                   <p className="eyebrow">IDENTITY</p>
                   <strong>Name your competition</strong>
@@ -935,41 +1071,6 @@ export default function LeaguePage() {
                     <option value="12">12 managers</option>
                   </select>
                 </label>
-                <div className="form-section-title">
-                  <p className="eyebrow">GAME TYPE</p>
-                  <strong>Choose how managers build their teams</strong>
-                </div>
-                <div className="format-choice">
-                  <button
-                    type="button"
-                    className={gameFormat === "draft" ? "active" : ""}
-                    onClick={() => setGameFormat("draft")}
-                  >
-                    <span>⇄</span>
-                    <strong>Draft League</strong>
-                    <small>
-                      Snake draft · one exclusive copy of each player
-                    </small>
-                  </button>
-                  <button
-                    type="button"
-                    className={gameFormat === "pack" ? "active" : ""}
-                    onClick={() => setGameFormat("pack")}
-                  >
-                    <span>▣</span>
-                    <strong>Pack League</strong>
-                    <small>Open packs · managers can own the same player</small>
-                  </button>
-                  <button
-                    type="button"
-                    className={gameFormat === "auction" ? "active" : ""}
-                    onClick={() => setGameFormat("auction")}
-                  >
-                    <span>◉</span>
-                    <strong>Auction League</strong>
-                    <small>$2B live budget · every manager can bid</small>
-                  </button>
-                </div>
                 {gameFormat === "auction" ? (
                   <>
                     <div className="form-section-title">
@@ -982,6 +1083,7 @@ export default function LeaguePage() {
                         className={
                           auctionStyle === "nomination" ? "active" : ""
                         }
+                        aria-pressed={auctionStyle === "nomination"}
                         onClick={() => setAuctionStyle("nomination")}
                       >
                         <span>◎</span>
@@ -993,6 +1095,7 @@ export default function LeaguePage() {
                       <button
                         type="button"
                         className={auctionStyle === "mystery" ? "active" : ""}
+                        aria-pressed={auctionStyle === "mystery"}
                         onClick={() => setAuctionStyle("mystery")}
                       >
                         <span>?</span>
@@ -1071,9 +1174,9 @@ export default function LeaguePage() {
                   <span>Manual MOTM: +1, plus +4 when captain</span>
                   <span>Season-long standings · No playoffs</span>
                 </div>
-              </>
-            ) : (
-              <>
+                </>
+              ) : (
+                <>
                 <label>
                   Invite code
                   <input
@@ -1095,17 +1198,18 @@ export default function LeaguePage() {
                     required
                   />
                 </label>
-              </>
-            )}
-            <button className="primary-button" disabled={busy}>
-              {busy
-                ? "Saving…"
-                : tab === "create"
-                  ? `Create ${gameFormat === "draft" ? "Draft" : gameFormat === "pack" ? "Pack" : "Auction"} League`
-                  : "Join league"}
-            </button>
-            {message ? <p className="form-message">{message}</p> : null}
-          </form>
+                </>
+              )}
+              <button className="primary-button" disabled={busy}>
+                {busy
+                  ? "Saving…"
+                  : tab === "create"
+                    ? `Create ${gameFormat === "draft" ? "Draft" : gameFormat === "pack" ? "Pack" : "Auction"} League`
+                    : "Join league"}
+              </button>
+              {message ? <p className="form-message">{message}</p> : null}
+            </form>
+          ) : null}
         </>
       )}
     </PageShell>
