@@ -1,7 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {useRouter} from "next/navigation";
 import { PageShell } from "./page-shell";
 import { supabase } from "@/lib/supabase";
 import { PlayerHeadshot } from "./player-headshot";
@@ -24,6 +24,7 @@ function managerAtPick(order:Manager[],pickNumber:number){
 }
 
 export function DraftRoom({leagueId}:{leagueId:string}){
+  const router=useRouter();
   const[draft,setDraft]=useState<Draft|null>(null);
   const[players,setPlayers]=useState<Player[]>([]);
   const[picks,setPicks]=useState<Pick[]>([]);
@@ -80,10 +81,8 @@ export function DraftRoom({leagueId}:{leagueId:string}){
   },[leagueId,load]);
 
   useEffect(()=>{
-    if(draft?.status!=="complete")return;
-    const timer=window.setTimeout(()=>window.location.replace(`/team?league=${leagueId}&draft=complete`),900);
-    return()=>window.clearTimeout(timer);
-  },[draft?.status,leagueId]);
+    if(draft?.status==="complete"&&leagueId)router.replace(`/team?league=${leagueId}`);
+  },[draft?.status,leagueId,router]);
 
   const managerCount=order.length;
   const currentPick=draft?.current_pick??1;
@@ -210,7 +209,7 @@ export function DraftRoom({leagueId}:{leagueId:string}){
 
   if(!leagueId)return <PageShell eyebrow="LIVE DRAFT" title="Select a league"><section className="panel empty-state">Open the League tab and choose a league’s Draft Room.</section></PageShell>;
 
-  if(draft?.status==="complete")return <PageShell eyebrow="DRAFT COMPLETE" title="Your squad is ready"><section className="panel draft-finished"><span>✓</span><h2>Draft complete — set your lineup</h2><p>The Draft Room is permanently closed. Opening My Team…</p><Link className="primary-button" href={`/team?league=${leagueId}&draft=complete`}>Set your lineup now</Link></section></PageShell>;
+  if(draft?.status==="complete")return <main className="app-shell" aria-busy="true">Opening My Team…</main>;
 
   return <PageShell eyebrow={`ROUND ${round} · PICK ${currentPick}`} title="Draft room">
     <section className={`draft-clock ${isMyTurn?"my-turn":""}`}>
