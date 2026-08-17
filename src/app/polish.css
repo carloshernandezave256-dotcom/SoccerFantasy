@@ -119,6 +119,48 @@ body {
   border-color: color-mix(in srgb, var(--gold) 55%, var(--line));
 }
 
+[data-theme="dark"] .quick-grid .icon,
+[data-theme="dark"] .league-command-grid a > span,
+[data-theme="dark"] .format-choice span,
+[data-theme="dark"] .starter-bundle > span,
+[data-theme="dark"] .pack-store article > span {
+  color: var(--gold);
+}
+
+[data-theme="dark"] .segmented button.active,
+[data-theme="dark"] .filter-row button.active,
+[data-theme="dark"] .draft-view-tabs button.active,
+[data-theme="dark"] .trade-tabs button.active,
+[data-theme="dark"] .player-market-tabs .active,
+[data-theme="dark"] .pack-tabs button.active {
+  color: #241b09;
+  background: linear-gradient(135deg, #ead083, var(--gold));
+}
+
+[data-theme="dark"] .market-status-filter button.active,
+[data-theme="dark"] .format-choice button.active,
+[data-theme="dark"] .bench-scroll > button.selected {
+  border-color: var(--gold);
+  color: var(--gold);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--gold) 18%, transparent);
+}
+
+[data-theme="dark"] .trade-roster > button.selected i,
+[data-theme="dark"] .trade-manager-list button.selected > span,
+[data-theme="dark"] .trade-manager-list button.selected > i,
+[data-theme="dark"] .team-controls button.active {
+  color: #241b09;
+  background: linear-gradient(135deg, #ead083, var(--gold));
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--gold) 18%, transparent);
+}
+
+[data-theme="dark"] .formation-card,
+[data-theme="dark"] .stats-hero,
+[data-theme="dark"] .trade-summary,
+[data-theme="dark"] .ledger-total {
+  border: 1px solid color-mix(in srgb, var(--gold) 28%, var(--line));
+}
+
 button,
 input,
 select,

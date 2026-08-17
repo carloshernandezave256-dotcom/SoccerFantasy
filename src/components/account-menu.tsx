@@ -7,7 +7,11 @@ import { resolveActiveLeague, setActiveLeagueId } from "@/lib/active-league";
 
 type Profile={display_name:string;avatar_url:string|null;theme_preference:"system"|"light"|"dark";notifications_enabled:boolean};
 type League={league_id:string;league_name:string;team_name:string;game_format:"draft"|"pack"};
-function applyTheme(theme:Profile["theme_preference"]){document.documentElement.dataset.theme=theme}
+function applyTheme(theme:Profile["theme_preference"]){
+  document.documentElement.dataset.theme=theme==="system"
+    ?(window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light")
+    :theme;
+}
 
 export function AccountMenu({compact=false}:{compact?:boolean}){
   const router=useRouter();const[open,setOpen]=useState(false);const[profile,setProfile]=useState<Profile|null>(null);const[avatarPreview,setAvatarPreview]=useState<string|null>(null);const[email,setEmail]=useState("");const[busy,setBusy]=useState(false);const[message,setMessage]=useState("");const[leagues,setLeagues]=useState<League[]>([]);const[activeLeagueId,setActiveId]=useState("");
