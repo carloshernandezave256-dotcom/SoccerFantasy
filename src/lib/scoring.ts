@@ -29,6 +29,10 @@ export interface ScoreResult { total: number; entries: LedgerEntry[] }
 const goalPoints: Record<Position, number> = { GK: 7, DEF: 5, MID: 4, FWD: 3 };
 const hatTrickBonus: Record<Position, number> = { GK: 9, DEF: 5, MID: 3, FWD: 1 };
 
+function countLabel(count: number, singular: string, plural = `${singular}s`): string {
+  return `${count} ${count === 1 ? singular : plural}`;
+}
+
 function concededPenalty(goals: number): number {
   if (goals < 2) return 0;
   return -(goals * 2 - 3);
@@ -43,34 +47,34 @@ export function calculateScore(stats: PlayerMatchStats): ScoreResult {
   if (stats.minutes > 0) add("minutes", "Playing time", `${stats.minutes} minutes`, stats.minutes >= 60 ? 2 : 1);
 
   const goals = stats.goals ?? 0;
-  add("goals", "Goals", `${goals} × ${goalPoints[stats.position]} (${stats.position})`, goals * goalPoints[stats.position]);
-  if (goals >= 3) add("hat-trick", "Hat-trick bonus", `Position bonus for ${stats.position}`, hatTrickBonus[stats.position]);
-  add("assists", "Assists", `${stats.assists ?? 0} × 2`, (stats.assists ?? 0) * 2);
+  add("goals", "Goals", `${countLabel(goals, "goal")} · ${goalPoints[stats.position]} FP each for a ${stats.position}`, goals * goalPoints[stats.position]);
+  if (goals >= 3) add("hat-trick", "Hat-trick bonus", `Extra ${hatTrickBonus[stats.position]} FP for a ${stats.position} scoring 3+ goals`, hatTrickBonus[stats.position]);
+  add("assists", "Assists", `${countLabel(stats.assists ?? 0, "assist")} · 2 FP each`, (stats.assists ?? 0) * 2);
 
   // Latest Dreamflow clarifications supersede the earlier spreadsheet thresholds.
-  add("shots-on-target", "Shots on target", `${stats.shotsOnTarget ?? 0} × 1`, stats.shotsOnTarget ?? 0);
-  add("big-chances-missed", "Big chances missed", `${stats.bigChancesMissed ?? 0} × −1`, -(stats.bigChancesMissed ?? 0));
-  add("passes", "Completed passes", `${Math.floor((stats.completedPasses ?? 0) / 10)} blocks of 10`, Math.floor((stats.completedPasses ?? 0) / 10));
-  add("tackles", "Tackles won", `${Math.floor((stats.tacklesWon ?? 0) / 3)} blocks of 3`, Math.floor((stats.tacklesWon ?? 0) / 3));
-  add("penalty-goals", "Penalties scored", `${stats.penaltyGoals ?? 0} × 2`, (stats.penaltyGoals ?? 0) * 2);
-  add("penalties-missed", "Penalties missed", `${stats.penaltiesMissed ?? 0} × −2`, -(stats.penaltiesMissed ?? 0) * 2);
-  add("penalties-conceded", "Penalties conceded", `${stats.penaltiesConceded ?? 0} × −2`, -(stats.penaltiesConceded ?? 0) * 2);
+  add("shots-on-target", "Shots on target", `${countLabel(stats.shotsOnTarget ?? 0, "shot")} on target · 1 FP each`, stats.shotsOnTarget ?? 0);
+  add("big-chances-missed", "Big chances missed", `${countLabel(stats.bigChancesMissed ?? 0, "big chance")} missed · −1 FP each`, -(stats.bigChancesMissed ?? 0));
+  add("passes", "Completed passes", `${countLabel(stats.completedPasses ?? 0, "completed pass", "completed passes")} · 1 FP for every 10`, Math.floor((stats.completedPasses ?? 0) / 10));
+  add("tackles", "Tackles won", `${countLabel(stats.tacklesWon ?? 0, "tackle")} won · 1 FP for every 3`, Math.floor((stats.tacklesWon ?? 0) / 3));
+  add("penalty-goals", "Penalties scored", `${countLabel(stats.penaltyGoals ?? 0, "penalty")} scored · 2 FP each`, (stats.penaltyGoals ?? 0) * 2);
+  add("penalties-missed", "Penalties missed", `${countLabel(stats.penaltiesMissed ?? 0, "penalty")} missed · −2 FP each`, -(stats.penaltiesMissed ?? 0) * 2);
+  add("penalties-conceded", "Penalties conceded", `${countLabel(stats.penaltiesConceded ?? 0, "penalty")} conceded · −2 FP each`, -(stats.penaltiesConceded ?? 0) * 2);
 
   if (stats.position === "GK") {
-    add("saves", "Saves", `${Math.floor((stats.saves ?? 0) / 3)} blocks of 3`, Math.floor((stats.saves ?? 0) / 3));
-    add("penalties-saved", "Penalties saved", `${stats.penaltiesSaved ?? 0} × 2`, (stats.penaltiesSaved ?? 0) * 2);
+    add("saves", "Saves", `${countLabel(stats.saves ?? 0, "save")} · 1 FP for every 3`, Math.floor((stats.saves ?? 0) / 3));
+    add("penalties-saved", "Penalties saved", `${countLabel(stats.penaltiesSaved ?? 0, "penalty")} saved · 2 FP each`, (stats.penaltiesSaved ?? 0) * 2);
   }
 
   if ((stats.position === "GK" || stats.position === "DEF") && stats.minutes >= 60) {
     const conceded = stats.goalsConceded ?? 0;
     if (conceded === 0) add("clean-sheet", "Clean sheet", "60+ minutes, no goals conceded", 3);
-    add("goals-conceded", "Goals conceded", `${conceded} conceded`, concededPenalty(conceded));
+    add("goals-conceded", "Goals conceded", `${countLabel(conceded, "goal")} conceded · deductions begin at 2`, concededPenalty(conceded));
   }
 
-  add("yellow", "Yellow cards", `${stats.yellowCards ?? 0} × −1`, -(stats.yellowCards ?? 0));
-  add("second-yellow", "Second-yellow dismissals", `${stats.secondYellowCards ?? 0} × −2`, -(stats.secondYellowCards ?? 0) * 2);
-  add("red", "Straight red cards", `${stats.redCards ?? 0} × −3`, -(stats.redCards ?? 0) * 3);
-  add("own-goals", "Own goals", `${stats.ownGoals ?? 0} × −3`, -(stats.ownGoals ?? 0) * 3);
+  add("yellow", "Yellow cards", `${countLabel(stats.yellowCards ?? 0, "yellow card")} · −1 FP each`, -(stats.yellowCards ?? 0));
+  add("second-yellow", "Second-yellow dismissals", `${countLabel(stats.secondYellowCards ?? 0, "second-yellow dismissal")} · −2 FP each`, -(stats.secondYellowCards ?? 0) * 2);
+  add("red", "Straight red cards", `${countLabel(stats.redCards ?? 0, "straight red card")} · −3 FP each`, -(stats.redCards ?? 0) * 3);
+  add("own-goals", "Own goals", `${countLabel(stats.ownGoals ?? 0, "own goal")} · −3 FP each`, -(stats.ownGoals ?? 0) * 3);
   if (stats.manOfTheMatch) {
     add("motm", "Man of the Match", "Match award", 1);
     if (stats.captain) add("captain-motm", "Captain prediction bonus", "Your captain won Man of the Match", 4);

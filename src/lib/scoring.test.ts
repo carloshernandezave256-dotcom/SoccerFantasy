@@ -15,6 +15,8 @@ describe("custom scoring", () => {
   it("uses complete threshold blocks", () => {
     const result = calculateScore({ position: "DEF", minutes: 59, completedPasses: 29, tacklesWon: 5 });
     expect(result.total).toBe(4); // minutes 1 + passes 2 + tackles 1
+    expect(result.entries.find((entry) => entry.code === "passes")?.detail).toBe("29 completed passes · 1 FP for every 10");
+    expect(result.entries.find((entry) => entry.code === "tackles")?.detail).toBe("5 tackles won · 1 FP for every 3");
   });
 
   it("awards and removes defensive clean-sheet points correctly", () => {
