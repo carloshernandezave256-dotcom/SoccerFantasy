@@ -7,6 +7,8 @@ import { supabase } from "@/lib/supabase";
 import { resolveActiveLeague } from "@/lib/active-league";
 import { PlayerStatsDialog } from "./player-stats-dialog";
 import { getPackHeroCard } from "@/lib/pack-hero-cards";
+import { formationIsValid, lineupIsReady, reorderWithinPosition } from "@/lib/lineup";
+import { loginPathFor } from "@/lib/auth-navigation";
 
 type League={league_id:string;league_name:string;team_name:string;game_format:string};
 type Player={id:number;full_name:string;position:string;club:string;competition?:string;photo_url?:string|null};
@@ -30,11 +32,6 @@ function defaultStartingEleven(roster:Player[]){
   add(roster.filter(player=>player.position==="FWD"),3);
   add(roster.filter(player=>player.position!=="GK"&&!chosen.some(item=>item.id===player.id)),11-chosen.length);
   return new Set(chosen.map(player=>player.id));
-}
-
-function formationIsValid(roster:Player[],ids:Set<number>){
-  const counts=roster.filter(player=>ids.has(player.id)).reduce((all,player)=>({...all,[player.position]:(all[player.position]??0)+1}),{} as Record<string,number>);
-  return ids.size===11&&counts.GK===1&&(counts.DEF??0)>=3&&(counts.MID??0)>=1&&(counts.FWD??0)>=1&&(counts.FWD??0)<=4;
 }
 
 export function TeamManager(){
@@ -109,7 +106,7 @@ export function TeamManager(){
 
   const loadActiveLeague=useCallback(async()=>{
       const{data:{user}}=await supabase.auth.getUser();
-      if(!user){setLoading(false);return}
+      if(!user){window.location.replace(loginPathFor(window.location.pathname,window.location.search));return}
       setUserId(user.id);
       setDraftComplete(new URLSearchParams(window.location.search).get("draft")==="complete");
       const{data}=await supabase.rpc("my_leagues");
@@ -176,14 +173,11 @@ export function TeamManager(){
   }
 
   const counts=useMemo(()=>roster.filter(player=>starters.has(player.id)).reduce((all,player)=>({...all,[player.position]:(all[player.position]??0)+1}),{} as Record<string,number>),[roster,starters]);
-  const valid=starters.size===11&&counts.GK===1&&(counts.DEF??0)>=3&&(counts.MID??0)>=1&&(counts.FWD??0)>=1&&(counts.FWD??0)<=4&&captain!==null;
+  const valid=lineupIsReady(roster,starters,captain);
 
   function reorderStarter(id:number,targetId:number){
-    const position=roster.find(player=>player.id===id)?.position;
-    if(!position||roster.find(player=>player.id===targetId)?.position!==position)return;
-    const previous=[...starterOrder],from=previous.indexOf(id),target=previous.indexOf(targetId);
-    if(from<0||target<0||from===target)return;
-    const next=[...previous];next.splice(from,1);next.splice(target,0,id);
+    const previous=[...starterOrder],next=reorderWithinPosition(roster,previous,id,targetId);
+    if(!next)return;
     setStarterOrder(next);setUndoOrder(previous);setDirty(true);
     if(isMine)void persistOrder(next,previous);
   }
