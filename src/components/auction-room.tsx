@@ -340,6 +340,7 @@ export function AuctionRoom({ leagueId }: { leagueId: string }) {
     );
   return (
     <PageShell
+      leagueId={leagueId}
       eyebrow={
         session
           ? `${session.style === "mystery" ? "MYSTERY REVEAL" : "MANAGER NOMINATION"} · LIVE AUCTION`
