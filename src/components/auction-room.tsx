@@ -239,6 +239,8 @@ export function AuctionRoom({ leagueId }: { leagueId: string }) {
   const leader = managers.find(
     (manager) => manager.user_id === currentLot?.current_bidder_id,
   );
+  const canReveal =
+    nominator?.user_id === userId || Boolean(league?.is_commissioner);
   const myBudget =
     budgets.find((item) => item.user_id === userId)?.remaining_budget ??
     session?.starting_budget ??
@@ -434,12 +436,13 @@ export function AuctionRoom({ leagueId }: { leagueId: string }) {
               <p className="eyebrow">MYSTERY PLAYER</p>
               <h2>Who enters the room next?</h2>
               <p>
-                The player is randomly selected from this league&apos;s eligible
-                pool. Everyone can bid after the reveal.
+                {nominator?.user_id === userId
+                  ? "It’s your turn to reveal the next mystery player."
+                  : `${nominator?.team_name ?? "The active manager"} reveals next. Everyone sees the same player and can bid.`}
               </p>
               <button
                 className="primary-button full-button"
-                disabled={busy}
+                disabled={busy || !canReveal}
                 onClick={() =>
                   void act(
                     "reveal_auction_player",
@@ -448,7 +451,11 @@ export function AuctionRoom({ leagueId }: { leagueId: string }) {
                   )
                 }
               >
-                Reveal next player
+                {nominator?.user_id === userId
+                  ? "Reveal next player"
+                  : league?.is_commissioner
+                    ? "Commissioner reveal override"
+                    : `Waiting for ${nominator?.team_name ?? "manager"}`}
               </button>
             </section>
           ) : (
