@@ -693,11 +693,19 @@ export function HomeDashboard() {
                 <span>↻</span>
                 <div>
                   <strong>
-                    {league.game_format === "pack" ? "Auction" : "Waivers"}
+                    {league.game_format === "pack"
+                      ? "Auction"
+                      : league.game_format === "auction"
+                        ? "Contracts"
+                        : "Waivers"}
                   </strong>
                   <small>
                     {league.game_format === "pack"
                       ? "League card market"
+                      : league.game_format === "auction"
+                        ? windowState
+                          ? `GW ${windowState.gameweek} · ${windowState.phase === "waivers" ? "blind offers" : windowState.phase.replace("_", " ")}`
+                          : "Blind offers & signings"
                       : windowState
                         ? `GW ${windowState.gameweek} · ${windowState.phase.replace("_", " ")}`
                         : "Claims & priority"}
