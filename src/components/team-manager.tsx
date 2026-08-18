@@ -214,7 +214,7 @@ export function TeamManager(){
     if(error)setMessage(error.message);else{setMessage("Lineup and captain saved.");setDirty(false);setUndoOrder(null);setEditing(false);setCaptainMode(false)}
   }
 
-  return <PageShell eyebrow={viewedManager?.team_name??leagues.find(item=>item.league_id===league)?.team_name??"MY CLUB"} title={isMine?"My Team":"Team Viewer"}>
+  return <PageShell leagueId={league} eyebrow={viewedManager?.team_name??leagues.find(item=>item.league_id===league)?.team_name??"MY CLUB"} title={isMine?"My Team":"Team Viewer"}>
     {draftComplete&&isMine?<section className="panel draft-finished"><span>✓</span><h2>Draft complete — set your lineup</h2><p>Your 4-3-3 has been created. Choose a captain, make any changes, and save.</p></section>:null}
     <div className="team-selectors">
       <label>View team<select className="league-select" value={viewedUser} onChange={event=>{setViewedUser(event.target.value);void loadRoster(league,event.target.value)}}>{managers.map(manager=><option key={manager.user_id} value={manager.user_id}>{manager.user_id===userId?"My Team":manager.team_name}</option>)}</select></label>
