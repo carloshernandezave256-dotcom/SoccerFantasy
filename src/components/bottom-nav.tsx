@@ -11,11 +11,14 @@ export function BottomNav({ leagueId }: { leagueId?: string }) {
   const isActive = (href: string) => pathname === href || (href === "/players" && (pathname === "/waivers" || pathname === "/packs"));
   return (
     <nav className="bottom-nav" aria-label="Primary navigation">
-      {items.map(([icon, label, href]) => {\n        const destination = leagueId && href !== "/" ? `${href}?league=${encodeURIComponent(leagueId)}` : href;\n        return (
-        <Link className={isActive(href) ? "active" : ""} key={label} aria-current={isActive(href) ? "page" : undefined} href={destination}>
-          <span>{icon}</span>{label}
-        </Link>
-      ))}
+      {items.map(([icon, label, href]) => {
+        const destination = leagueId && href !== "/" ? `${href}?league=${encodeURIComponent(leagueId)}` : href;
+        return (
+          <Link className={isActive(href) ? "active" : ""} key={label} aria-current={isActive(href) ? "page" : undefined} href={destination}>
+            <span>{icon}</span>{label}
+          </Link>
+        );
+      })}
     </nav>
   );
 }
