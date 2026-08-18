@@ -51,6 +51,10 @@ type LeagueSnapshot = {
 type GameFormat = "draft" | "pack" | "auction";
 const LEAGUE_SNAPSHOT_KEY = "xi-fantasy-league-snapshot";
 
+function leagueFormatLabel(format: GameFormat) {
+  return format === "auction" ? "Auction" : format === "pack" ? "Pack" : "Snake draft";
+}
+
 const GAME_FORMATS: Array<{
   id: GameFormat;
   icon: string;
@@ -524,7 +528,7 @@ export default function LeaguePage() {
               <button onClick={() => void invite(active)}>＋ Invite</button>
             </div>
             <p>
-              {active.manager_count}/{active.league_size} managers · Draft{" "}
+              {active.manager_count}/{active.league_size} managers · {leagueFormatLabel(active.game_format)}{" "}
               {draft?.status ?? "not started"}
             </p>
           </section>
