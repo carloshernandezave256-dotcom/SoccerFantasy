@@ -17,6 +17,9 @@ type League = {
   team_name: string;
   game_format: "draft" | "pack" | "auction";
 };
+function leagueFormatLabel(format: League["game_format"]) {
+  return format === "auction" ? "Auction" : format === "pack" ? "Pack" : "Snake";
+}
 function applyTheme(theme: Profile["theme_preference"]) {
   document.documentElement.dataset.theme =
     theme === "system"
@@ -234,7 +237,7 @@ export function AccountMenu({ compact = false }: { compact?: boolean }) {
                   {leagues.map((league) => (
                     <option key={league.league_id} value={league.league_id}>
                       {league.league_name} ·{" "}
-                      {league.game_format === "pack" ? "Pack" : "Draft"}
+                      {leagueFormatLabel(league.game_format)}
                     </option>
                   ))}
                 </select>
