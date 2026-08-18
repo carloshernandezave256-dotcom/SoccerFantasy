@@ -45,6 +45,16 @@ begin
   if v_session.style<>'mystery' or v_session.status<>'reveal' then
     raise exception 'Mystery Reveal is not ready';
   end if;
+  if not exists(
+    select 1
+    from public.league_members m
+    join public.leagues l on l.id=m.league_id
+    where m.league_id=p_league_id
+      and m.user_id=v_user
+      and (m.draft_slot=v_session.current_nominator_slot or l.commissioner_id=v_user)
+  ) then
+    raise exception 'The active manager must reveal the next player';
+  end if;
 
   v_superstar_chance := least(15, 5 + v_session.superstar_drought);
   v_star_chance := least(45, 15 + (v_session.star_drought * 5));
