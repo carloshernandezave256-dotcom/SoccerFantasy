@@ -4,6 +4,10 @@ export function setActiveLeagueId(leagueId:string){
   if(typeof window!=="undefined")window.localStorage.setItem(ACTIVE_LEAGUE_KEY,leagueId);
 }
 
+export function clearActiveLeagueId(){
+  if(typeof window!=="undefined")window.localStorage.removeItem(ACTIVE_LEAGUE_KEY);
+}
+
 export function resolveActiveLeague<T extends {league_id:string}>(leagues:T[],requested?:string|null):T|undefined{
   if(!leagues.length)return undefined;
   const stored=typeof window!=="undefined"?window.localStorage.getItem(ACTIVE_LEAGUE_KEY):null;

@@ -4,7 +4,11 @@ import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 import { PageShell } from "@/components/page-shell";
 import { supabase } from "@/lib/supabase";
-import { resolveActiveLeague, setActiveLeagueId } from "@/lib/active-league";
+import {
+  clearActiveLeagueId,
+  resolveActiveLeague,
+  setActiveLeagueId,
+} from "@/lib/active-league";
 import { ApiFootballTest } from "@/components/api-football-test";
 
 type League = {
@@ -411,6 +415,7 @@ export default function LeaguePage() {
 
   async function deleteLeague() {
     if (!active || !active.is_commissioner) return;
+    const deletedLeagueId = active.league_id;
     const confirmed = window.confirm(
       `Permanently delete “${active.league_name}”?\n\nThis removes every manager, roster, draft pick, pack, waiver, trade, score and matchup in this league. This cannot be undone.`,
     );
@@ -423,10 +428,50 @@ export default function LeaguePage() {
     });
     if (error) setMessage(error.message);
     else {
-      window.localStorage.removeItem("xi-fantasy-active-league");
-      setMessage("League permanently deleted.");
-      setActiveId("");
-      await load();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      clearActiveLeagueId();
+      if (user) {
+        window.sessionStorage.removeItem(`${LEAGUE_SNAPSHOT_KEY}:${user.id}`);
+      }
+
+      const { data: remainingData, error: remainingError } =
+        await supabase.rpc("my_leagues");
+      if (remainingError) {
+        setMessage(
+          `League deleted, but your remaining leagues could not be refreshed: ${remainingError.message}`,
+        );
+        setActiveId("");
+        await load();
+      } else {
+        const remaining = ((remainingData ?? []) as League[]).filter(
+          (league) => league.league_id !== deletedLeagueId,
+        );
+        const nextLeague = remaining[0];
+        if (nextLeague) {
+          setActiveLeagueId(nextLeague.league_id);
+          window.location.assign(
+            `/?league=${encodeURIComponent(nextLeague.league_id)}`,
+          );
+          return;
+        }
+
+        setLeagues([]);
+        setActiveId("");
+        setManagers([]);
+        setDraft(null);
+        setSettings(null);
+        setTransactionWindow(null);
+        setLeagueView("data");
+        setTab("create");
+        setCreationStep("format");
+        setShowMembership(true);
+        window.history.replaceState({}, "", "/league");
+        setMessage(
+          "League permanently deleted. Create or join your next league.",
+        );
+      }
     }
     setSettingsBusy(false);
   }
