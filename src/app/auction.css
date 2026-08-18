@@ -277,6 +277,38 @@
   color: var(--gold);
   font-size: 42px;
 }
+.auction-mystery-odds {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  width: 100%;
+  margin: 18px 0 10px;
+}
+.auction-mystery-odds span {
+  padding: 12px 6px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface2);
+  text-align: center;
+}
+.auction-mystery-odds small {
+  display: block;
+  color: var(--muted);
+  font-size: 8px;
+  letter-spacing: 0.08em;
+}
+.auction-mystery-odds strong {
+  display: block;
+  margin-top: 5px;
+  color: var(--gold);
+  font-size: 17px;
+}
+.auction-odds-rising {
+  color: var(--gold) !important;
+  font-size: 10px !important;
+  font-weight: 700;
+  text-align: center;
+}
 .auction-nomination label {
   display: flex;
   flex-direction: column;
