@@ -16,46 +16,49 @@
   --red: #ef8175;
   --warning: #d7b86a;
   --button-text: #12200c;
+  --bg-glow: rgba(87, 104, 72, .34);
   --shadow: 0 16px 42px rgba(0, 0, 0, .28);
 }
 
 [data-theme="light"] {
-  --bg: #edf2e7;
+  --bg: #f1f4ef;
   --surface: #ffffff;
-  --surface2: #f5f9ef;
-  --surface3: #e8f0df;
-  --line: #d4dfd0;
-  --line-strong: #b9cbb5;
-  --text: #102017;
-  --muted: #637269;
-  --lime: #527700;
-  --lime-soft: #6f920f;
-  --gold: #886719;
-  --gold-soft: #a27e27;
-  --red: #b52d27;
-  --warning: #895f00;
+  --surface2: #e9efe8;
+  --surface3: #dce6dc;
+  --line: #c5d0c5;
+  --line-strong: #98aa9a;
+  --text: #17231b;
+  --muted: #59685e;
+  --lime: #35733f;
+  --lime-soft: #4e8a55;
+  --gold: #7a5b16;
+  --gold-soft: #967527;
+  --red: #b4232d;
+  --warning: #7a5700;
   --button-text: #ffffff;
-  --shadow: 0 14px 34px rgba(35, 57, 39, .12);
+  --bg-glow: rgba(81, 126, 88, .18);
+  --shadow: 0 12px 30px rgba(24, 51, 32, .11);
 }
 
 @media (prefers-color-scheme: light) {
   html:not([data-theme]) {
-    --bg: #edf2e7;
+    --bg: #f1f4ef;
     --surface: #ffffff;
-    --surface2: #f5f9ef;
-    --surface3: #e8f0df;
-    --line: #d4dfd0;
-    --line-strong: #b9cbb5;
-    --text: #102017;
-    --muted: #637269;
-    --lime: #527700;
-    --lime-soft: #6f920f;
-    --gold: #886719;
-    --gold-soft: #a27e27;
-    --red: #b52d27;
-    --warning: #895f00;
+    --surface2: #e9efe8;
+    --surface3: #dce6dc;
+    --line: #c5d0c5;
+    --line-strong: #98aa9a;
+    --text: #17231b;
+    --muted: #59685e;
+    --lime: #35733f;
+    --lime-soft: #4e8a55;
+    --gold: #7a5b16;
+    --gold-soft: #967527;
+    --red: #b4232d;
+    --warning: #7a5700;
     --button-text: #ffffff;
-    --shadow: 0 14px 34px rgba(35, 57, 39, .12);
+    --bg-glow: rgba(81, 126, 88, .18);
+    --shadow: 0 12px 30px rgba(24, 51, 32, .11);
     color-scheme: light;
   }
 }
@@ -75,11 +78,45 @@ body {
   min-height: 100dvh;
   overflow-x: hidden;
   background:
-    radial-gradient(circle at 50% -8%, rgba(87, 104, 72, .34), transparent 34rem),
+    radial-gradient(circle at 50% -8%, var(--bg-glow), transparent 34rem),
     var(--bg);
   font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   line-height: 1.45;
   text-rendering: optimizeLegibility;
+}
+
+[data-theme="light"] body {
+  background: radial-gradient(circle at 50% -12%, #d7e4d6 0, transparent 31rem), var(--bg);
+}
+
+[data-theme="light"] .panel,
+[data-theme="light"] .match-card {
+  border-color: var(--line);
+  background: linear-gradient(145deg, #ffffff, #fbfcfa);
+  box-shadow: var(--shadow);
+}
+
+[data-theme="light"] .bottom-nav {
+  border-top-color: var(--line-strong);
+  background: rgba(255,255,255,.96);
+  box-shadow: 0 -8px 24px rgba(25,55,34,.08);
+}
+
+[data-theme="light"] .primary-button,
+[data-theme="light"] .claim-button,
+[data-theme="light"] .draft-button {
+  background: linear-gradient(135deg, #43804c, #2f6839);
+  color: #fff !important;
+}
+
+[data-theme="light"] .muted-chip,
+[data-theme="light"] .claim-status.pending {
+  background: #e0eadf;
+  color: #2f6739;
+}
+
+[data-theme="light"] .waiver-priority article.you > span {
+  color: #fff;
 }
 
 /* Dark mode keeps green for live/action states and uses warm gold for hierarchy. */
