@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { AuctionRoom } from "./auction-room";
 import { supabase } from "@/lib/supabase";
 import { resolveActiveLeague, setActiveLeagueId } from "@/lib/active-league";
+import { loginPathFor } from "@/lib/auth-navigation";
 
 export function ActiveAuctionRoom({
   requestedLeagueId,
@@ -21,6 +22,16 @@ export function ActiveAuctionRoom({
     let cancelled = false;
     void (async () => {
       setError("");
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (cancelled) return;
+      if (!user) {
+        window.location.replace(
+          loginPathFor(window.location.pathname, window.location.search),
+        );
+        return;
+      }
       const { data, error: leagueError } = await supabase.rpc("my_leagues");
       if (cancelled) return;
       if (leagueError) {

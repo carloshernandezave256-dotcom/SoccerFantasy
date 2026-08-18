@@ -7,4 +7,10 @@ describe("authenticated page navigation", () => {
       "/login?next=%2Fteam%3Fleague%3Dleague-123",
     );
   });
+
+  it("preserves the selected Auction League through login", () => {
+    expect(loginPathFor("/auction", "?league=auction-456")).toBe(
+      "/login?next=%2Fauction%3Fleague%3Dauction-456",
+    );
+  });
 });
