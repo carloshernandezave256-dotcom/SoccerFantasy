@@ -24,6 +24,8 @@ type Session = {
   bid_seconds: number;
   current_nominator_slot: number;
   current_lot_id: string | null;
+  star_drought: number;
+  superstar_drought: number;
 };
 type Manager = { draft_slot: number; user_id: string; team_name: string };
 type Budget = { user_id: string; remaining_budget: number };
@@ -89,7 +91,7 @@ export function AuctionRoom({ leagueId }: { leagueId: string }) {
       supabase
         .from("auction_sessions")
         .select(
-          "id,style,status,starting_budget,minimum_bid,bid_increment,bid_seconds,current_nominator_slot,current_lot_id",
+          "id,style,status,starting_budget,minimum_bid,bid_increment,bid_seconds,current_nominator_slot,current_lot_id,star_drought,superstar_drought",
         )
         .eq("league_id", leagueId)
         .maybeSingle(),
@@ -253,6 +255,11 @@ export function AuctionRoom({ leagueId }: { leagueId: string }) {
   );
   const nextBid =
     (currentLot?.current_bid ?? 0) + (session?.bid_increment ?? 1000000);
+  const superstarChance = Math.min(
+    15,
+    5 + (session?.superstar_drought ?? 0),
+  );
+  const starChance = Math.min(45, 15 + (session?.star_drought ?? 0) * 5);
 
   async function act(
     name: string,
@@ -440,6 +447,29 @@ export function AuctionRoom({ leagueId }: { leagueId: string }) {
                   ? "It’s your turn to reveal the next mystery player."
                   : `${nominator?.team_name ?? "The active manager"} reveals next. Everyone sees the same player and can bid.`}
               </p>
+              <div
+                className="auction-mystery-odds"
+                aria-label="Mystery reveal odds"
+              >
+                <span>
+                  <small>SUPERSTAR</small>
+                  <strong>{superstarChance}%</strong>
+                </span>
+                <span>
+                  <small>STAR</small>
+                  <strong>{starChance}%</strong>
+                </span>
+                <span>
+                  <small>REGULAR</small>
+                  <strong>{100 - superstarChance - starChance}%</strong>
+                </span>
+              </div>
+              {session.star_drought > 0 || session.superstar_drought > 0 ? (
+                <p className="auction-odds-rising">
+                  Star odds rising · {session.star_drought} regular reveal
+                  {session.star_drought === 1 ? "" : "s"} in a row
+                </p>
+              ) : null}
               <button
                 className="primary-button full-button"
                 disabled={busy || !canReveal}
