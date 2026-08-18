@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { PageShell } from "./page-shell";
 import { PlayerHeadshot } from "./player-headshot";
@@ -26,6 +26,7 @@ type Session = {
   current_lot_id: string | null;
   star_drought: number;
   superstar_drought: number;
+  updated_at: string;
 };
 type Manager = { draft_slot: number; user_id: string; team_name: string };
 type Budget = { user_id: string; remaining_budget: number };
@@ -68,6 +69,8 @@ const rosterTargets = [
 
 export function AuctionRoom({ leagueId }: { leagueId: string }) {
   const router = useRouter();
+  const loadSequence = useRef(0);
+  const sessionUpdatedAt = useRef("");
   const [league, setLeague] = useState<League | null>(null),
     [session, setSession] = useState<Session | null>(null),
     [managers, setManagers] = useState<Manager[]>([]),
@@ -84,6 +87,7 @@ export function AuctionRoom({ leagueId }: { leagueId: string }) {
     [customBid, setCustomBid] = useState("");
 
   const load = useCallback(async () => {
+    const sequence = ++loadSequence.current;
     const [
       auth,
       leagueResult,
@@ -98,7 +102,7 @@ export function AuctionRoom({ leagueId }: { leagueId: string }) {
       supabase
         .from("auction_sessions")
         .select(
-          "id,style,status,starting_budget,minimum_bid,bid_increment,bid_seconds,current_nominator_slot,current_lot_id,star_drought,superstar_drought",
+          "id,style,status,starting_budget,minimum_bid,bid_increment,bid_seconds,current_nominator_slot,current_lot_id,star_drought,superstar_drought,updated_at",
         )
         .eq("league_id", leagueId)
         .maybeSingle(),
@@ -126,9 +130,12 @@ export function AuctionRoom({ leagueId }: { leagueId: string }) {
       ((leagueResult.data ?? []) as League[]).find(
         (item) => item.league_id === leagueId,
       ) ?? null;
+    if (sequence !== loadSequence.current) return;
+    const nextSession = (sessionResult.data as Session | null) ?? null;
     setUserId(auth.data.user?.id ?? "");
     setLeague(active);
-    setSession((sessionResult.data as Session | null) ?? null);
+    setSession(nextSession);
+    sessionUpdatedAt.current = nextSession?.updated_at ?? "";
     setManagers((orderResult.data ?? []) as Manager[]);
     setBudgets((budgetResult.data ?? []) as Budget[]);
     setLots((lotResult.data ?? []) as unknown as Lot[]);
@@ -143,6 +150,7 @@ export function AuctionRoom({ leagueId }: { leagueId: string }) {
         .limit(1000);
       if (pool !== "All Top Five") request = request.eq("competition", pool);
       const { data } = await request;
+      if (sequence !== loadSequence.current) return;
       setPlayers((data ?? []) as Player[]);
     }
   }, [leagueId]);
@@ -150,6 +158,20 @@ export function AuctionRoom({ leagueId }: { leagueId: string }) {
   useEffect(() => {
     void load();
     const clock = window.setInterval(() => setNow(Date.now()), 1000);
+    const heartbeat = window.setInterval(async () => {
+      const { data } = await supabase
+        .from("auction_sessions")
+        .select("updated_at")
+        .eq("league_id", leagueId)
+        .maybeSingle();
+      const updatedAt = data?.updated_at ?? "";
+      if (updatedAt && updatedAt !== sessionUpdatedAt.current) void load();
+    }, 8000);
+    const refreshVisibleRoom = () => {
+      if (document.visibilityState === "visible") void load();
+    };
+    window.addEventListener("focus", refreshVisibleRoom);
+    document.addEventListener("visibilitychange", refreshVisibleRoom);
     const channel = supabase
       .channel(`auction:${leagueId}`)
       .on(
@@ -192,9 +214,14 @@ export function AuctionRoom({ leagueId }: { leagueId: string }) {
         },
         () => void load(),
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (status === "SUBSCRIBED") void load();
+      });
     return () => {
       window.clearInterval(clock);
+      window.clearInterval(heartbeat);
+      window.removeEventListener("focus", refreshVisibleRoom);
+      document.removeEventListener("visibilitychange", refreshVisibleRoom);
       void supabase.removeChannel(channel);
     };
   }, [leagueId, load]);
