@@ -1,5 +1,6 @@
 import {NextRequest,NextResponse} from "next/server";
 import {apiFootball} from "@/lib/api-football-server";
+import {isDeveloperRequest} from "@/lib/developer-auth";
 
 const competitions:Record<string,number>={"Premier League":39,"La Liga":140,"Serie A":135,"Bundesliga":78,"Ligue 1":61};
 const finalStatuses=new Set(["FT","AET","PEN"]);
@@ -20,6 +21,7 @@ function parseGameweek(round:string){const match=round.match(/(\d+)\s*$/);return
 export async function POST(request:NextRequest){
   const authorization=request.headers.get("authorization")??"";
   if(!authorization.startsWith("Bearer "))return NextResponse.json({error:"Sign in is required."},{status:401});
+  if(!await isDeveloperRequest(request))return NextResponse.json({error:"Developer access required."},{status:403});
   const body=await request.json().catch(()=>({})) as {leagueId?:string};
   if(!body.leagueId)return NextResponse.json({error:"Choose a league first."},{status:400});
   const supabaseUrl=process.env.NEXT_PUBLIC_SUPABASE_URL??"https://ocabrgbrkqmsnalbfzvx.supabase.co";
@@ -29,7 +31,7 @@ export async function POST(request:NextRequest){
   const userHeaders={apikey:publishableKey,Authorization:authorization,"Content-Type":"application/json"};
   const leaguesResponse=await fetch(`${supabaseUrl}/rest/v1/rpc/my_leagues`,{method:"POST",headers:userHeaders,body:"{}",cache:"no-store"});
   const memberships=leaguesResponse.ok?await leaguesResponse.json():[];
-  if(!memberships.some((league:{league_id:string;is_commissioner:boolean})=>league.league_id===body.leagueId&&league.is_commissioner))return NextResponse.json({error:"Only this league's commissioner can run an immediate score sync."},{status:403});
+  if(!memberships.some((league:{league_id:string})=>league.league_id===body.leagueId))return NextResponse.json({error:"Choose one of your leagues."},{status:403});
 
   const leagueResponse=await fetch(`${supabaseUrl}/rest/v1/leagues?id=eq.${encodeURIComponent(body.leagueId)}&select=calendar_competition,player_pool`,{headers:adminHeaders(serviceRoleKey),cache:"no-store"});
   const leagueRows=leagueResponse.ok?await leagueResponse.json() as LeagueRow[]:[];

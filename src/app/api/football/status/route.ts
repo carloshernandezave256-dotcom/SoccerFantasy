@@ -1,11 +1,13 @@
-import {NextResponse} from "next/server";
+import {NextRequest,NextResponse} from "next/server";
 import {apiFootball} from "@/lib/api-football-server";
+import {isDeveloperRequest} from "@/lib/developer-auth";
 
 type StatusResponse={response?:{subscription?:{plan?:string;end?:string;active?:boolean};requests?:{current?:number;limit_day?:number}}};
 
 export const dynamic="force-dynamic";
 
-export async function GET(){
+export async function GET(request:NextRequest){
+  if(!await isDeveloperRequest(request))return NextResponse.json({error:"Developer access required."},{status:403});
   try{
     const body=await apiFootball<StatusResponse>("status");
     const subscription=body.response?.subscription,requests=body.response?.requests;

@@ -185,6 +185,8 @@ export function AccountMenu({ compact = false }: { compact?: boolean }) {
     .join("")
     .slice(0, 2)
     .toUpperCase();
+  const isDeveloper =
+    email.toLowerCase() === "carloshernandezave256@gmail.com";
   return (
     <>
       <button
@@ -322,6 +324,18 @@ export function AccountMenu({ compact = false }: { compact?: boolean }) {
             >
               {busy ? "Saving…" : "Save profile"}
             </button>
+            {isDeveloper ? (
+              <button
+                type="button"
+                className="secondary-button full-button"
+                onClick={() => {
+                  setOpen(false);
+                  router.push("/developer");
+                }}
+              >
+                Open developer tools
+              </button>
+            ) : null}
             <button
               type="button"
               className="sign-out-button"

@@ -9,7 +9,6 @@ import {
   resolveActiveLeague,
   setActiveLeagueId,
 } from "@/lib/active-league";
-import { ApiFootballTest } from "@/components/api-football-test";
 
 type League = {
   league_id: string;
@@ -666,9 +665,6 @@ export default function LeaguePage() {
                     can view the rules below.
                   </p>
                 </section>
-              ) : null}
-              {active.is_commissioner ? (
-                <ApiFootballTest leagueId={active.league_id} />
               ) : null}
               {active.is_commissioner && settings ? (
                 <>
