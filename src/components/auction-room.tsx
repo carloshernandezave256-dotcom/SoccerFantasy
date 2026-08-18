@@ -59,6 +59,13 @@ type Pick = {
 const money = (amount: number | null | undefined) =>
   `$${Math.round(Number(amount ?? 0) / 1000000).toLocaleString()}M`;
 
+const rosterTargets = [
+  { position: "GK", target: 2 },
+  { position: "DEF", target: 6 },
+  { position: "MID", target: 5 },
+  { position: "FWD", target: 5 },
+] as const;
+
 export function AuctionRoom({ leagueId }: { leagueId: string }) {
   const router = useRouter();
   const [league, setLeague] = useState<League | null>(null),
@@ -248,6 +255,12 @@ export function AuctionRoom({ leagueId }: { leagueId: string }) {
     session?.starting_budget ??
     2000000000;
   const myRoster = picks.filter((pick) => pick.user_id === userId);
+  const rosterNeeds = rosterTargets.map(({ position, target }) => {
+    const current = myRoster.filter(
+      (pick) => pick.players?.position === position,
+    ).length;
+    return { position, target, current, needed: Math.max(0, target - current) };
+  });
   const myMax = Math.max(
     0,
     myBudget -
@@ -265,21 +278,23 @@ export function AuctionRoom({ leagueId }: { leagueId: string }) {
     name: string,
     args: Record<string, unknown>,
     success: string,
-  ) {
+  ): Promise<boolean> {
     setBusy(true);
     setMessage("");
     const { error } = await supabase.rpc(name, args);
     setMessage(error?.message ?? success);
     await load();
     setBusy(false);
+    return !error;
   }
-  function bid(amount: number) {
+  async function bid(amount: number, clearManualBid = false) {
     if (!currentLot || amount < nextBid) return;
-    void act(
+    const succeeded = await act(
       "place_auction_bid",
       { p_league_id: leagueId, p_amount: amount },
       `You lead at ${money(amount)}.`,
     );
+    if (succeeded && clearManualBid) setCustomBid("");
   }
 
   if (!league)
@@ -357,6 +372,29 @@ export function AuctionRoom({ leagueId }: { leagueId: string }) {
             </span>
           </section>
           <section
+            className="auction-roster-needs"
+            aria-label="Your remaining roster requirements"
+          >
+            <div className="auction-roster-needs-heading">
+              <span>
+                <small>YOUR POSITION NEEDS</small>
+                <strong>{Math.max(0, 18 - myRoster.length)} spots left</strong>
+              </span>
+              <small>18-player target</small>
+            </div>
+            <div className="auction-roster-needs-grid">
+              {rosterNeeds.map(({ position, target, current, needed }) => (
+                <span className={needed === 0 ? "complete" : ""} key={position}>
+                  <small>{position}</small>
+                  <strong>
+                    {current}/{target}
+                  </strong>
+                  <em>{needed === 0 ? "Complete" : `Need ${needed}`}</em>
+                </span>
+              ))}
+            </div>
+          </section>
+          <section
             className="draft-order"
             aria-label="Auction nomination order"
           >
@@ -406,7 +444,9 @@ export function AuctionRoom({ leagueId }: { leagueId: string }) {
                   <button
                     key={step}
                     disabled={busy || nextBid + (step - 1) * 1000000 > myMax}
-                    onClick={() => bid(nextBid + (step - 1) * 1000000)}
+                    onClick={() =>
+                      void bid(nextBid + (step - 1) * 1000000)
+                    }
                   >
                     +{step}M
                   </button>
@@ -428,7 +468,9 @@ export function AuctionRoom({ leagueId }: { leagueId: string }) {
                     Number(customBid) * 1000000 < nextBid ||
                     Number(customBid) * 1000000 > myMax
                   }
-                  onClick={() => bid(Number(customBid) * 1000000)}
+                  onClick={() =>
+                    void bid(Number(customBid) * 1000000, true)
+                  }
                 >
                   Bid
                 </button>

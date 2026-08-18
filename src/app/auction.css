@@ -164,6 +164,73 @@
   color: var(--gold);
   font-size: 15px;
 }
+.auction-roster-needs {
+  margin-bottom: 12px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface);
+}
+.auction-roster-needs-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.auction-roster-needs-heading span {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.auction-roster-needs-heading small {
+  color: var(--muted);
+  font-size: 8px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.auction-roster-needs-heading strong {
+  font-size: 14px;
+}
+.auction-roster-needs-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+.auction-roster-needs-grid span {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 9px 4px;
+  border: 1px solid color-mix(in srgb, var(--gold) 45%, var(--line));
+  border-radius: 11px;
+  background: color-mix(in srgb, var(--gold) 7%, var(--surface2));
+  text-align: center;
+}
+.auction-roster-needs-grid span.complete {
+  border-color: var(--line);
+  background: var(--surface2);
+}
+.auction-roster-needs-grid small {
+  color: var(--muted);
+  font-size: 8px;
+  font-weight: 800;
+}
+.auction-roster-needs-grid strong {
+  color: var(--gold);
+  font-size: 16px;
+}
+.auction-roster-needs-grid em {
+  color: var(--text);
+  font-size: 8px;
+  font-style: normal;
+  font-weight: 800;
+}
+.auction-roster-needs-grid span.complete em {
+  color: var(--muted);
+}
 .auction-stage {
   text-align: center;
   background: radial-gradient(
