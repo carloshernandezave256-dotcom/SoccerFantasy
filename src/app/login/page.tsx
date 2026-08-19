@@ -8,7 +8,7 @@ import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 export default function LoginPage() {
   const router = useRouter();
   const [mode, setMode] = useState<"login" | "signup">("signup");
-  const [name, setName] = useState(""); const [email, setEmail] = useState(""); const [password, setPassword] = useState("");
+  const [name, setName] = useState(""); const [email, setEmail] = useState(""); const [password, setPassword] = useState(""); const [betaCode, setBetaCode] = useState("");
   const [message, setMessage] = useState(""); const [busy, setBusy] = useState(false);
   useEffect(() => {
     if (new URLSearchParams(window.location.search).get("mode") === "login") setMode("login");
@@ -21,10 +21,14 @@ export default function LoginPage() {
     const requested = search.get("next");
     const safeNext = requested?.startsWith("/") && !requested.startsWith("//") ? requested : null;
     const next = safeNext ?? (invite ? `/league?invite=${encodeURIComponent(invite)}` : "/league");
-    const callback = `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`;
-    const result = mode === "signup" ? await supabase.auth.signUp({ email, password, options: { data: { display_name: name }, emailRedirectTo: callback } }) : await supabase.auth.signInWithPassword({ email, password });
+    if (mode === "signup") {
+      const response = await fetch("/api/auth/beta-signup", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name, email, password, betaCode }) });
+      const body = await response.json().catch(() => ({ error: "Your account could not be created." }));
+      if (!response.ok) { setBusy(false); setMessage(body.error); return; }
+    }
+    const result = await supabase.auth.signInWithPassword({ email, password });
     setBusy(false); if (result.error) return setMessage(result.error.message);
-    if (result.data.session) router.push(next); else setMessage(invite ? "Check your email to confirm your account, then reopen the invite link and log in." : "Check your email to confirm your account, then log in.");
+    router.push(next);
   }
   return <main className="auth-page">
     <section className="auth-visual" aria-hidden="true">
@@ -46,6 +50,7 @@ export default function LoginPage() {
           {mode === "signup" ? <label>Manager name<input autoComplete="name" value={name} onChange={e=>setName(e.target.value)} minLength={2} required /></label> : null}
           <label>Email<input type="email" autoComplete="email" value={email} onChange={e=>setEmail(e.target.value)} required /></label>
           <label>Password<input type="password" autoComplete={mode === "signup" ? "new-password" : "current-password"} value={password} onChange={e=>setPassword(e.target.value)} minLength={8} required /></label>
+          {mode === "signup" ? <label>Beta access code<input autoComplete="off" value={betaCode} onChange={e=>setBetaCode(e.target.value)} required /><small>My Fantasy XI is currently invite-only.</small></label> : null}
           <button className="primary-button" disabled={busy}>{busy ? "Working…" : mode === "signup" ? "Create account" : "Log in"}</button>
           {message ? <p className="form-message" role="status">{message}</p> : null}
         </form>
