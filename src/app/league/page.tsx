@@ -333,13 +333,10 @@ export default function LeaguePage() {
         setActiveLeagueId(id);
         formElement.reset();
         setCode("");
-        if (tab === "create") {
-          window.location.assign(`/?league=${encodeURIComponent(id)}`);
-          return;
-        }
-        setMessage("You joined the league.");
-        setShowMembership(false);
-        await load(id);
+        window.location.assign(
+          `/?league=${encodeURIComponent(id)}&welcome=1`,
+        );
+        return;
       }
     } catch (error) {
       setMessage(
