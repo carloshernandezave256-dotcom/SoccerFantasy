@@ -221,7 +221,7 @@ function SignedOutLanding() {
         <div className="guest-format-grid">
           <article><span>01</span><h3>Snake Draft</h3><p>Take turns drafting an exclusive squad. Once a player is picked, they’re gone.</p></article>
           <article><span>02</span><h3>Auction</h3><p>Bid live, manage your budget and build the squad your way.</p></article>
-          <article><span>03</span><h3>Packs</h3><p>Open packs, collect players and shape a one-of-a-kind club.</p></article>
+          <article><span>03 · COMING SOON</span><h3>Packs</h3><p>Collections, pack openings and the card market are currently in private testing.</p></article>
         </div>
       </section>
       <section className="guest-how" aria-label="How My Fantasy XI works">
