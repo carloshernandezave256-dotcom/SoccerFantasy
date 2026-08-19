@@ -657,3 +657,157 @@ textarea,
     transition-duration: .01ms !important;
   }
 }
+
+/* Shared navigation: phone bar, tablet rail and desktop sidebar. */
+.bottom-nav { display: block; }
+
+.bottom-nav .nav-brand,
+.bottom-nav .nav-footer { display: none; }
+
+.bottom-nav .nav-items {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  width: 100%;
+}
+
+.bottom-nav .nav-items > a {
+  min-width: 0;
+  min-height: 49px;
+  padding: 4px 2px;
+  line-height: 1.15;
+}
+
+.bottom-nav .nav-items b {
+  font-size: inherit;
+  font-weight: 700;
+}
+
+@media (min-width: 760px) {
+  .app-shell:has(> .bottom-nav) {
+    width: min(calc(100% - 86px), 760px);
+    margin-right: auto;
+    margin-left: max(86px, calc(86px + (100vw - 846px) / 2));
+    padding-bottom: 44px;
+  }
+
+  .bottom-nav {
+    top: 0;
+    bottom: 0;
+    left: 0;
+    transform: none;
+    width: 86px;
+    min-height: 100dvh;
+    padding: max(18px, env(safe-area-inset-top)) 10px max(18px, env(safe-area-inset-bottom));
+    border-top: 0;
+    border-right: 1px solid var(--line-strong);
+    background: color-mix(in srgb, var(--bg) 94%, transparent);
+  }
+
+  .bottom-nav .nav-brand {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 46px;
+    color: var(--text);
+    text-decoration: none;
+  }
+
+  .bottom-nav .nav-brand span {
+    display: grid;
+    place-items: center;
+    width: 42px;
+    height: 42px;
+    border-radius: 13px;
+    background: var(--lime);
+    color: var(--button-text);
+    font-size: 13px;
+    font-weight: 1000;
+  }
+
+  .bottom-nav .nav-brand strong { display: none; }
+
+  .bottom-nav .nav-items {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .bottom-nav .nav-items > a {
+    min-height: 58px;
+    padding: 8px 4px;
+    border: 1px solid transparent;
+    border-radius: 14px;
+  }
+
+  .bottom-nav .nav-items > a span { font-size: 20px; }
+  .bottom-nav .nav-items > a b { font-size: 8px; }
+
+  .bottom-nav .nav-items > a.active {
+    border-color: color-mix(in srgb, var(--lime) 20%, var(--line));
+    background: color-mix(in srgb, var(--lime) 10%, var(--surface));
+  }
+}
+
+@media (min-width: 1100px) {
+  .app-shell:has(> .bottom-nav) {
+    width: min(calc(100% - 238px), 1040px);
+    margin-left: max(238px, calc(238px + (100vw - 1278px) / 2));
+    padding-inline: clamp(26px, 3vw, 46px);
+  }
+
+  .bottom-nav {
+    width: 238px;
+    padding: max(28px, env(safe-area-inset-top)) 20px max(24px, env(safe-area-inset-bottom));
+  }
+
+  .bottom-nav .nav-brand {
+    justify-content: flex-start;
+    gap: 12px;
+    margin: 0 8px 54px;
+  }
+
+  .bottom-nav .nav-brand span {
+    width: 44px;
+    height: 44px;
+    flex: 0 0 44px;
+  }
+
+  .bottom-nav .nav-brand strong {
+    display: block;
+    font-size: 10px;
+    letter-spacing: .15em;
+    white-space: nowrap;
+  }
+
+  .bottom-nav .nav-items { gap: 6px; }
+
+  .bottom-nav .nav-items > a {
+    flex-direction: row;
+    justify-content: flex-start;
+    min-height: 52px;
+    gap: 14px;
+    padding: 10px 14px;
+    font-size: 12px;
+  }
+
+  .bottom-nav .nav-items > a span {
+    width: 24px;
+    font-size: 19px;
+    text-align: center;
+  }
+
+  .bottom-nav .nav-items > a b { font-size: 12px; }
+
+  .bottom-nav .nav-footer {
+    position: absolute;
+    right: 20px;
+    bottom: max(22px, env(safe-area-inset-bottom));
+    left: 20px;
+    display: block;
+    margin: 0;
+    color: var(--muted);
+    font-size: 7px;
+    font-weight: 900;
+    letter-spacing: .14em;
+    text-align: center;
+  }
+}
