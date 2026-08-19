@@ -451,7 +451,7 @@ export function HomeDashboard() {
       return {
         eyebrow: "LINEUP NEEDED",
         title: "Finish your Starting XI.",
-        copy: `${lineupCount}/11 starters selected${hasCaptain ? "" : " · captain still needed"}.`,
+        copy: `${lineupCount}/11 starters selected${hasCaptain ? "" : " · Star Pick still needed"}.`,
         href: `/team?league=${league.league_id}`,
         label: "Set my lineup",
       };
@@ -664,7 +664,7 @@ export function HomeDashboard() {
                 <div>
                   <strong>My Team</strong>
                   <small>
-                    {lineupReady ? "Lineup & captain ready" : "Action required"}
+                    {lineupReady ? "Lineup & Star Pick ready" : "Action required"}
                   </small>
                 </div>
                 {!lineupReady && draftReady ? (

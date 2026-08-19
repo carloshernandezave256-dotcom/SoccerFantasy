@@ -19,7 +19,7 @@ export interface PlayerMatchStats {
   redCards?: number;
   ownGoals?: number;
   manOfTheMatch?: boolean;
-  captain?: boolean;
+  starPickWinner?: boolean;
 }
 
 export interface LedgerEntry { code: string; label: string; detail: string; points: number }
@@ -73,10 +73,7 @@ export function calculateScore(stats: PlayerMatchStats): ScoreResult {
   add("second-yellow", "Second-yellow dismissals", `${countLabel(stats.secondYellowCards ?? 0, "second-yellow dismissal")} · −2 FP each`, -(stats.secondYellowCards ?? 0) * 2);
   add("red", "Straight red cards", `${countLabel(stats.redCards ?? 0, "straight red card")} · −3 FP each`, -(stats.redCards ?? 0) * 3);
   add("own-goals", "Own goals", `${countLabel(stats.ownGoals ?? 0, "own goal")} · −3 FP each`, -(stats.ownGoals ?? 0) * 3);
-  if (stats.manOfTheMatch) {
-    add("motm", "Man of the Match", "Match award", 1);
-    if (stats.captain) add("captain-motm", "Captain prediction bonus", "Your captain won Man of the Match", 4);
-  }
+  if (stats.starPickWinner) add("star-pick", "Star Pick", "Your prediction finished as your highest-scoring starter", 5);
 
   return { total: entries.reduce((sum, entry) => sum + entry.points, 0), entries };
 }

@@ -2,9 +2,9 @@ import { describe, expect, it } from "vitest";
 import { calculateScore } from "./scoring";
 
 describe("custom scoring", () => {
-  it("uses shots on target and MOTM without a big-chance deduction", () => {
+  it("uses shots on target without scoring the display-only match award", () => {
     const result = calculateScore({ position: "MID", minutes: 90, shotsOnTarget: 3, manOfTheMatch: true });
-    expect(result.total).toBe(6); // minutes 2 + SOT 3 + MOTM 1
+    expect(result.total).toBe(5); // minutes 2 + SOT 3
   });
 
   it("awards position goals and the hat-trick target bonus", () => {
@@ -30,11 +30,10 @@ describe("custom scoring", () => {
     expect(result.total).toBe(8); // minutes 2 + saves 2 + pen save 2 + clean sheet 3 - yellow 1
   });
 
-  it("awards one for Man of the Match and four more for a correct captain prediction", () => {
-    const captain = calculateScore({ position: "MID", minutes: 90, manOfTheMatch: true, captain: true });
-    const regular = calculateScore({ position: "MID", minutes: 90, manOfTheMatch: true });
-    expect(regular.entries.find((entry) => entry.code === "motm")?.points).toBe(1);
-    expect(captain.total).toBe(regular.total + 4);
-    expect(captain.entries.some((entry) => entry.code === "captain-motm")).toBe(true);
+  it("awards one five-point Star Pick bonus after the team-level prediction is settled", () => {
+    const winner = calculateScore({ position: "MID", minutes: 90, starPickWinner: true });
+    const regular = calculateScore({ position: "MID", minutes: 90 });
+    expect(winner.total).toBe(regular.total + 5);
+    expect(winner.entries.find((entry) => entry.code === "star-pick")?.points).toBe(5);
   });
 });

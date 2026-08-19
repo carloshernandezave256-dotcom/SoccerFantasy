@@ -781,13 +781,12 @@ export default function LeaguePage() {
                     </label>
                     <div className="settings-readonly">
                       <span>
-                        <strong>Man of the Match</strong>
+                        <strong>Star Pick</strong>
                         <small>
-                          Highest API match rating · +1 point; captain earns
-                          an additional +4.
+                          Predict your highest-scoring starter · +5 points if correct.
                         </small>
                       </span>
-                      <b>AUTOMATIC</b>
+                      <b>WEEKLY PICK</b>
                     </div>
                     <button
                       className="primary-button full-button"
@@ -940,10 +939,10 @@ export default function LeaguePage() {
                   </div>
                   <div>
                     <span>
-                      <strong>Man of the Match</strong>
-                      <small>+1 point; captain earns an additional +4.</small>
+                      <strong>Star Pick</strong>
+                      <small>+5 when your prediction finishes tied for or alone as your highest-scoring starter.</small>
                     </span>
-                    <b>Automatic</b>
+                    <b>Settles automatically</b>
                   </div>
                 </section>
               ) : null}
@@ -1298,7 +1297,7 @@ export default function LeaguePage() {
                     </>
                   )}
                   <span>18-player squads · 11 starters · 7 bench</span>
-                  <span>Manual MOTM: +1, plus +4 when captain</span>
+                  <span>Weekly Star Pick · +5 when your prediction tops your XI</span>
                   <span>Season-long standings · No playoffs</span>
                 </div>
                 </>

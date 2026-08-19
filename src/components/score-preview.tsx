@@ -8,7 +8,7 @@ const example: PlayerMatchStats = {
   shotsOnTarget: 2,
   completedPasses: 42,
   tacklesWon: 3,
-  manOfTheMatch: true,
+  starPickWinner: true,
 };
 
 export function ScorePreview() {

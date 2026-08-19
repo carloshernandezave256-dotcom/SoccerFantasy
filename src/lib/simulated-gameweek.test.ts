@@ -12,6 +12,6 @@ describe("simulated gameweek", () => {
       }, 0)
     );
 
-    expect(totals).toEqual([113, 105]);
+    expect(totals).toEqual([115, 106]);
   });
 });
