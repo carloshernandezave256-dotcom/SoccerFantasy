@@ -108,7 +108,7 @@ as $$
   with starter_scores as (
     select
       lp.player_id,
-      lp.is_captain as is_star_pick,
+      lp.is_star_pick,
       coalesce(private.player_score(
         p.position, s.minutes, s.goals, s.assists, s.shots_on_target,
         s.big_chances_missed, s.completed_passes, s.tackles_won,
