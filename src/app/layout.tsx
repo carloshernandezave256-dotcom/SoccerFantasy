@@ -16,6 +16,7 @@ import "./waivers.css";
 import "./packs.css";
 import "./auction.css";
 import "./polish.css";
+import { LegalDisclosureGate } from "@/components/legal-disclosure-gate";
 
 export const metadata: Metadata = {
   title: "My Fantasy XI | Build Your Football World",
@@ -33,7 +34,7 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>{children}<LegalDisclosureGate /></body>
     </html>
   );
 }
