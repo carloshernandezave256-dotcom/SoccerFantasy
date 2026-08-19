@@ -57,5 +57,5 @@ export async function GET(request:NextRequest){
   }
 
   const failed=results.filter(result=>!result.ok);
-  return NextResponse.json({ok:failed.length===0,ranAt:new Date().toISOString(),cadenceMinutes:5,leaguesFound:leagues.length,leaguesEligible:activeLeagues.length,leaguesSkipped:leagues.length-activeLeagues.length,leaguesUpdated:results.length-failed.length,failed:failed.length,requestsUsed:results.reduce((total,result)=>total+(result.requestsUsed??0),0),results},{status:failed.length===results.length&&results.length>0?502:200});
+  return NextResponse.json({ok:failed.length===0,ranAt:new Date().toISOString(),cadenceMinutes:3,leaguesFound:leagues.length,leaguesEligible:activeLeagues.length,leaguesSkipped:leagues.length-activeLeagues.length,leaguesUpdated:results.length-failed.length,failed:failed.length,requestsUsed:results.reduce((total,result)=>total+(result.requestsUsed??0),0),results},{status:failed.length===results.length&&results.length>0?502:200});
 }
