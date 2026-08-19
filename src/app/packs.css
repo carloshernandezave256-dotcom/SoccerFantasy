@@ -42,3 +42,4 @@
 @keyframes superstar-card-arrive{0%,76%{opacity:0;transform:translate(-50%,-46%) scale(.42) rotateY(86deg)}80%{opacity:1}91%,100%{opacity:1;transform:translate(-50%,-50%) scale(1) rotateY(0)}}
 @media(max-height:720px){.superstar-walkout{height:74vh;min-height:460px}.superstar-final-card{width:min(72%,285px)}}
 @media(prefers-reduced-motion:reduce){.walkout-lights,.walkout-smoke,.walkout-stage-mark,.walkout-clue,.walkout-flash{display:none}.superstar-final-card{opacity:1;transform:translate(-50%,-50%) scale(1) rotateY(0);animation:none}}
+.packs-coming-soon{max-width:620px;margin-inline:auto}.packs-coming-soon>span{display:block;margin-bottom:16px}
