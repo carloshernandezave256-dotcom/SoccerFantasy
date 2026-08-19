@@ -58,6 +58,7 @@ export function TeamManager(){
   const[lineupLock,setLineupLock]=useState<LineupLock|null>(null);
   const suppressRefreshUntil=useRef(0);
   const dirtyRef=useRef(false);
+  const savedStarterIdsRef=useRef<Set<number>>(new Set());
 
   const loadRoster=useCallback(async(id:string,ownerId:string)=>{
     setLoading(true);setMessage("");setRoster([]);setStarters(new Set());setStarterOrder([]);setCaptain(null);setInfoPlayer(null);setUndoOrder(null);setSelectedStarter(null);
@@ -96,6 +97,7 @@ export function TeamManager(){
     const mergedOrder=[...orderedSaved,...fallbackOrder.filter(id=>!orderedSaved.includes(id))];
     setStarterOrder(saved.some(row=>row.is_starter&&row.pitch_order!==null)?mergedOrder:centerHaaland(fallbackOrder,loadedRoster));
     const savedCaptain=saved.find(row=>row.is_captain)?.player_id??null;
+    savedStarterIdsRef.current=new Set(savedStarterIds);
     setCaptain(savedLineupIsValid&&savedCaptain!==null&&starterIds.has(savedCaptain)?savedCaptain:null);
     setEditing(!currentLock?.locked&&(!savedLineupIsValid||savedCaptain===null));setDirty(false);setCaptainMode(false);setSelectedBench(null);setSelectedStarter(null);setLoading(false);
   },[]);
@@ -190,6 +192,8 @@ export function TeamManager(){
   }
 
   async function persistOrder(order:number[],rollback:number[]){
+    const matchesSavedXI=starters.size===savedStarterIdsRef.current.size&&[...starters].every(id=>savedStarterIdsRef.current.has(id));
+    if(!matchesSavedXI){setMessage("Arrangement ready. Finish lineup to save your updated XI and positions together.");return}
     suppressRefreshUntil.current=Date.now()+4000;
     const start=[...order.filter(id=>starters.has(id)),...[...starters].filter(id=>!order.includes(id))];
     const{error}=await supabase.rpc(starters.size<11?"save_partial_pitch_order":"save_pitch_order",starters.size<11?{p_league_id:league,p_players:start}:{p_league_id:league,p_starters:start});
@@ -222,7 +226,7 @@ export function TeamManager(){
     const start=[...starterOrder.filter(id=>starters.has(id)),...[...starters].filter(id=>!starterOrder.includes(id))];
     const bench=roster.filter(player=>!starters.has(player.id)).slice(0,7).map(player=>player.id);
     const{error}=await supabase.rpc("save_lineup",{p_league_id:league,p_starters:start,p_bench:bench,p_captain:captain});
-    if(error)setMessage(error.message);else{setMessage("Lineup and Star Pick saved.");setDirty(false);setUndoOrder(null);setEditing(false);setCaptainMode(false)}
+    if(error)setMessage(error.message);else{savedStarterIdsRef.current=new Set(start);setMessage("Lineup and Star Pick saved.");setDirty(false);setUndoOrder(null);setEditing(false);setCaptainMode(false)}
   }
 
   return <PageShell leagueId={league} eyebrow={viewedManager?.team_name??leagues.find(item=>item.league_id===league)?.team_name??"MY CLUB"} title={isMine?"My Team":"Team Viewer"}>
