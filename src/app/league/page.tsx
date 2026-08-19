@@ -783,11 +783,11 @@ export default function LeaguePage() {
                       <span>
                         <strong>Man of the Match</strong>
                         <small>
-                          Commissioner entry · +1 point; captain earns an
-                          additional +4.
+                          Highest API match rating · +1 point; captain earns
+                          an additional +4.
                         </small>
                       </span>
-                      <b>MANUAL</b>
+                      <b>AUTOMATIC</b>
                     </div>
                     <button
                       className="primary-button full-button"
@@ -943,7 +943,7 @@ export default function LeaguePage() {
                       <strong>Man of the Match</strong>
                       <small>+1 point; captain earns an additional +4.</small>
                     </span>
-                    <b>Manual</b>
+                    <b>Automatic</b>
                   </div>
                 </section>
               ) : null}

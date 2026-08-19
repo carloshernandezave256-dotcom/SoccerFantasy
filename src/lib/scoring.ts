@@ -6,7 +6,6 @@ export interface PlayerMatchStats {
   goals?: number;
   assists?: number;
   shotsOnTarget?: number;
-  bigChancesMissed?: number;
   completedPasses?: number;
   tacklesWon?: number;
   penaltyGoals?: number;
@@ -53,7 +52,6 @@ export function calculateScore(stats: PlayerMatchStats): ScoreResult {
 
   // Latest Dreamflow clarifications supersede the earlier spreadsheet thresholds.
   add("shots-on-target", "Shots on target", `${countLabel(stats.shotsOnTarget ?? 0, "shot")} on target · 1 FP each`, stats.shotsOnTarget ?? 0);
-  add("big-chances-missed", "Big chances missed", `${countLabel(stats.bigChancesMissed ?? 0, "big chance")} missed · −1 FP each`, -(stats.bigChancesMissed ?? 0));
   add("passes", "Completed passes", `${countLabel(stats.completedPasses ?? 0, "completed pass", "completed passes")} · 1 FP for every 10`, Math.floor((stats.completedPasses ?? 0) / 10));
   add("tackles", "Tackles won", `${countLabel(stats.tacklesWon ?? 0, "tackle")} won · 1 FP for every 3`, Math.floor((stats.tacklesWon ?? 0) / 3));
   add("penalty-goals", "Penalties scored", `${countLabel(stats.penaltyGoals ?? 0, "penalty")} scored · 2 FP each`, (stats.penaltyGoals ?? 0) * 2);

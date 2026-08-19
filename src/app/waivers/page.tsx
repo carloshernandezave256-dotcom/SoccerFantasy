@@ -103,7 +103,7 @@ export default function WaiversPage() {
     for (const row of scores) {
       const player = playerMap.get(row.player_id);
       if (!player) continue;
-      const points = calculateScore({ position: player.position as Position, minutes: row.minutes, goals: row.goals, assists: row.assists, shotsOnTarget: row.shots_on_target, bigChancesMissed: row.big_chances_missed, completedPasses: row.completed_passes, tacklesWon: row.tackles_won, penaltyGoals: row.penalty_goals, penaltiesMissed: row.penalties_missed, penaltiesConceded: row.penalties_conceded, saves: row.saves, penaltiesSaved: row.penalties_saved, goalsConceded: row.goals_conceded, yellowCards: row.yellow_cards, secondYellowCards: row.second_yellow_cards, redCards: row.red_cards, ownGoals: row.own_goals, manOfTheMatch: row.man_of_the_match }).total;
+      const points = calculateScore({ position: player.position as Position, minutes: row.minutes, goals: row.goals, assists: row.assists, shotsOnTarget: row.shots_on_target, completedPasses: row.completed_passes, tacklesWon: row.tackles_won, penaltyGoals: row.penalty_goals, penaltiesMissed: row.penalties_missed, penaltiesConceded: row.penalties_conceded, saves: row.saves, penaltiesSaved: row.penalties_saved, goalsConceded: row.goals_conceded, yellowCards: row.yellow_cards, secondYellowCards: row.second_yellow_cards, redCards: row.red_cards, ownGoals: row.own_goals, manOfTheMatch: row.man_of_the_match }).total;
       const current = totals.get(row.player_id) ?? { points: 0, appearances: 0, minutes: 0, goals: 0, assists: 0, shotsOnTarget: 0, completedPasses: 0, tacklesWon: 0, saves: 0, cleanSheets: 0, yellowCards: 0, redCards: 0, motm: 0, gameweeks: [] };
       current.points += points;
       current.appearances += row.minutes > 0 ? 1 : 0;

@@ -2,9 +2,9 @@ import { describe, expect, it } from "vitest";
 import { calculateScore } from "./scoring";
 
 describe("custom scoring", () => {
-  it("uses the latest clarified SOT, BCM and MOTM rules", () => {
-    const result = calculateScore({ position: "MID", minutes: 90, shotsOnTarget: 3, bigChancesMissed: 1, manOfTheMatch: true });
-    expect(result.total).toBe(5); // minutes 2 + SOT 3 - BCM 1 + MOTM 1
+  it("uses shots on target and MOTM without a big-chance deduction", () => {
+    const result = calculateScore({ position: "MID", minutes: 90, shotsOnTarget: 3, manOfTheMatch: true });
+    expect(result.total).toBe(6); // minutes 2 + SOT 3 + MOTM 1
   });
 
   it("awards position goals and the hat-trick target bonus", () => {

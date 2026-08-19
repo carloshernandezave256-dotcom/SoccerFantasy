@@ -81,7 +81,7 @@ export function RealMatchup(){
       const scoredPlayer=(player:Omit<Player,"score"|"status"|"ledger">,captain:boolean,lineupSet:boolean):Player=>{
         const row=scoreRows.find(score=>score.player_id===player.id);
         if(!row||!lineupSet)return{...player,captain,score:0,status:"not_started",ledger:[]};
-        const stats:PlayerMatchStats={position:player.position as Position,minutes:row.minutes,goals:row.goals,assists:row.assists,shotsOnTarget:row.shots_on_target,bigChancesMissed:row.big_chances_missed,completedPasses:row.completed_passes,tacklesWon:row.tackles_won,penaltyGoals:row.penalty_goals,penaltiesMissed:row.penalties_missed,penaltiesConceded:row.penalties_conceded,saves:row.saves,penaltiesSaved:row.penalties_saved,goalsConceded:row.goals_conceded,yellowCards:row.yellow_cards,secondYellowCards:row.second_yellow_cards,redCards:row.red_cards,ownGoals:row.own_goals,manOfTheMatch:row.man_of_the_match,captain};
+        const stats:PlayerMatchStats={position:player.position as Position,minutes:row.minutes,goals:row.goals,assists:row.assists,shotsOnTarget:row.shots_on_target,completedPasses:row.completed_passes,tacklesWon:row.tackles_won,penaltyGoals:row.penalty_goals,penaltiesMissed:row.penalties_missed,penaltiesConceded:row.penalties_conceded,saves:row.saves,penaltiesSaved:row.penalties_saved,goalsConceded:row.goals_conceded,yellowCards:row.yellow_cards,secondYellowCards:row.second_yellow_cards,redCards:row.red_cards,ownGoals:row.own_goals,manOfTheMatch:row.man_of_the_match,captain};
         const result=calculateScore(stats);
         return{...player,captain,score:result.total,status:row.status,ledger:result.entries};
       };

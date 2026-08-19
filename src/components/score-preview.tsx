@@ -6,7 +6,6 @@ const example: PlayerMatchStats = {
   goals: 1,
   assists: 1,
   shotsOnTarget: 2,
-  bigChancesMissed: 1,
   completedPasses: 42,
   tacklesWon: 3,
   manOfTheMatch: true,
