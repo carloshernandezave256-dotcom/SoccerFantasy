@@ -14,9 +14,9 @@ export async function GET(request:NextRequest){
   if(!secret)return NextResponse.json({error:"CRON_SECRET is not configured."},{status:503});
   if(request.headers.get("authorization")!==`Bearer ${secret}`)return NextResponse.json({error:"Unauthorized"},{status:401});
 
-  const supabaseUrl=process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseUrl=process.env.NEXT_PUBLIC_SUPABASE_URL??"https://ocabrgbrkqmsnalbfzvx.supabase.co";
   const serviceRoleKey=process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if(!supabaseUrl||!serviceRoleKey)return NextResponse.json({error:"Server database credentials are not configured."},{status:503});
+  if(!serviceRoleKey)return NextResponse.json({error:"Server database credential is not configured."},{status:503});
 
   const leaguesResponse=await fetch(`${supabaseUrl}/rest/v1/leagues?select=id,name,calendar_competition&game_format=in.(draft,auction)&calendar_competition=not.is.null`,{headers:adminHeaders(serviceRoleKey),cache:"no-store"});
   if(!leaguesResponse.ok)return NextResponse.json({error:(await leaguesResponse.text())||"Could not load leagues."},{status:502});
