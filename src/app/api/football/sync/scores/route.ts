@@ -58,6 +58,8 @@ export async function POST(request:NextRequest){
     if(fixtureRows.length){
       const fixtureUpsert=await fetch(`${supabaseUrl}/rest/v1/league_headline_fixtures?on_conflict=league_id,fixture_id`,{method:"POST",headers:{...adminHeaders(serviceRoleKey),Prefer:"resolution=merge-duplicates,return=minimal"},body:JSON.stringify(fixtureRows),cache:"no-store"});
       if(!fixtureUpsert.ok)throw new Error((await fixtureUpsert.text())||"Fixture database update failed");
+      const calendarRefresh=await fetch(`${supabaseUrl}/rest/v1/rpc/refresh_league_calendar`,{method:"POST",headers:adminHeaders(serviceRoleKey),body:JSON.stringify({p_league_id:body.leagueId}),cache:"no-store"});
+      if(!calendarRefresh.ok)throw new Error((await calendarRefresh.text())||"Automatic gameweek activation failed");
     }
 
     const started=fixtureBody.response.filter(item=>!unstartedStatuses.has(item.fixture.status.short)&&new Date(item.fixture.date)<=now);
