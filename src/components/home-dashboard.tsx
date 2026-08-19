@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AccountMenu } from "./account-menu";
 import { BottomNav } from "./bottom-nav";
@@ -185,6 +186,57 @@ function LeagueWelcome({ league, onFinish }: { league: League; onFinish: () => v
         </button>
       </section>
     </div>
+  );
+}
+
+function SignedOutLanding() {
+  return (
+    <main className="guest-landing">
+      <header className="guest-header">
+        <Link className="guest-brand" href="/" aria-label="My Fantasy XI home">
+          <span>XI</span>
+          <strong>MY FANTASY XI</strong>
+        </Link>
+        <Link className="guest-header-login" href="/login?next=/&mode=login">Log in</Link>
+      </header>
+      <section className="guest-hero">
+        <div className="guest-hero-copy">
+          <p className="eyebrow">YOUR TEAM. YOUR CALLS.</p>
+          <h1>Build your XI.<br />Outsmart your league.</h1>
+          <p>Draft stars across Europe, set your lineup and compete head to head every gameweek.</p>
+          <div className="guest-actions">
+            <Link className="primary-button" href="/login?next=/">Create account</Link>
+            <Link className="guest-secondary-button" href="/login?next=/&mode=login">Log in</Link>
+          </div>
+        </div>
+        <div className="guest-hero-art">
+          <Image src="/home/my-fantasy-xi-hero.webp" alt="A football manager directing a fantasy starting eleven on a glowing tactical pitch" fill priority sizes="(min-width: 900px) 50vw, 100vw" />
+        </div>
+      </section>
+      <section className="guest-formats" aria-labelledby="guest-formats-title">
+        <div className="guest-section-heading">
+          <p className="eyebrow">THREE WAYS TO PLAY</p>
+          <h2 id="guest-formats-title">Choose your competition.</h2>
+        </div>
+        <div className="guest-format-grid">
+          <article><span>01</span><h3>Snake Draft</h3><p>Take turns drafting an exclusive squad. Once a player is picked, they’re gone.</p></article>
+          <article><span>02</span><h3>Auction</h3><p>Bid live, manage your budget and build the squad your way.</p></article>
+          <article><span>03</span><h3>Packs</h3><p>Open packs, collect players and shape a one-of-a-kind club.</p></article>
+        </div>
+      </section>
+      <section className="guest-how" aria-label="How My Fantasy XI works">
+        <p className="eyebrow">HOW IT WORKS</p>
+        <div>
+          <span><b>1</b> Join a league</span><i aria-hidden="true">→</i>
+          <span><b>2</b> Build your XI</span><i aria-hidden="true">→</i>
+          <span><b>3</b> Compete weekly</span>
+        </div>
+      </section>
+      <footer className="guest-footer">
+        <strong>MY FANTASY XI</strong>
+        <p>Independent fantasy football. Not affiliated with any club, league or governing body.</p>
+      </footer>
+    </main>
   );
 }
 
@@ -578,6 +630,8 @@ export function HomeDashboard() {
     window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
   }
 
+  if (!loading && !signedIn) return <SignedOutLanding />;
+
   return (
     <main className="app-shell home-dashboard">
       {league && showLeagueWelcome ? <LeagueWelcome league={league} onFinish={finishLeagueWelcome} /> : null}
@@ -589,16 +643,6 @@ export function HomeDashboard() {
         </div>
         <AccountMenu />
       </header>
-      {!loading && !signedIn ? (
-        <section className="match-card home-empty">
-          <p className="eyebrow">YOUR SEASON</p>
-          <h2>Sign in to open your dashboard.</h2>
-          <p>Your leagues, lineup and matchup will appear here.</p>
-          <Link className="primary-button" href="/login?next=/">
-            Log in
-          </Link>
-        </section>
-      ) : null}
       {!loading && signedIn && !league ? (
         <section className="match-card home-empty">
           <p className="eyebrow">START HERE</p>

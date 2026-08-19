@@ -18,8 +18,8 @@ import "./auction.css";
 import "./polish.css";
 
 export const metadata: Metadata = {
-  title: "XI | Cross-League Fantasy",
-  description: "Draft across Europe's top five leagues.",
+  title: "My Fantasy XI | Build Your Football World",
+  description: "Draft, auction or collect your squad and compete head to head every gameweek.",
 };
 
 export const viewport: Viewport = {
