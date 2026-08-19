@@ -1,6 +1,7 @@
 import {NextRequest,NextResponse} from "next/server";
 
-type League={id:string;name:string};
+type League={id:string;name:string;calendar_competition:string};
+type FixtureWindow={kickoff:string;status:string};
 type SyncResult={leagueId:string;leagueName:string;ok:boolean;gameweek?:number;playersUpdated?:number;matchupsUpdated?:number;requestsUsed?:number;error?:string};
 
 export const dynamic="force-dynamic";
@@ -17,15 +18,35 @@ export async function GET(request:NextRequest){
   const serviceRoleKey=process.env.SUPABASE_SERVICE_ROLE_KEY;
   if(!supabaseUrl||!serviceRoleKey)return NextResponse.json({error:"Server database credentials are not configured."},{status:503});
 
-  const leaguesResponse=await fetch(`${supabaseUrl}/rest/v1/leagues?select=id,name&game_format=in.(draft,auction)&calendar_competition=not.is.null`,{headers:adminHeaders(serviceRoleKey),cache:"no-store"});
+  const leaguesResponse=await fetch(`${supabaseUrl}/rest/v1/leagues?select=id,name,calendar_competition&game_format=in.(draft,auction)&calendar_competition=not.is.null`,{headers:adminHeaders(serviceRoleKey),cache:"no-store"});
   if(!leaguesResponse.ok)return NextResponse.json({error:(await leaguesResponse.text())||"Could not load leagues."},{status:502});
   const leagues=await leaguesResponse.json() as League[];
+  const now=new Date();
+  const activeSince=new Date(now.getTime()-6*60*60*1000);
+  const finalStatuses=new Set(["FT","AET","PEN","PST","CANC","ABD","AWD","WO"]);
+  const activity=await Promise.all(leagues.map(async league=>{
+    const query=new URLSearchParams({
+      league_id:`eq.${league.id}`,
+      competition:`eq.${league.calendar_competition}`,
+      kickoff:`lte.${now.toISOString()}`,
+      select:"kickoff,status",
+      order:"kickoff.desc",
+      limit:"1",
+    });
+    const response=await fetch(`${supabaseUrl}/rest/v1/league_headline_fixtures?${query}`,{headers:adminHeaders(serviceRoleKey),cache:"no-store"});
+    const fixtures=response.ok?await response.json() as FixtureWindow[]:[];
+    const latest=fixtures[0];
+    // No cached fixture means the league needs one bootstrap sync. Otherwise only
+    // spend API-Football requests while its calendar competition can be live.
+    return {league,shouldSync:!latest||(new Date(latest.kickoff)>=activeSince&&!finalStatuses.has(latest.status))};
+  }));
+  const activeLeagues=activity.filter(item=>item.shouldSync).map(item=>item.league);
   const results:SyncResult[]=[];
 
   // Small batches keep API-Football concurrency predictable while allowing every
   // beta league to finish inside the serverless execution window.
-  for(let index=0;index<leagues.length;index+=2){
-    const batch=leagues.slice(index,index+2);
+  for(let index=0;index<activeLeagues.length;index+=2){
+    const batch=activeLeagues.slice(index,index+2);
     results.push(...await Promise.all(batch.map(async league=>{
       try{
         const response=await fetch(new URL("/api/football/sync/scores",request.url),{method:"POST",headers:{Authorization:`Bearer ${secret}`,"Content-Type":"application/json"},body:JSON.stringify({leagueId:league.id}),cache:"no-store"});
@@ -36,5 +57,5 @@ export async function GET(request:NextRequest){
   }
 
   const failed=results.filter(result=>!result.ok);
-  return NextResponse.json({ok:failed.length===0,ranAt:new Date().toISOString(),leaguesFound:leagues.length,leaguesUpdated:results.length-failed.length,failed:failed.length,requestsUsed:results.reduce((total,result)=>total+(result.requestsUsed??0),0),results},{status:failed.length===results.length&&results.length>0?502:200});
+  return NextResponse.json({ok:failed.length===0,ranAt:new Date().toISOString(),cadenceMinutes:5,leaguesFound:leagues.length,leaguesEligible:activeLeagues.length,leaguesSkipped:leagues.length-activeLeagues.length,leaguesUpdated:results.length-failed.length,failed:failed.length,requestsUsed:results.reduce((total,result)=>total+(result.requestsUsed??0),0),results},{status:failed.length===results.length&&results.length>0?502:200});
 }
