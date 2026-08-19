@@ -9,6 +9,7 @@ import {
   resolveActiveLeague,
   setActiveLeagueId,
 } from "@/lib/active-league";
+import { isDeveloperEmail } from "@/lib/developer-auth";
 
 type League = {
   league_id: string;
@@ -146,6 +147,7 @@ export default function LeaguePage() {
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
   const [initialLoading, setInitialLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [packDeveloper, setPackDeveloper] = useState(false);
   const active =
     leagues.find((league) => league.league_id === activeId) ??
     leagues[0] ??
@@ -231,6 +233,7 @@ export default function LeaguePage() {
       data: { user },
     } = await supabase.auth.getUser();
     setSignedIn(Boolean(user));
+    setPackDeveloper(isDeveloperEmail(user?.email));
     if (!user) {
       setInitialLoading(false);
       return;
@@ -300,6 +303,11 @@ export default function LeaguePage() {
     if (!signedIn) {
       setSignedIn(false);
       setMessage("Log in first so this league can be saved to your account.");
+      return;
+    }
+    if (tab === "create" && gameFormat === "pack" && !packDeveloper) {
+      setMessage("Pack Leagues are coming soon.");
+      setCreationStep("format");
       return;
     }
     setBusy(true);
@@ -1027,6 +1035,7 @@ export default function LeaguePage() {
                       gameFormat === format.id ? " active" : ""
                     }`}
                     aria-pressed={gameFormat === format.id}
+                    disabled={format.id === "pack" && !packDeveloper}
                     onClick={() => setGameFormat(format.id)}
                   >
                     <span className="league-format-icon" aria-hidden="true">
@@ -1034,7 +1043,7 @@ export default function LeaguePage() {
                     </span>
                     <small>{format.kicker}</small>
                     <strong>{format.title}</strong>
-                    <span>{format.description}</span>
+                    <span>{format.id === "pack" && !packDeveloper ? "Coming soon" : format.description}</span>
                   </button>
                 ))}
               </div>
