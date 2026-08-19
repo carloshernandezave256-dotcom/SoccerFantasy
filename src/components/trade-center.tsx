@@ -466,8 +466,10 @@ export function TradeCenter() {
                       <WizardActions
                         back={() => setBuildStep(1)}
                         next={() => setBuildStep(3)}
-                        nextLabel="Next: choose who you send"
+                        nextLabel={`Confirm ${requested.length} player${requested.length === 1 ? "" : "s"}`}
                         nextDisabled={!requested.length}
+                        sticky={requested.length > 0}
+                        selectionLabel={`${requested.length} selected`}
                       />
                     </>
                   ) : null}
@@ -483,8 +485,10 @@ export function TradeCenter() {
                       <WizardActions
                         back={() => setBuildStep(2)}
                         next={() => setBuildStep(4)}
-                        nextLabel="Next: review offer"
+                        nextLabel="Confirm and review"
                         nextDisabled={offered.length !== requested.length}
+                        sticky={offered.length > 0}
+                        selectionLabel={`${offered.length}/${requested.length} selected`}
                       />
                     </>
                   ) : null}
@@ -574,21 +578,31 @@ function WizardActions({
   next,
   nextLabel,
   nextDisabled,
+  sticky = false,
+  selectionLabel,
 }: {
   back: () => void;
   next: () => void;
   nextLabel: string;
   nextDisabled: boolean;
+  sticky?: boolean;
+  selectionLabel?: string;
 }) {
   return (
-    <div className="trade-wizard-actions">
-      <button className="secondary-button" onClick={back}>
-        Back
-      </button>
-      <button className="primary-button" disabled={nextDisabled} onClick={next}>
-        {nextLabel}
-      </button>
-    </div>
+    <>
+      {sticky ? <div className="trade-sticky-action-spacer" aria-hidden="true" /> : null}
+      <div className={`trade-wizard-actions ${sticky ? "trade-wizard-actions-fixed" : ""}`}>
+        <button className="secondary-button" onClick={back}>
+          Back
+        </button>
+        <div className="trade-confirm-action">
+          {selectionLabel ? <small>{selectionLabel}</small> : null}
+          <button className="primary-button" disabled={nextDisabled} onClick={next}>
+            {nextLabel}
+          </button>
+        </div>
+      </div>
+    </>
   );
 }
 

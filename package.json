@@ -8,6 +8,7 @@
     "start": "next start",
     "test": "vitest run",
     "test:draft": "node scripts/regression-draft.mjs",
+    "test:auction": "node scripts/regression-auction.mjs",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
