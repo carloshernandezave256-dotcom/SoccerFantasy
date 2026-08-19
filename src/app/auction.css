@@ -64,6 +64,7 @@
   box-shadow: inset 0 0 0 2px var(--gold), 0 12px 30px rgba(0, 0, 0, 0.18);
   transform: translateY(-2px);
 }
+.league-format-poster:disabled{cursor:not-allowed;filter:saturate(.35);opacity:.58}.league-format-poster:disabled>span:last-child{color:var(--lime);font-weight:900;text-transform:uppercase;letter-spacing:.08em}
 .league-format-icon {
   position: absolute;
   top: 18px;
