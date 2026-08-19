@@ -144,6 +144,50 @@ function managerAtPick(order: Manager[], pickNumber: number) {
   return order.find((manager) => manager.draft_slot === slot);
 }
 
+type WelcomeCard = { eyebrow: string; title: string; copy: string };
+
+const leagueWelcomeCards: Record<string, WelcomeCard[]> = {
+  draft: [
+    { eyebrow: "SNAKE DRAFT", title: "Every player is exclusive", copy: "Draft order reverses each round, and each player can belong to only one manager." },
+    { eyebrow: "YOUR TEAM", title: "Set your Starting XI", copy: "Choose a valid lineup and Star Pick before the gameweek locks." },
+    { eyebrow: "EACH GAMEWEEK", title: "Keep improving", copy: "Use waiver priority, free agency and trades to strengthen your squad." },
+  ],
+  auction: [
+    { eyebrow: "AUCTION LEAGUE", title: "Build with your budget", copy: "Bid for exclusively owned players while keeping enough money for your full squad." },
+    { eyebrow: "YOUR TEAM", title: "Set your Starting XI", copy: "Choose a valid lineup and Star Pick before the gameweek locks." },
+    { eyebrow: "PLAYER CONTRACTS", title: "Make private offers", copy: "Blind bids stay hidden. The highest valid contract offer wins the available player." },
+  ],
+  pack: [
+    { eyebrow: "PACK LEAGUE", title: "Open and collect", copy: "Build through packs. Different managers can own the same player." },
+    { eyebrow: "YOUR TEAM", title: "Set your Starting XI", copy: "Choose a valid lineup and Star Pick before the gameweek locks." },
+    { eyebrow: "YOUR COLLECTION", title: "Keep building", copy: "Open packs, manage your cards and use the league market to improve." },
+  ],
+};
+
+function LeagueWelcome({ league, onFinish }: { league: League; onFinish: () => void }) {
+  const [step, setStep] = useState(0);
+  const cards = leagueWelcomeCards[league.game_format] ?? leagueWelcomeCards.draft;
+  const card = cards[step];
+  const last = step === cards.length - 1;
+
+  return (
+    <div className="league-welcome-overlay" role="dialog" aria-modal="true" aria-labelledby="league-welcome-title">
+      <section className="league-welcome-card">
+        <div className="league-welcome-progress" aria-label={`Step ${step + 1} of ${cards.length}`}>
+          {cards.map((_, index) => <span className={index <= step ? "active" : ""} key={index} />)}
+        </div>
+        <p className="eyebrow">{card.eyebrow}</p>
+        <h2 id="league-welcome-title">{card.title}</h2>
+        <p>{card.copy}</p>
+        <small>{league.league_name} · {step + 1} of {cards.length}</small>
+        <button className="primary-button full-button" type="button" onClick={() => last ? onFinish() : setStep(current => current + 1)}>
+          {last ? "Enter league" : "Next"}
+        </button>
+      </section>
+    </div>
+  );
+}
+
 export function HomeDashboard() {
   const [league, setLeague] = useState<League | null>(null),
     [draft, setDraft] = useState<Draft | null>(null),
@@ -162,7 +206,8 @@ export function HomeDashboard() {
     [name, setName] = useState("Manager"),
     [loading, setLoading] = useState(true),
     [signedIn, setSignedIn] = useState(true),
-    [now, setNow] = useState(Date.now());
+    [now, setNow] = useState(Date.now()),
+    [showLeagueWelcome, setShowLeagueWelcome] = useState(false);
 
   const load = useCallback(async () => {
     const {
@@ -188,6 +233,7 @@ export function HomeDashboard() {
         new URLSearchParams(window.location.search).get("league"),
       ) ?? null;
     setLeague(active);
+    setShowLeagueWelcome(new URLSearchParams(window.location.search).get("welcome") === "1");
     if (!active) {
       setLoading(false);
       return;
@@ -525,8 +571,16 @@ export function HomeDashboard() {
       )
       .slice(0, 3);
 
+  function finishLeagueWelcome() {
+    setShowLeagueWelcome(false);
+    const url = new URL(window.location.href);
+    url.searchParams.delete("welcome");
+    window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
+  }
+
   return (
     <main className="app-shell home-dashboard">
+      {league && showLeagueWelcome ? <LeagueWelcome league={league} onFinish={finishLeagueWelcome} /> : null}
       <header className="topbar home-topbar">
         <div>
           <p className="eyebrow">{league?.league_name ?? "XI FANTASY"}</p>
