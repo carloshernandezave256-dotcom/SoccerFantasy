@@ -22,17 +22,20 @@ function parseGameweek(round:string){const match=round.match(/(\d+)\s*$/);return
 export async function POST(request:NextRequest){
   const authorization=request.headers.get("authorization")??"";
   if(!authorization.startsWith("Bearer "))return NextResponse.json({error:"Sign in is required."},{status:401});
-  if(!await isDeveloperRequest(request))return NextResponse.json({error:"Developer access required."},{status:403});
+  const cronAuthorized=Boolean(process.env.CRON_SECRET)&&authorization===`Bearer ${process.env.CRON_SECRET}`;
+  if(!cronAuthorized&&!await isDeveloperRequest(request))return NextResponse.json({error:"Developer access required."},{status:403});
   const body=await request.json().catch(()=>({})) as {leagueId?:string};
   if(!body.leagueId)return NextResponse.json({error:"Choose a league first."},{status:400});
   const supabaseUrl=process.env.NEXT_PUBLIC_SUPABASE_URL??"https://ocabrgbrkqmsnalbfzvx.supabase.co";
   const publishableKey=process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY??"sb_publishable_DA08c5KwmYXpru6CdrRfHA_4Qe2z3M-";
   const serviceRoleKey=process.env.SUPABASE_SERVICE_ROLE_KEY;
   if(!serviceRoleKey)return NextResponse.json({error:"Server database credential is not configured."},{status:503});
-  const userHeaders={apikey:publishableKey,Authorization:authorization,"Content-Type":"application/json"};
-  const leaguesResponse=await fetch(`${supabaseUrl}/rest/v1/rpc/my_leagues`,{method:"POST",headers:userHeaders,body:"{}",cache:"no-store"});
-  const memberships=leaguesResponse.ok?await leaguesResponse.json():[];
-  if(!memberships.some((league:{league_id:string})=>league.league_id===body.leagueId))return NextResponse.json({error:"Choose one of your leagues."},{status:403});
+  if(!cronAuthorized){
+    const userHeaders={apikey:publishableKey,Authorization:authorization,"Content-Type":"application/json"};
+    const leaguesResponse=await fetch(`${supabaseUrl}/rest/v1/rpc/my_leagues`,{method:"POST",headers:userHeaders,body:"{}",cache:"no-store"});
+    const memberships=leaguesResponse.ok?await leaguesResponse.json():[];
+    if(!memberships.some((league:{league_id:string})=>league.league_id===body.leagueId))return NextResponse.json({error:"Choose one of your leagues."},{status:403});
+  }
 
   const leagueResponse=await fetch(`${supabaseUrl}/rest/v1/leagues?id=eq.${encodeURIComponent(body.leagueId)}&select=calendar_competition,player_pool`,{headers:adminHeaders(serviceRoleKey),cache:"no-store"});
   const leagueRows=leagueResponse.ok?await leagueResponse.json() as LeagueRow[]:[];
@@ -92,6 +95,9 @@ export async function POST(request:NextRequest){
     const rows=players.map(player=>({league_id:body.leagueId,gameweek,player_id:player.id,rating:null,minutes:0,goals:0,assists:0,shots_on_target:0,big_chances_missed:0,completed_passes:0,tackles_won:0,penalty_goals:0,penalties_missed:0,penalties_conceded:0,saves:0,penalties_saved:0,goals_conceded:0,yellow_cards:0,second_yellow_cards:0,red_cards:0,own_goals:0,man_of_the_match:false,status:roundStatus,source:"api-football-live",source_updated_at:new Date().toISOString(),updated_at:new Date().toISOString(),...(player.api_football_id?statsByApiId.get(player.api_football_id)??{}:{})}));
     const upsert=await fetch(`${supabaseUrl}/rest/v1/league_player_scores?on_conflict=league_id,gameweek,player_id`,{method:"POST",headers:{...adminHeaders(serviceRoleKey),Prefer:"resolution=merge-duplicates,return=minimal"},body:JSON.stringify(rows),cache:"no-store"});
     if(!upsert.ok)throw new Error((await upsert.text())||"Score database update failed");
-    return NextResponse.json({ok:true,competition,season,round,gameweek,status:roundStatus,fixturesStarted:activeFixtures.length,fixturesTotal:roundFixtures.length,seasonFixturesCached:fixtureRows.length,playersWithStats:statsByApiId.size,playersUpdated:rows.length,lineupPlayersUpdated:lineupPlayers.length,requestsUsed:scheduleBodies.length+activeFixtures.length,notes:["Completed passes are estimated from total passes and API accuracy.","Man of the Match is awarded automatically to the highest API-rated player in each fixture.","Big chances missed is not part of fantasy scoring."]});
+    const refresh=await fetch(`${supabaseUrl}/rest/v1/rpc/refresh_league_matchup_scores`,{method:"POST",headers:adminHeaders(serviceRoleKey),body:JSON.stringify({p_league_id:body.leagueId,p_gameweek:gameweek}),cache:"no-store"});
+    if(!refresh.ok)throw new Error((await refresh.text())||"Matchup total refresh failed");
+    const matchupsUpdated=Number(await refresh.json())||0;
+    return NextResponse.json({ok:true,competition,season,round,gameweek,status:roundStatus,fixturesStarted:activeFixtures.length,fixturesTotal:roundFixtures.length,seasonFixturesCached:fixtureRows.length,playersWithStats:statsByApiId.size,playersUpdated:rows.length,lineupPlayersUpdated:lineupPlayers.length,matchupsUpdated,requestsUsed:scheduleBodies.length+activeFixtures.length,notes:["Completed passes are estimated from total passes and API accuracy.","Man of the Match is awarded automatically to the highest API-rated player in each fixture.","Big chances missed is not part of fantasy scoring."]});
   }catch(error){return NextResponse.json({error:error instanceof Error?error.message:"Live score synchronization failed."},{status:502})}
 }
