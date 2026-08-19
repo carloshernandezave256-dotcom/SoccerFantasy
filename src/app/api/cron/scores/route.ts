@@ -18,9 +18,13 @@ export async function GET(request:NextRequest){
   const serviceRoleKey=process.env.SUPABASE_SERVICE_ROLE_KEY;
   if(!serviceRoleKey)return NextResponse.json({error:"Server database credential is not configured."},{status:503});
 
-  const leaguesResponse=await fetch(`${supabaseUrl}/rest/v1/leagues?select=id,name,calendar_competition&game_format=in.(draft,auction)&calendar_competition=not.is.null`,{headers:adminHeaders(serviceRoleKey),cache:"no-store"});
+  const leaguesResponse=await fetch(`${supabaseUrl}/rest/v1/leagues?select=id,name,calendar_competition&game_format=in.(draft,auction,pack)&calendar_competition=not.is.null`,{headers:adminHeaders(serviceRoleKey),cache:"no-store"});
   if(!leaguesResponse.ok)return NextResponse.json({error:(await leaguesResponse.text())||"Could not load leagues."},{status:502});
   const leagues=await leaguesResponse.json() as League[];
+  const calendarRefreshes=await Promise.all(leagues.map(async league=>{
+    const response=await fetch(`${supabaseUrl}/rest/v1/rpc/refresh_league_calendar`,{method:"POST",headers:{...adminHeaders(serviceRoleKey),"Content-Type":"application/json"},body:JSON.stringify({p_league_id:league.id}),cache:"no-store"});
+    return {leagueId:league.id,ok:response.ok};
+  }));
   const now=new Date();
   const activeSince=new Date(now.getTime()-6*60*60*1000);
   const finalStatuses=new Set(["FT","AET","PEN","PST","CANC","ABD","AWD","WO"]);
@@ -57,5 +61,5 @@ export async function GET(request:NextRequest){
   }
 
   const failed=results.filter(result=>!result.ok);
-  return NextResponse.json({ok:failed.length===0,ranAt:new Date().toISOString(),cadenceMinutes:3,leaguesFound:leagues.length,leaguesEligible:activeLeagues.length,leaguesSkipped:leagues.length-activeLeagues.length,leaguesUpdated:results.length-failed.length,failed:failed.length,requestsUsed:results.reduce((total,result)=>total+(result.requestsUsed??0),0),results},{status:failed.length===results.length&&results.length>0?502:200});
+  return NextResponse.json({ok:failed.length===0,ranAt:new Date().toISOString(),cadenceMinutes:3,leaguesFound:leagues.length,calendarsRefreshed:calendarRefreshes.filter(item=>item.ok).length,calendarRefreshFailures:calendarRefreshes.filter(item=>!item.ok).length,leaguesEligible:activeLeagues.length,leaguesSkipped:leagues.length-activeLeagues.length,leaguesUpdated:results.length-failed.length,failed:failed.length,requestsUsed:results.reduce((total,result)=>total+(result.requestsUsed??0),0),results},{status:failed.length===results.length&&results.length>0?502:200});
 }
