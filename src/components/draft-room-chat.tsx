@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { useLanguage } from "@/lib/i18n";
 
 type Manager = { user_id: string; team_name: string };
 type ChatMessage = {
@@ -22,6 +23,7 @@ export function DraftRoomChat({
   managers: Manager[];
   roomName: "Draft" | "Auction";
 }) {
+  const { t } = useLanguage();
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState("");
@@ -113,18 +115,18 @@ export function DraftRoomChat({
   }
 
   const teamName = (userId: string) =>
-    managers.find((manager) => manager.user_id === userId)?.team_name ?? "Manager";
+    managers.find((manager) => manager.user_id === userId)?.team_name ?? t("chat.manager", "Manager");
 
   return (
     <div className={`draft-chat ${open ? "open" : ""}`}>
       {open ? (
-        <section className="draft-chat-panel" role="dialog" aria-label={`${roomName} room chat`}>
+        <section className="draft-chat-panel" role="dialog" aria-label={roomName === "Draft" ? t("chat.roomDraft", "Draft room chat") : t("chat.roomAuction", "Auction room chat")}>
           <header>
             <span>
-              <small>LIVE CHAT</small>
-              <strong>{roomName} room</strong>
+              <small>{t("chat.live", "LIVE CHAT")}</small>
+              <strong>{roomName === "Draft" ? t("chat.roomDraft", "Draft room") : t("chat.roomAuction", "Auction room")}</strong>
             </span>
-            <button type="button" onClick={() => setOpen(false)} aria-label="Close chat">
+            <button type="button" onClick={() => setOpen(false)} aria-label={t("chat.close", "Close chat")}>
               ×
             </button>
           </header>
@@ -135,7 +137,7 @@ export function DraftRoomChat({
                 return (
                   <article className={mine ? "mine" : ""} key={message.id}>
                     <div>
-                      <strong>{mine ? "You" : teamName(message.user_id)}</strong>
+                      <strong>{mine ? t("chat.you", "You") : teamName(message.user_id)}</strong>
                       <time dateTime={message.created_at}>
                         {new Date(message.created_at).toLocaleTimeString([], {
                           hour: "numeric",
@@ -148,7 +150,7 @@ export function DraftRoomChat({
                 );
               })
             ) : (
-              <p className="draft-chat-empty">The room is quiet. Start the conversation.</p>
+              <p className="draft-chat-empty">{t("chat.empty", "The room is quiet. Start the conversation.")}</p>
             )}
             <div ref={endRef} />
           </div>
@@ -158,13 +160,13 @@ export function DraftRoomChat({
               value={draft}
               onChange={(event) => setDraft(event.target.value)}
               maxLength={300}
-              placeholder="Message the league…"
-              aria-label="Chat message"
+              placeholder={t("chat.placeholder", "Message the league…")}
+              aria-label={t("chat.message", "Chat message")}
               autoComplete="off"
               enterKeyHint="send"
             />
             <button type="submit" disabled={!draft.trim() || !currentUserId || sending}>
-              {sending ? "…" : "Send"}
+              {sending ? "…" : t("chat.send", "Send")}
             </button>
           </form>
         </section>
@@ -173,10 +175,10 @@ export function DraftRoomChat({
           type="button"
           className="draft-chat-launcher"
           onClick={() => setOpen(true)}
-          aria-label={`Open ${roomName.toLowerCase()} room chat${unread ? `, ${unread} unread messages` : ""}`}
+          aria-label={`${roomName === "Draft" ? t("chat.openDraft", "Open draft room chat") : t("chat.openAuction", "Open auction room chat")}${unread ? `, ${unread} ${t("chat.unread", "unread messages")}` : ""}`}
         >
           <span aria-hidden="true">✉</span>
-          <strong>Chat</strong>
+          <strong>{t("chat.label", "Chat")}</strong>
           {unread ? <b>{unread > 9 ? "9+" : unread}</b> : null}
         </button>
       )}

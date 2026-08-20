@@ -19,6 +19,7 @@ import "./polish.css";
 import { LegalDisclosureGate } from "@/components/legal-disclosure-gate";
 import { BetaAccessGate } from "@/components/beta-access-gate";
 import { SessionGuard } from "@/components/session-guard";
+import { LanguageProvider } from "@/lib/i18n";
 
 export const metadata: Metadata = {
   title: "My Fantasy XI | Build Your Football World",
@@ -37,9 +38,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <SessionGuard>{children}</SessionGuard>
-        <LegalDisclosureGate />
-        <BetaAccessGate />
+        <LanguageProvider>
+          <SessionGuard>{children}</SessionGuard>
+          <LegalDisclosureGate />
+          <BetaAccessGate />
+        </LanguageProvider>
       </body>
     </html>
   );

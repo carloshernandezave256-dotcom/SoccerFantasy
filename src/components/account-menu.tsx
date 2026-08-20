@@ -4,6 +4,7 @@ import { ChangeEvent, FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { resolveActiveLeague, setActiveLeagueId } from "@/lib/active-league";
+import { useLanguage } from "@/lib/i18n";
 
 type Profile = {
   display_name: string;
@@ -17,9 +18,6 @@ type League = {
   team_name: string;
   game_format: "draft" | "pack" | "auction";
 };
-function leagueFormatLabel(format: League["game_format"]) {
-  return format === "auction" ? "Auction" : format === "pack" ? "Pack" : "Snake";
-}
 function applyTheme(theme: Profile["theme_preference"]) {
   document.documentElement.dataset.theme =
     theme === "system"
@@ -31,6 +29,7 @@ function applyTheme(theme: Profile["theme_preference"]) {
 
 export function AccountMenu({ compact = false }: { compact?: boolean }) {
   const router = useRouter();
+  const { language, setLanguage, t } = useLanguage();
   const [open, setOpen] = useState(false);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
@@ -91,7 +90,7 @@ export function AccountMenu({ compact = false }: { compact?: boolean }) {
     const file = event.target.files?.[0];
     if (!file || !profile) return;
     if (file.size > 3145728) {
-      setMessage("Choose an image smaller than 3 MB.");
+      setMessage(t("account.photoSize", "Choose an image smaller than 3 MB."));
       return;
     }
     setBusy(true);
@@ -115,7 +114,7 @@ export function AccountMenu({ compact = false }: { compact?: boolean }) {
         .createSignedUrl(path, 3600);
       setAvatarPreview(signed?.signedUrl ?? null);
       setProfile({ ...profile, avatar_url: path });
-      setMessage("Photo ready. Save your profile to keep it.");
+      setMessage(t("account.photoReady", "Photo ready. Save your profile to keep it."));
     }
     setBusy(false);
   }
@@ -130,7 +129,7 @@ export function AccountMenu({ compact = false }: { compact?: boolean }) {
       p_theme_preference: profile.theme_preference,
       p_notifications_enabled: profile.notifications_enabled,
     });
-    setMessage(error ? error.message : "Profile saved.");
+    setMessage(error ? error.message : t("account.saved", "Profile saved."));
     if (!error) router.refresh();
     setBusy(false);
   }
@@ -152,7 +151,7 @@ export function AccountMenu({ compact = false }: { compact?: boolean }) {
       setProfile(previous);
       applyTheme(previous.theme_preference);
       setMessage(error.message);
-    } else setMessage("Appearance saved.");
+    } else setMessage(t("account.appearanceSaved", "Appearance saved."));
     setBusy(false);
   }
   async function signOut() {
@@ -195,7 +194,7 @@ export function AccountMenu({ compact = false }: { compact?: boolean }) {
       <button
         className={`account-trigger ${compact ? "compact" : ""}`}
         onClick={() => setOpen(true)}
-        aria-label="Open personal settings"
+        aria-label={t("account.open", "Open personal settings")}
       >
         {avatarPreview ? (
           <img src={avatarPreview} alt="Your profile" />
@@ -208,7 +207,7 @@ export function AccountMenu({ compact = false }: { compact?: boolean }) {
           className="account-overlay"
           role="dialog"
           aria-modal="true"
-          aria-label="Personal settings"
+          aria-label={t("account.open", "Personal settings")}
           onMouseDown={(event) => {
             if (event.target === event.currentTarget) setOpen(false);
           }}
@@ -216,8 +215,8 @@ export function AccountMenu({ compact = false }: { compact?: boolean }) {
           <form className="account-sheet" onSubmit={save}>
             <div className="account-sheet-head">
               <div>
-                <p className="eyebrow">PERSONAL SETTINGS</p>
-                <h2>Your profile</h2>
+                <p className="eyebrow">{t("account.settings", "PERSONAL SETTINGS")}</p>
+                <h2>{t("account.profile", "Your profile")}</h2>
               </div>
               <button
                 type="button"
@@ -229,7 +228,7 @@ export function AccountMenu({ compact = false }: { compact?: boolean }) {
             </div>
             {leagues.length > 1 ? (
               <label className="account-field active-league-field">
-                <span>Active league</span>
+                <span>{t("account.activeLeague", "Active league")}</span>
                 <select
                   value={activeLeagueId}
                   onChange={(event) => switchLeague(event.target.value)}
@@ -237,11 +236,15 @@ export function AccountMenu({ compact = false }: { compact?: boolean }) {
                   {leagues.map((league) => (
                     <option key={league.league_id} value={league.league_id}>
                       {league.league_name} ·{" "}
-                      {leagueFormatLabel(league.game_format)}
+                      {league.game_format === "auction"
+                        ? t("format.auction", "Auction")
+                        : league.game_format === "pack"
+                          ? t("format.pack", "Pack")
+                          : t("format.snake", "Snake")}
                     </option>
                   ))}
                 </select>
-                <small>Changes the league used across every page.</small>
+                <small>{t("account.activeLeagueHelp", "Changes the league used across every page.")}</small>
               </label>
             ) : null}
             <div className="profile-photo-row">
@@ -259,13 +262,13 @@ export function AccountMenu({ compact = false }: { compact?: boolean }) {
                 />
               </label>
               <div>
-                <strong>Profile picture</strong>
-                <small>Tap the picture to choose a photo.</small>
+                <strong>{t("account.photo", "Profile picture")}</strong>
+                <small>{t("account.photoHelp", "Tap the picture to choose a photo.")}</small>
                 <small>JPG, PNG or WebP · 3 MB max</small>
               </div>
             </div>
             <label className="account-field">
-              <span>Display name</span>
+              <span>{t("account.displayName", "Display name")}</span>
               <input
                 value={profile?.display_name ?? ""}
                 onChange={(event) =>
@@ -279,13 +282,13 @@ export function AccountMenu({ compact = false }: { compact?: boolean }) {
             </label>
             <div className="account-readonly">
               <span>
-                <strong>Email</strong>
+                <strong>{t("account.email", "Email")}</strong>
                 <small>{email}</small>
               </span>
-              <b>ACCOUNT</b>
+              <b>{t("account.account", "ACCOUNT")}</b>
             </div>
             <fieldset className="appearance-options">
-              <legend>Appearance</legend>
+              <legend>{t("account.appearance", "Appearance")}</legend>
               {(["system", "light", "dark"] as const).map((theme) => (
                 <button
                   type="button"
@@ -297,15 +300,31 @@ export function AccountMenu({ compact = false }: { compact?: boolean }) {
                   onClick={() => void changeTheme(theme)}
                 >
                   {theme === "system"
-                    ? "Auto"
-                    : theme[0].toUpperCase() + theme.slice(1)}
+                    ? t("account.auto", "Auto")
+                    : theme === "light"
+                      ? t("account.light", "Light")
+                      : t("account.dark", "Dark")}
                 </button>
               ))}
             </fieldset>
+            <fieldset className="appearance-options language-options">
+              <legend>{t("account.language", "Language")}</legend>
+              {(["en", "es"] as const).map((option) => (
+                <button
+                  type="button"
+                  className={language === option ? "active" : ""}
+                  key={option}
+                  onClick={() => void setLanguage(option)}
+                >
+                  {option === "en" ? "English" : "Español"}
+                </button>
+              ))}
+              <small>{t("account.languageHelp", "Saved to your account and used across your devices.")}</small>
+            </fieldset>
             <label className="account-toggle">
               <span>
-                <strong>Notifications</strong>
-                <small>League activity and important reminders.</small>
+                <strong>{t("account.notifications", "Notifications")}</strong>
+                <small>{t("account.notificationsHelp", "League activity and important reminders.")}</small>
               </span>
               <input
                 type="checkbox"
@@ -325,7 +344,7 @@ export function AccountMenu({ compact = false }: { compact?: boolean }) {
               className="primary-button full-button"
               disabled={busy || !profile}
             >
-              {busy ? "Saving…" : "Save profile"}
+              {busy ? t("account.saving", "Saving…") : t("account.save", "Save profile")}
             </button>
             {isDeveloper ? (
               <button
@@ -336,7 +355,7 @@ export function AccountMenu({ compact = false }: { compact?: boolean }) {
                   router.push("/developer");
                 }}
               >
-                Open developer tools
+                {t("account.developer", "Open developer tools")}
               </button>
             ) : null}
             <button
@@ -344,7 +363,7 @@ export function AccountMenu({ compact = false }: { compact?: boolean }) {
               className="sign-out-button"
               onClick={() => void signOut()}
             >
-              Sign out
+              {t("account.signOut", "Sign out")}
             </button>
           </form>
         </div>
