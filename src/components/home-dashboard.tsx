@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AccountMenu } from "./account-menu";
 import { BottomNav } from "./bottom-nav";
+import { PlayerStatsDialog } from "./player-stats-dialog";
 import { resolveActiveLeague } from "@/lib/active-league";
 import { calculateScore, type Position } from "@/lib/scoring";
 import { supabase } from "@/lib/supabase";
@@ -74,12 +75,17 @@ type ScoreRow = {
     full_name: string;
     position: string;
     club: string;
+    competition: string;
+    photo_url: string | null;
   } | null;
 };
 type PlayerPulse = {
   id: number;
   name: string;
   club: string;
+  position: string;
+  competition: string;
+  photo_url: string | null;
   gameweek: number;
   points: number;
   goals: number;
@@ -151,6 +157,7 @@ export function HomeDashboard() {
     [picks, setPicks] = useState<Pick[]>([]),
     [matchup, setMatchup] = useState<Matchup | null>(null),
     [playerPulse, setPlayerPulse] = useState<PlayerPulse[]>([]),
+    [statsPlayer, setStatsPlayer] = useState<PlayerPulse | null>(null),
     [headlineFixtures, setHeadlineFixtures] = useState<RealFixture[]>([]),
     [standings, setStandings] = useState<Standing[]>([]),
     [windowState, setWindowState] = useState<WindowState | null>(null);
@@ -231,11 +238,11 @@ export function HomeDashboard() {
         supabase
           .from("league_player_scores")
           .select(
-            "gameweek,minutes,goals,assists,shots_on_target,big_chances_missed,completed_passes,tackles_won,penalty_goals,penalties_missed,penalties_conceded,saves,penalties_saved,goals_conceded,yellow_cards,second_yellow_cards,red_cards,own_goals,man_of_the_match,status,players(id,full_name,position,club)",
+            "gameweek,minutes,goals,assists,shots_on_target,big_chances_missed,completed_passes,tackles_won,penalty_goals,penalties_missed,penalties_conceded,saves,penalties_saved,goals_conceded,yellow_cards,second_yellow_cards,red_cards,own_goals,man_of_the_match,status,players(id,full_name,position,club,competition,photo_url)",
           )
           .eq("league_id", active.league_id)
           .order("gameweek", { ascending: false })
-          .limit(250),
+          .limit(1000),
         supabase
           .from("league_headline_fixtures")
           .select(
@@ -257,6 +264,9 @@ export function HomeDashboard() {
           id: row.players!.id,
           name: row.players!.full_name,
           club: row.players!.club,
+          position: row.players!.position,
+          competition: row.players!.competition,
+          photo_url: row.players!.photo_url,
           gameweek: row.gameweek,
           goals: row.goals,
           assists: row.assists,
@@ -267,6 +277,7 @@ export function HomeDashboard() {
             goals: row.goals,
             assists: row.assists,
             shotsOnTarget: row.shots_on_target,
+            bigChancesMissed: row.big_chances_missed,
             completedPasses: row.completed_passes,
             tacklesWon: row.tackles_won,
             penaltyGoals: row.penalty_goals,
@@ -825,7 +836,18 @@ export function HomeDashboard() {
             </div>
             <div className="home-news-scroll">
               {playerPulse.map((player, index) => (
-                <article key={player.id}>
+                <article
+                  key={player.id}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`Open stats for ${player.name}`}
+                  onClick={() => setStatsPlayer(player)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      setStatsPlayer(player);
+                    }
+                  }}
+                >
                   <span>{index + 1}</span>
                   <div>
                     <strong>{player.name}</strong>
@@ -884,6 +906,20 @@ export function HomeDashboard() {
             </section>
           ) : null}
         </>
+      ) : null}
+      {statsPlayer && league ? (
+        <PlayerStatsDialog
+          leagueId={league.league_id}
+          player={{
+            id: statsPlayer.id,
+            full_name: statsPlayer.name,
+            position: statsPlayer.position,
+            club: statsPlayer.club,
+            competition: statsPlayer.competition,
+            photo_url: statsPlayer.photo_url,
+          }}
+          onClose={() => setStatsPlayer(null)}
+        />
       ) : null}
       <BottomNav />
     </main>
