@@ -67,12 +67,12 @@ export async function POST(request:NextRequest){
       return NextResponse.json({ok:true,skipped:true,status:"already-final",competition,requestsUsed:0,message:`${competition}'s games are already final. No provider requests were used.`});
     }
 
-    const lockResponse=await fetch(`${supabaseUrl}/rest/v1/rpc/acquire_score_sync_lock`,{method:"POST",headers:adminHeaders(serviceRoleKey),body:JSON.stringify({p_league_id:body.leagueId,p_cooldown_seconds:900}),cache:"no-store"});
+    const lockResponse=await fetch(`${supabaseUrl}/rest/v1/rpc/acquire_score_sync_lock`,{method:"POST",headers:adminHeaders(serviceRoleKey),body:JSON.stringify({p_league_id:body.leagueId,p_cooldown_seconds:120}),cache:"no-store"});
     if(!lockResponse.ok)throw new Error((await lockResponse.text())||"Score sync lock could not be acquired");
     const lockAcquired=await lockResponse.json() as boolean;
     if(!lockAcquired){
       console.log(JSON.stringify({level:"info",msg:"score_sync_skipped_cooldown",route:"/api/football/sync/scores",requestId,leagueId:body.leagueId,competition,ms:Date.now()-startedAt}));
-      return NextResponse.json({ok:true,skipped:true,status:"cooldown",competition,requestsUsed:0,message:"A score sync was attempted recently. Try again in 15 minutes."},{status:202});
+      return NextResponse.json({ok:true,skipped:true,status:"cooldown",competition,requestsUsed:0,message:"A score sync is already running or just finished. Try again in 2 minutes."},{status:202});
     }
 
     const scheduleCompetitions=playerPool==="All Top Five"?Object.entries(competitions):[[competition,competitionId] as [string,number]];

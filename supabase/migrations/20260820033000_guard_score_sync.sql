@@ -9,7 +9,7 @@ revoke all on table public.score_sync_locks from anon, authenticated;
 
 create or replace function public.acquire_score_sync_lock(
   p_league_id uuid,
-  p_cooldown_seconds integer default 900
+  p_cooldown_seconds integer default 120
 )
 returns boolean
 language plpgsql
