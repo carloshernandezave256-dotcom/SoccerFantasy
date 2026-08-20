@@ -370,6 +370,39 @@ textarea,
   align-items: center;
 }
 
+/* Keep every player list on the same visual rails at every viewport width. */
+.player-list article {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+  gap: 12px;
+  justify-content: initial;
+}
+
+.player-list article > .player-headshot,
+.player-list article > .position { justify-self: start; }
+
+.player-list article > div:not(.player-actions) {
+  width: 100%;
+  align-items: flex-start;
+  text-align: left;
+}
+
+.player-list article > div:not(.player-actions) strong,
+.player-list article > div:not(.player-actions) small {
+  max-width: 100%;
+}
+
+.draft-list article > .player-actions,
+.auction-player-list article > button { width: 82px; }
+
+.my-picks-list article {
+  grid-template-columns: 34px 42px minmax(0, 1fr);
+}
+
+.waiver-player-list article {
+  grid-template-columns: 42px minmax(0, 1fr) max-content minmax(68px, auto);
+}
+
 .league-row > div,
 .player-list article > div { min-width: 0; }
 
@@ -569,9 +602,16 @@ textarea,
   .draft-view-tabs button { padding-inline: 4px; font-size: 9px; }
 
   .player-list article {
-    display: grid;
     grid-template-columns: 42px minmax(0, 1fr) auto;
     gap: 10px;
+  }
+
+  .my-picks-list article {
+    grid-template-columns: 34px 42px minmax(0, 1fr);
+  }
+
+  .waiver-player-list article {
+    grid-template-columns: 42px minmax(0, 1fr) max-content minmax(64px, auto);
   }
 
   .player-list article > .position { width: 42px; }
