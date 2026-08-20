@@ -19,6 +19,7 @@ import "./auction.css";
 import "./predictions.css";
 import "./predictions-nav.css";
 import "./polish.css";
+import "./predictions-theme-fix.css";
 
 export const metadata: Metadata = {
   title: "XI | Cross-League Fantasy",

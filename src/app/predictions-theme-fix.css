@@ -1,0 +1,9 @@
+[data-theme="dark"] .prediction-slip {
+  background: #101a14f5;
+  color: var(--text);
+}
+
+[data-theme="light"] .prediction-slip {
+  background: #fffffff5;
+  color: var(--text);
+}
