@@ -777,18 +777,18 @@ export default function LeaguePage() {
                       <span>
                         <strong>Lineup lock</strong>
                         <small>
-                          Applied relative to each player’s kickoff once match
-                          data is connected.
+                          Locks the entire lineup once, before the first match
+                          of each gameweek in this league’s Fantasy Calendar.
                         </small>
                       </span>
                       <select
                         name="lineup_lock_minutes"
                         defaultValue={settings.lineup_lock_minutes}
                       >
-                        <option value="0">At kickoff</option>
-                        <option value="15">15 min before</option>
-                        <option value="30">30 min before</option>
-                        <option value="60">60 min before</option>
+                        <option value="0">At the first match kickoff</option>
+                        <option value="15">15 min before the first match</option>
+                        <option value="30">30 min before the first match</option>
+                        <option value="60">60 min before the first match</option>
                       </select>
                     </label>
                     <div className="settings-readonly">
@@ -875,12 +875,15 @@ export default function LeaguePage() {
                   <div>
                     <span>
                       <strong>Lineup lock</strong>
-                      <small>Applied relative to each player’s kickoff.</small>
+                      <small>
+                        The full lineup locks before the first match of the
+                        gameweek.
+                      </small>
                     </span>
                     <b>
                       {settings.lineup_lock_minutes
-                        ? `${settings.lineup_lock_minutes} min before`
-                        : "At kickoff"}
+                        ? `${settings.lineup_lock_minutes} min before first match`
+                        : "At first match kickoff"}
                     </b>
                   </div>
                   <div>
@@ -1252,10 +1255,10 @@ export default function LeaguePage() {
                 <label>
                   Lineup lock
                   <select name="lineup_lock_minutes" defaultValue="0">
-                    <option value="0">At each player’s kickoff</option>
-                    <option value="15">15 minutes before kickoff</option>
-                    <option value="30">30 minutes before kickoff</option>
-                    <option value="60">60 minutes before kickoff</option>
+                    <option value="0">At the first match kickoff</option>
+                    <option value="15">15 minutes before the first match</option>
+                    <option value="30">30 minutes before the first match</option>
+                    <option value="60">60 minutes before the first match</option>
                   </select>
                 </label>
                 <label className="creation-toggle">
