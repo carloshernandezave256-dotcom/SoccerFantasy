@@ -32,8 +32,6 @@ export function LegalDisclosureGate() {
         setRequired(false);
         return;
       }
-      setRequired(true);
-
       const { data, error } = await supabase.rpc("my_legal_disclosure_status");
       if (!active) return;
       if (error) {
