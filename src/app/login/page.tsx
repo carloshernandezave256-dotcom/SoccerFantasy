@@ -1,7 +1,6 @@
 "use client";
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import Image from "next/image";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 
@@ -36,7 +35,6 @@ export default function LoginPage() {
       <div><p className="eyebrow">MY FANTASY XI</p><h2>Every decision<br />shapes your season.</h2></div>
     </section>
     <section className="auth-panel">
-      <Link className="auth-home-link" href="/">← Back to home</Link>
       <div className="auth-brand"><span>XI</span><strong>MY FANTASY XI</strong></div>
       <div className="auth-content">
         <p className="eyebrow">{mode === "signup" ? "WELCOME, MANAGER" : "WELCOME BACK"}</p>
