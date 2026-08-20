@@ -160,6 +160,8 @@ export function DraftRoomChat({
               maxLength={300}
               placeholder="Message the league…"
               aria-label="Chat message"
+              autoComplete="off"
+              enterKeyHint="send"
             />
             <button type="submit" disabled={!draft.trim() || !currentUserId || sending}>
               {sending ? "…" : "Send"}
