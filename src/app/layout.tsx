@@ -14,7 +14,10 @@ import "./team-demo.css";
 import "./home.css";
 import "./waivers.css";
 import "./packs.css";
+import "./pack-collection-cards.css";
 import "./auction.css";
+import "./predictions.css";
+import "./predictions-nav.css";
 import "./polish.css";
 
 export const metadata: Metadata = {
