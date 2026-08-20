@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AccountMenu } from "./account-menu";
 import { BottomNav } from "./bottom-nav";
@@ -145,101 +144,6 @@ function managerAtPick(order: Manager[], pickNumber: number) {
   return order.find((manager) => manager.draft_slot === slot);
 }
 
-type WelcomeCard = { eyebrow: string; title: string; copy: string };
-
-const leagueWelcomeCards: Record<string, WelcomeCard[]> = {
-  draft: [
-    { eyebrow: "SNAKE DRAFT", title: "Every player is exclusive", copy: "Draft order reverses each round, and each player can belong to only one manager." },
-    { eyebrow: "YOUR TEAM", title: "Set your Starting XI", copy: "Choose a valid lineup and Star Pick before the gameweek locks." },
-    { eyebrow: "EACH GAMEWEEK", title: "Keep improving", copy: "Use waiver priority, free agency and trades to strengthen your squad." },
-  ],
-  auction: [
-    { eyebrow: "AUCTION LEAGUE", title: "Build with your budget", copy: "Bid for exclusively owned players while keeping enough money for your full squad." },
-    { eyebrow: "YOUR TEAM", title: "Set your Starting XI", copy: "Choose a valid lineup and Star Pick before the gameweek locks." },
-    { eyebrow: "PLAYER CONTRACTS", title: "Make private offers", copy: "Blind bids stay hidden. The highest valid contract offer wins the available player." },
-  ],
-  pack: [
-    { eyebrow: "PACK LEAGUE", title: "Open and collect", copy: "Build through packs. Different managers can own the same player." },
-    { eyebrow: "YOUR TEAM", title: "Set your Starting XI", copy: "Choose a valid lineup and Star Pick before the gameweek locks." },
-    { eyebrow: "YOUR COLLECTION", title: "Keep building", copy: "Open packs, manage your cards and use the league market to improve." },
-  ],
-};
-
-function LeagueWelcome({ league, onFinish }: { league: League; onFinish: () => void }) {
-  const [step, setStep] = useState(0);
-  const cards = leagueWelcomeCards[league.game_format] ?? leagueWelcomeCards.draft;
-  const card = cards[step];
-  const last = step === cards.length - 1;
-
-  return (
-    <div className="league-welcome-overlay" role="dialog" aria-modal="true" aria-labelledby="league-welcome-title">
-      <section className="league-welcome-card">
-        <div className="league-welcome-progress" aria-label={`Step ${step + 1} of ${cards.length}`}>
-          {cards.map((_, index) => <span className={index <= step ? "active" : ""} key={index} />)}
-        </div>
-        <p className="eyebrow">{card.eyebrow}</p>
-        <h2 id="league-welcome-title">{card.title}</h2>
-        <p>{card.copy}</p>
-        <small>{league.league_name} · {step + 1} of {cards.length}</small>
-        <button className="primary-button full-button" type="button" onClick={() => last ? onFinish() : setStep(current => current + 1)}>
-          {last ? "Enter league" : "Next"}
-        </button>
-      </section>
-    </div>
-  );
-}
-
-function SignedOutLanding() {
-  return (
-    <main className="guest-landing">
-      <header className="guest-header">
-        <Link className="guest-brand" href="/" aria-label="My Fantasy XI home">
-          <span>XI</span>
-          <strong>MY FANTASY XI</strong>
-        </Link>
-        <Link className="guest-header-login" href="/login?next=/&mode=login">Log in</Link>
-      </header>
-      <section className="guest-hero">
-        <div className="guest-hero-copy">
-          <p className="eyebrow">YOUR TEAM. YOUR CALLS.</p>
-          <h1>Build your XI.<br />Outsmart your league.</h1>
-          <p>Draft stars across Europe, set your lineup and compete head to head every gameweek.</p>
-          <div className="guest-actions">
-            <Link className="primary-button" href="/login?next=/">Create account</Link>
-            <Link className="guest-secondary-button" href="/login?next=/&mode=login">Log in</Link>
-          </div>
-        </div>
-        <div className="guest-hero-art">
-          <Image src="/home/my-fantasy-xi-hero.webp" alt="A football manager directing a fantasy starting eleven on a glowing tactical pitch" fill priority sizes="(min-width: 900px) 50vw, 100vw" />
-        </div>
-      </section>
-      <section className="guest-formats" aria-labelledby="guest-formats-title">
-        <div className="guest-section-heading">
-          <p className="eyebrow">THREE WAYS TO PLAY</p>
-          <h2 id="guest-formats-title">Choose your competition.</h2>
-        </div>
-        <div className="guest-format-grid">
-          <article><span>01</span><h3>Snake Draft</h3><p>Take turns drafting an exclusive squad. Once a player is picked, they’re gone.</p></article>
-          <article><span>02</span><h3>Auction</h3><p>Bid live, manage your budget and build the squad your way.</p></article>
-          <article><span>03 · COMING SOON</span><h3>Packs</h3><p>Collections, pack openings and the card market are currently in private testing.</p></article>
-        </div>
-      </section>
-      <section className="guest-how" aria-label="How My Fantasy XI works">
-        <p className="eyebrow">HOW IT WORKS</p>
-        <div>
-          <span><b>1</b> Join a league</span><i aria-hidden="true">→</i>
-          <span><b>2</b> Build your XI</span><i aria-hidden="true">→</i>
-          <span><b>3</b> Compete weekly</span>
-        </div>
-      </section>
-      <footer className="guest-footer">
-        <strong>MY FANTASY XI</strong>
-        <p>Independent fantasy football. Not affiliated with any club, league or governing body.</p>
-      </footer>
-    </main>
-  );
-}
-
 export function HomeDashboard() {
   const [league, setLeague] = useState<League | null>(null),
     [draft, setDraft] = useState<Draft | null>(null),
@@ -258,8 +162,7 @@ export function HomeDashboard() {
     [name, setName] = useState("Manager"),
     [loading, setLoading] = useState(true),
     [signedIn, setSignedIn] = useState(true),
-    [now, setNow] = useState(Date.now()),
-    [showLeagueWelcome, setShowLeagueWelcome] = useState(false);
+    [now, setNow] = useState(Date.now());
 
   const load = useCallback(async () => {
     const {
@@ -285,7 +188,6 @@ export function HomeDashboard() {
         new URLSearchParams(window.location.search).get("league"),
       ) ?? null;
     setLeague(active);
-    setShowLeagueWelcome(new URLSearchParams(window.location.search).get("welcome") === "1");
     if (!active) {
       setLoading(false);
       return;
@@ -365,6 +267,7 @@ export function HomeDashboard() {
             goals: row.goals,
             assists: row.assists,
             shotsOnTarget: row.shots_on_target,
+            bigChancesMissed: row.big_chances_missed,
             completedPasses: row.completed_passes,
             tacklesWon: row.tackles_won,
             penaltyGoals: row.penalty_goals,
@@ -549,7 +452,7 @@ export function HomeDashboard() {
       return {
         eyebrow: "LINEUP NEEDED",
         title: "Finish your Starting XI.",
-        copy: `${lineupCount}/11 starters selected${hasCaptain ? "" : " · Star Pick still needed"}.`,
+        copy: `${lineupCount}/11 starters selected${hasCaptain ? "" : " · captain still needed"}.`,
         href: `/team?league=${league.league_id}`,
         label: "Set my lineup",
       };
@@ -623,18 +526,8 @@ export function HomeDashboard() {
       )
       .slice(0, 3);
 
-  function finishLeagueWelcome() {
-    setShowLeagueWelcome(false);
-    const url = new URL(window.location.href);
-    url.searchParams.delete("welcome");
-    window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
-  }
-
-  if (!loading && !signedIn) return <SignedOutLanding />;
-
   return (
     <main className="app-shell home-dashboard">
-      {league && showLeagueWelcome ? <LeagueWelcome league={league} onFinish={finishLeagueWelcome} /> : null}
       <header className="topbar home-topbar">
         <div>
           <p className="eyebrow">{league?.league_name ?? "XI FANTASY"}</p>
@@ -643,6 +536,16 @@ export function HomeDashboard() {
         </div>
         <AccountMenu />
       </header>
+      {!loading && !signedIn ? (
+        <section className="match-card home-empty">
+          <p className="eyebrow">YOUR SEASON</p>
+          <h2>Sign in to open your dashboard.</h2>
+          <p>Your leagues, lineup and matchup will appear here.</p>
+          <Link className="primary-button" href="/login?next=/">
+            Log in
+          </Link>
+        </section>
+      ) : null}
       {!loading && signedIn && !league ? (
         <section className="match-card home-empty">
           <p className="eyebrow">START HERE</p>
@@ -762,7 +665,7 @@ export function HomeDashboard() {
                 <div>
                   <strong>My Team</strong>
                   <small>
-                    {lineupReady ? "Lineup & Star Pick ready" : "Action required"}
+                    {lineupReady ? "Lineup & captain ready" : "Action required"}
                   </small>
                 </div>
                 {!lineupReady && draftReady ? (
@@ -801,7 +704,7 @@ export function HomeDashboard() {
                       ? "League card market"
                       : league.game_format === "auction"
                         ? windowState
-                          ? `GW ${windowState.gameweek} · ${windowState.phase === "waivers" ? "blind offers" : windowState.phase.replace("_", " ")}`
+                          ? `GW ${windowState.gameweek} · ${windowState.phase === "waivers" ? "blind offers" : windowState.phase === "free_agency" ? "window executed" : "locked"}`
                           : "Blind offers & signings"
                       : windowState
                         ? `GW ${windowState.gameweek} · ${windowState.phase.replace("_", " ")}`
