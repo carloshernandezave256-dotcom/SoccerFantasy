@@ -18,6 +18,7 @@ import "./auction.css";
 import "./polish.css";
 import { LegalDisclosureGate } from "@/components/legal-disclosure-gate";
 import { BetaAccessGate } from "@/components/beta-access-gate";
+import { SessionGuard } from "@/components/session-guard";
 
 export const metadata: Metadata = {
   title: "My Fantasy XI | Build Your Football World",
@@ -35,7 +36,11 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <body>{children}<LegalDisclosureGate /><BetaAccessGate /></body>
+      <body>
+        <SessionGuard>{children}</SessionGuard>
+        <LegalDisclosureGate />
+        <BetaAccessGate />
+      </body>
     </html>
   );
 }
