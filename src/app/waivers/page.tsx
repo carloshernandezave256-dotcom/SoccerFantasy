@@ -14,6 +14,7 @@ type Player = { id: number; full_name: string; position: string; club: string; c
 type Pick = { user_id: string; player_id: number; players: Player | null };
 type Claim = { id: string; user_id: string; add_player_id: number; drop_player_id: number | null; gameweek:number; claim_rank:number; status: string; created_at: string; processed_at: string | null; note: string | null };
 type ContractOffer = { id:string;user_id:string;add_player_id:number;release_player_id:number;gameweek:number;offer_rank:number;amount:number;status:string;created_at:string;processed_at:string|null;note:string|null };
+type ContractEarning = { id:string;gameweek:number;result:"win"|"draw"|"loss";weekly_amount:number;result_amount:number;total_amount:number;awarded_at:string };
 type Priority = { rank: number; user_id: string; team_name: string };
 type TransactionWindow={gameweek:number;waiver_process_at:string;roster_lock_at:string;phase:"waivers"|"free_agency"|"locked"};
 type ScoreRow = { gameweek: number; player_id: number; minutes: number; goals: number; assists: number; shots_on_target: number; big_chances_missed: number; completed_passes: number; tackles_won: number; penalty_goals: number; penalties_missed: number; penalties_conceded: number; saves: number; penalties_saved: number; goals_conceded: number; yellow_cards: number; second_yellow_cards: number; red_cards: number; own_goals: number; man_of_the_match: boolean; status: string };
@@ -26,6 +27,7 @@ export default function WaiversPage() {
   const [claims, setClaims] = useState<Claim[]>([]);
   const [contractOffers,setContractOffers]=useState<ContractOffer[]>([]);
   const [contractBudget,setContractBudget]=useState(0);
+  const [contractEarnings,setContractEarnings]=useState<ContractEarning[]>([]);
   const [priority, setPriority] = useState<Priority[]>([]);
   const [scores, setScores] = useState<ScoreRow[]>([]);
   const [userId, setUserId] = useState("");
@@ -45,7 +47,7 @@ export default function WaiversPage() {
 
   async function loadLeague(active: League, currentUser: string) {
     setLoading(true);
-    const [playerResult, pickResult, claimResult, priorityResult, scoreResult,windowResult,offerResult,budgetResult] = await Promise.all([
+    const [playerResult, pickResult, claimResult, priorityResult, scoreResult,windowResult,offerResult,budgetResult,earningsResult] = await Promise.all([
       supabase.from("players").select("id,full_name,position,club,competition,draft_rank,photo_url").eq("active", true).order("draft_rank").limit(1000),
       supabase.from("draft_picks").select("user_id,player_id,players(id,full_name,position,club,competition,draft_rank,photo_url)").eq("league_id", active.league_id),
       supabase.from("waiver_claims").select("id,user_id,add_player_id,drop_player_id,gameweek,claim_rank,status,created_at,processed_at,note").eq("league_id", active.league_id).order("created_at", { ascending: false }),
@@ -54,8 +56,9 @@ export default function WaiversPage() {
       supabase.rpc("transaction_window",{p_league_id:active.league_id}),
       supabase.from("auction_contract_offers").select("id,user_id,add_player_id,release_player_id,gameweek,offer_rank,amount,status,created_at,processed_at,note").eq("league_id",active.league_id).order("created_at",{ascending:false}),
       supabase.from("auction_budgets").select("remaining_budget").eq("league_id",active.league_id).eq("user_id",currentUser).maybeSingle(),
+      supabase.from("auction_contract_earnings").select("id,gameweek,result,weekly_amount,result_amount,total_amount,awarded_at").eq("league_id",active.league_id).eq("user_id",currentUser).order("gameweek",{ascending:false}),
     ]);
-    const error = playerResult.error ?? pickResult.error ?? claimResult.error ?? priorityResult.error ?? scoreResult.error??windowResult.error??offerResult.error??budgetResult.error;
+    const error = playerResult.error ?? pickResult.error ?? claimResult.error ?? priorityResult.error ?? scoreResult.error??windowResult.error??offerResult.error??budgetResult.error??earningsResult.error;
     if (error) setMessage(error.message);
     setPlayers(((playerResult.data ?? []) as Player[]).filter(player=>!active.player_pool||active.player_pool==="All Top Five"||player.competition===active.player_pool));
     setPicks((pickResult.data ?? []) as unknown as Pick[]);
@@ -65,6 +68,7 @@ export default function WaiversPage() {
     setWindowState(((windowResult.data??[])[0] as TransactionWindow)??null);
     setContractOffers((offerResult.data??[]) as ContractOffer[]);
     setContractBudget(Number(budgetResult.data?.remaining_budget??0));
+    setContractEarnings((earningsResult.data??[]) as ContractEarning[]);
     setUserId(currentUser);
     setLoading(false);
   }
@@ -161,6 +165,7 @@ export default function WaiversPage() {
     <nav className="player-market-tabs two-tabs" aria-label="Player market sections"><button className={tab === "market" ? "active" : ""} onClick={() => { setTab("market"); window.history.replaceState({}, "", `${window.location.pathname}${window.location.search}#market`); }}>{isAuction?"Available players":"Player market"}</button><button className={tab === "claims" ? "active" : ""} onClick={() => { setTab("claims"); window.history.replaceState({}, "", `${window.location.pathname}${window.location.search}#claims`); }}>{isAuction?"My offers":"My claims"}</button></nav>
     {!userId && !loading ? <section className="panel empty-feature"><span>↻</span><h2>Sign in to manage waivers</h2><p>Your claims, roster, and waiver priority are private to your league.</p><Link className="primary-button" href="/login?next=/waivers">Log in</Link></section> : !league && !loading ? <section className="panel empty-feature"><span>＋</span><h2>Join a league first</h2><p>Waivers open for managers after a league draft is complete.</p><Link className="primary-button" href="/league">Open leagues</Link></section> : <>
       <section className="waiver-summary"><div><small>{isAuction?"CONTRACT BUDGET":"YOUR PRIORITY"}</small><strong>{isAuction?`$${Math.round(contractBudget/1000000)}M`:`#${priority.find((item) => item.user_id === userId)?.rank ?? "—"}`}</strong></div><div><small>YOUR ROSTER</small><strong>{roster.length}/18</strong></div><div><small>{windowState?`GW ${windowState.gameweek} · ${isAuction&&windowState.phase==="waivers"?"blind window":windowState.phase.replace("_"," ")}`:"SCHEDULE"}</small><strong>{windowState?.phase==="locked"?"LOCKED":isAuction?contractOffers.filter(offer=>offer.status==="pending").length:claims.filter((claim) => claim.user_id === userId && claim.status === "pending").length}</strong></div></section>
+      {isAuction?<section className="panel waiver-message"><strong>Weekly Contract Earnings</strong><p>Every manager receives $3M after the gameweek, plus $5M for a win, $3M for a draw, or $1M for a loss.</p>{contractEarnings[0]?<small>Latest: GW {contractEarnings[0].gameweek} · {contractEarnings[0].result.toUpperCase()} · +${Math.round(contractEarnings[0].total_amount/1000000)}M</small>:<small>Your first payment arrives when a gameweek becomes final.</small>}</section>:null}
       {windowState?<p className="panel waiver-message">{isAuction?(windowState.phase==="waivers"?`Contract offers stay private until ${new Date(windowState.waiver_process_at).toLocaleString()}. Highest offer wins; ties use rolling priority.`:windowState.phase==="free_agency"?`This contract window has been executed. Available players return in the next Blind Contract Window.`:`Contracts locked at ${new Date(windowState.roster_lock_at).toLocaleString()}. Set your lineup.`):(windowState.phase==="waivers"?`Rank claims before ${new Date(windowState.waiver_process_at).toLocaleString()}.`:windowState.phase==="free_agency"?`Free-agent pickups are immediate until ${new Date(windowState.roster_lock_at).toLocaleString()}.`:`Rosters locked at ${new Date(windowState.roster_lock_at).toLocaleString()}. Set your lineup.`)}</p>:<p className="panel waiver-message">The commissioner must schedule the next gameweek before transactions open.</p>}
       {message ? <p className="panel waiver-message">{message}</p> : null}
       {tab === "market" ? <section className="panel">
