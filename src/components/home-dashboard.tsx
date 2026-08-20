@@ -615,7 +615,14 @@ export function HomeDashboard() {
           </Link>
         </section>
       ) : null}
-      {league && matchup ? (
+      {league?.game_format === "draft" && !draftReady ? (
+        <section className="panel home-matchup-card">
+          <p className="eyebrow">MATCHUPS</p>
+          <h2>Schedule pending</h2>
+          <p>Your randomized matchups will generate when the draft is complete.</p>
+        </section>
+      ) : null}
+      {league && matchup && draftReady ? (
         <section className="panel home-matchup-card">
           <div className="section-row">
             <div>
