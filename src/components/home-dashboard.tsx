@@ -199,28 +199,6 @@ export function HomeDashboard() {
       setLoading(false);
       return;
     }
-    if (active.game_format === "draft") {
-      const { data: activeDraft } = await supabase
-        .from("drafts")
-        .select("status")
-        .eq("league_id", active.league_id)
-        .maybeSingle();
-      if (activeDraft?.status !== "complete") {
-        window.location.replace(`/draft?league=${active.league_id}`);
-        return;
-      }
-    }
-    if (active.game_format === "auction") {
-      const { data: activeAuction } = await supabase
-        .from("auction_sessions")
-        .select("status")
-        .eq("league_id", active.league_id)
-        .maybeSingle();
-      if (activeAuction?.status !== "complete") {
-        window.location.replace(`/auction?league=${active.league_id}`);
-        return;
-      }
-    }
     const [d, o, p, t, l, c, w, s, m, scoreResult, fixtureResult] =
       await Promise.all([
         supabase
@@ -462,6 +440,14 @@ export function HomeDashboard() {
             : isMyTurn
               ? "Make my pick"
               : "Enter draft room",
+      };
+    if (league.game_format === "draft" && draft?.status !== "complete")
+      return {
+        eyebrow: "DRAFT LOBBY",
+        title: "Your Draft Room is ready.",
+        copy: "Set your player queue, meet the other managers and wait for the commissioner to begin the draft.",
+        href: `/draft?league=${league.league_id}`,
+        label: "Open Draft Room",
       };
     if (league.game_format === "auction" && !draft)
       return {
