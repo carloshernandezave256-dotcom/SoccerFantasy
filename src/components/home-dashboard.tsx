@@ -277,7 +277,6 @@ export function HomeDashboard() {
             goals: row.goals,
             assists: row.assists,
             shotsOnTarget: row.shots_on_target,
-            bigChancesMissed: row.big_chances_missed,
             completedPasses: row.completed_passes,
             tacklesWon: row.tackles_won,
             penaltyGoals: row.penalty_goals,
