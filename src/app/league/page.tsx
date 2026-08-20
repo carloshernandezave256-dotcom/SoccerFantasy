@@ -56,48 +56,10 @@ type LeagueSnapshot = {
 };
 
 type GameFormat = "draft" | "pack" | "auction";
-type AcquisitionStatus =
-  | "waiting"
-  | "live"
-  | "paused"
-  | "nomination"
-  | "reveal"
-  | "bidding"
-  | "complete";
 const LEAGUE_SNAPSHOT_KEY = "xi-fantasy-league-snapshot";
 
 function leagueFormatLabel(format: GameFormat) {
   return format === "auction" ? "Auction" : format === "pack" ? "Pack" : "Snake draft";
-}
-
-async function joinedLeagueDestination(id: string) {
-  const encodedId = encodeURIComponent(id);
-  const { data: leagueRows, error: leagueError } =
-    await supabase.rpc("my_leagues");
-  if (leagueError) return `/?league=${encodedId}&welcome=1`;
-
-  const league = ((leagueRows ?? []) as League[]).find(
-    (candidate) => candidate.league_id === id,
-  );
-  if (league?.game_format === "draft") {
-    const { data } = await supabase
-      .from("drafts")
-      .select("status")
-      .eq("league_id", id)
-      .maybeSingle();
-    const status = (data?.status as AcquisitionStatus | undefined) ?? "waiting";
-    if (status !== "complete") return `/draft?league=${encodedId}`;
-  }
-  if (league?.game_format === "auction") {
-    const { data } = await supabase
-      .from("auction_sessions")
-      .select("status")
-      .eq("league_id", id)
-      .maybeSingle();
-    const status = (data?.status as AcquisitionStatus | undefined) ?? "waiting";
-    if (status !== "complete") return `/auction?league=${encodedId}`;
-  }
-  return `/?league=${encodedId}&welcome=1`;
 }
 
 const GAME_FORMATS: Array<{
@@ -407,11 +369,9 @@ export default function LeaguePage() {
         setActiveLeagueId(id);
         formElement.reset();
         setCode("");
-        const destination =
-          tab === "join"
-            ? await joinedLeagueDestination(id)
-            : `/?league=${encodeURIComponent(id)}&welcome=1`;
-        window.location.assign(destination);
+        window.location.assign(
+          `/?league=${encodeURIComponent(id)}&welcome=1`,
+        );
         return;
       }
     } catch (error) {
