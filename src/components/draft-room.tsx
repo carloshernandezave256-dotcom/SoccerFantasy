@@ -13,6 +13,7 @@ type Manager = { draft_slot:number; user_id:string; team_name:string };
 type QueueItem = { player_id:number; priority:number; players?:Player|null };
 type Lobby = {league_size:number;manager_count:number;ready_count:number;is_commissioner:boolean;my_ready:boolean;player_pool:string;gk_count:number;def_count:number;mid_count:number;fwd_count:number;club_count:number};
 type QueueDrag = { index:number; target:number; top:number; left:number; width:number; height:number; pointerOffsetY:number };
+const MAX_QUEUE_SIZE=100;
 
 function managerAtPick(order:Manager[],pickNumber:number){
   const count=order.length;
@@ -140,7 +141,7 @@ export function DraftRoom({leagueId}:{leagueId:string}){
   }
 
   function addToQueue(player:Player){
-    if(queue.some(item=>item.player_id===player.id)||queue.length>=25)return;
+    if(queue.some(item=>item.player_id===player.id)||queue.length>=MAX_QUEUE_SIZE)return;
     void saveQueue([...queue.map(item=>item.player_id),player.id]);
   }
 
@@ -240,11 +241,11 @@ export function DraftRoom({leagueId}:{leagueId:string}){
       <section className="panel player-list draft-list">{available.slice(0,visibleCount).map(player=><article key={player.id}>
         <PlayerHeadshot name={player.full_name} position={player.position} photoUrl={player.photo_url}/>
         <div><strong>{player.full_name}</strong><small>#{player.draft_rank??"—"} · {player.club} · {player.competition}</small></div>
-        <div className="player-actions"><button className="queue-button" onClick={()=>addToQueue(player)} disabled={queueSaving||queue.some(item=>item.player_id===player.id)||queue.length>=25}>{queue.some(item=>item.player_id===player.id)?"QUEUED":"+ QUEUE"}</button><button className="draft-button" onClick={()=>pick(player.id)} disabled={!isMyTurn}>{isMyTurn?"DRAFT":"WAIT"}</button></div>
+        <div className="player-actions"><button className="queue-button" onClick={()=>addToQueue(player)} disabled={queueSaving||queue.some(item=>item.player_id===player.id)||queue.length>=MAX_QUEUE_SIZE}>{queue.some(item=>item.player_id===player.id)?"QUEUED":"+ QUEUE"}</button><button className="draft-button" onClick={()=>pick(player.id)} disabled={!isMyTurn}>{isMyTurn?"DRAFT":"WAIT"}</button></div>
       </article>)}{available.length===0?<p className="queue-empty">No available players match that search.</p>:null}</section>
       {visibleCount<available.length?<button className="secondary-button full-button load-more" onClick={()=>setVisibleCount(count=>count+20)}>Show 20 more</button>:null}
     </>:view==="queue"?<section ref={queueListRef} className={`panel draft-queue queue-tab-panel ${queueDrag?"is-reordering":""}`}>
-      <div className="section-row"><div><h2>My auto-pick priority</h2><p>Drag the three-line handle to reorder. You can also draft directly from this list.</p></div><span className="muted-chip">{queue.length}/25</span></div>
+      <div className="section-row"><div><h2>My auto-pick priority</h2><p>Drag the three-line handle to reorder. Your saved order remains active when the draft begins.</p></div><span className="muted-chip">{queue.length}/{MAX_QUEUE_SIZE}</span></div>
       {queue.length===0?<p className="queue-empty">Your queue is empty. Open Available and tap + QUEUE beside players you want. If it remains empty, auto-pick uses the highest-ranked player your roster needs.</p>:queue.map((item,index)=><article data-queue-index={index} className={`${queueDrag?.index===index?"queue-drag-source":""} ${queueDrag?.target===index&&queueDrag.index!==index?(queueDrag.index<index?"queue-drop-after":"queue-drop-before"):""}`} key={item.player_id}>
         <button className="queue-drag" disabled={queueSaving} onPointerDown={event=>beginQueueDrag(event,index)} onPointerMove={updateQueueDrag} onPointerUp={finishQueueDrag} onPointerCancel={finishQueueDrag} aria-label={`Reorder ${item.players?.full_name??"player"}`}>☰</button>{item.players?<PlayerHeadshot name={item.players.full_name} position={item.players.position} photoUrl={item.players.photo_url}/>:<span className="position">—</span>}
         <div><strong>{item.players?.full_name??`Player ${item.player_id}`}</strong><small>#{item.players?.draft_rank??"—"} · {item.players?.club}</small></div>
