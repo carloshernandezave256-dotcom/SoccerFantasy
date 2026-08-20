@@ -40,6 +40,11 @@ type TransactionWindow = {
   roster_lock_at: string;
   phase: string;
 };
+type ScheduleFixture = {
+  gameweek: number;
+  kickoff: string;
+  status: string;
+};
 type LeagueSnapshot = {
   leagues: League[];
   activeId: string;
@@ -47,6 +52,7 @@ type LeagueSnapshot = {
   draft: Draft;
   settings: Settings | null;
   transactionWindow: TransactionWindow | null;
+  scheduleFixture?: ScheduleFixture | null;
 };
 
 type GameFormat = "draft" | "pack" | "auction";
@@ -130,6 +136,8 @@ export default function LeaguePage() {
   const [leagueView, setLeagueView] = useState<"data" | "settings">("data");
   const [transactionWindow, setTransactionWindow] =
     useState<TransactionWindow | null>(null);
+  const [scheduleFixture, setScheduleFixture] =
+    useState<ScheduleFixture | null>(null);
   const [showMembership, setShowMembership] = useState(false);
   const [tab, setTab] = useState<"create" | "join">("create");
   const [creationStep, setCreationStep] = useState<"format" | "settings">(
@@ -162,6 +170,7 @@ export default function LeaguePage() {
     setDraft(snapshot.draft);
     setSettings(snapshot.settings);
     setTransactionWindow(snapshot.transactionWindow);
+    setScheduleFixture(snapshot.scheduleFixture ?? null);
   }
 
   async function loadDetails(id: string) {
@@ -186,17 +195,36 @@ export default function LeaguePage() {
     const nextWindow = windowResult.error
       ? null
       : (((windowResult.data ?? [])[0] as TransactionWindow) ?? null);
+    let nextScheduleFixture: ScheduleFixture | null = null;
+    if (nextSettings) {
+      let fixtureQuery = supabase
+        .from("league_headline_fixtures")
+        .select("gameweek,kickoff,status")
+        .eq("league_id", id)
+        .eq("competition", nextSettings.calendar_competition)
+        .order("kickoff", { ascending: true })
+        .limit(1);
+      fixtureQuery = nextWindow
+        ? fixtureQuery.eq("gameweek", nextWindow.gameweek)
+        : fixtureQuery.gt("kickoff", new Date().toISOString());
+      const fixtureResult = await fixtureQuery.maybeSingle();
+      nextScheduleFixture = fixtureResult.error
+        ? null
+        : ((fixtureResult.data as ScheduleFixture) ?? null);
+    }
     if (orderResult.error) setMessage(orderResult.error.message);
     if (settingsResult.error) setMessage(settingsResult.error.message);
     setManagers(nextManagers);
     setDraft(nextDraft);
     setSettings(nextSettings);
     setTransactionWindow(nextWindow);
+    setScheduleFixture(nextScheduleFixture);
     return {
       managers: nextManagers,
       draft: nextDraft,
       settings: nextSettings,
       transactionWindow: nextWindow,
+      scheduleFixture: nextScheduleFixture,
     };
   }
 
@@ -399,28 +427,6 @@ export default function LeaguePage() {
     setSettingsBusy(false);
   }
 
-  async function saveGameweek(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!active) return;
-    setSettingsBusy(true);
-    setMessage("");
-    const form = new FormData(event.currentTarget),
-      raw = String(form.get("first_kickoff") ?? "");
-    const { error } = await supabase.rpc("set_transaction_window", {
-      p_league_id: active.league_id,
-      p_gameweek: Number(form.get("gameweek")),
-      p_roster_lock_at: new Date(raw).toISOString(),
-    });
-    if (error) setMessage(error.message);
-    else {
-      setMessage(
-        "Gameweek scheduled. Waivers will process Thursday at 8:00 AM Pacific.",
-      );
-      await loadDetails(active.league_id);
-    }
-    setSettingsBusy(false);
-  }
-
   async function deleteLeague() {
     if (!active || !active.is_commissioner) return;
     const deletedLeagueId = active.league_id;
@@ -471,6 +477,7 @@ export default function LeaguePage() {
         setDraft(null);
         setSettings(null);
         setTransactionWindow(null);
+        setScheduleFixture(null);
         setLeagueView("data");
         setTab("create");
         setCreationStep("format");
@@ -800,72 +807,6 @@ export default function LeaguePage() {
                       {settingsBusy ? "Saving…" : "Save settings"}
                     </button>
                   </form>
-                  {active.game_format !== "pack" ? (
-                    <form
-                      className="panel commissioner-settings settings-form"
-                      onSubmit={saveGameweek}
-                    >
-                      <div className="section-row">
-                        <div>
-                          <p className="eyebrow">BETA SCHEDULE</p>
-                          <h2>Next transaction window</h2>
-                        </div>
-                        <span className="muted-chip">AUTO</span>
-                      </div>
-                      <label className="settings-field">
-                        <span>
-                          <strong>Gameweek</strong>
-                          <small>
-                            Waiver priority is randomized for this week.
-                          </small>
-                        </span>
-                        <input
-                          name="gameweek"
-                          type="number"
-                          min="1"
-                          defaultValue={(transactionWindow?.gameweek ?? 0) + 1}
-                          required
-                        />
-                      </label>
-                      <label className="settings-field">
-                        <span>
-                          <strong>First match kickoff</strong>
-                          <small>
-                            Claims process Thursday at 8:00 AM Pacific; free
-                            agency then stays open until this time.
-                          </small>
-                        </span>
-                        <input
-                          name="first_kickoff"
-                          type="datetime-local"
-                          required
-                        />
-                      </label>
-                      {transactionWindow ? (
-                        <div className="settings-readonly">
-                          <span>
-                            <strong>
-                              Current GW {transactionWindow.gameweek}
-                            </strong>
-                            <small>
-                              {transactionWindow.phase.replace("_", " ")} ·
-                              locks{" "}
-                              {new Date(
-                                transactionWindow.roster_lock_at,
-                              ).toLocaleString()}
-                            </small>
-                          </span>
-                          <b>{transactionWindow.phase.toUpperCase()}</b>
-                        </div>
-                      ) : null}
-                      <button
-                        className="primary-button full-button"
-                        disabled={settingsBusy}
-                      >
-                        {settingsBusy ? "Scheduling…" : "Schedule gameweek"}
-                      </button>
-                    </form>
-                  ) : null}
                 </>
               ) : settings ? (
                 <section className="panel settings-readonly-list">
@@ -949,6 +890,60 @@ export default function LeaguePage() {
                     </span>
                     <b>Settles automatically</b>
                   </div>
+                </section>
+              ) : null}
+              {settings && scheduleFixture ? (
+                <section className="panel league-overview">
+                  <div className="section-row">
+                    <div>
+                      <p className="eyebrow">FANTASY CALENDAR</p>
+                      <h2>
+                        {transactionWindow ? "Current" : "Upcoming"} gameweek{" "}
+                        {scheduleFixture.gameweek}
+                      </h2>
+                    </div>
+                    <span className="muted-chip">
+                      {transactionWindow
+                        ? transactionWindow.phase.replace("_", " ")
+                        : "AUTO"}
+                    </span>
+                  </div>
+                  <div className="settings-readonly-list">
+                    <div>
+                      <span>
+                        <strong>Calendar</strong>
+                        <small>Chosen when this league was created.</small>
+                      </span>
+                      <b>{settings.calendar_competition}</b>
+                    </div>
+                    <div>
+                      <span>
+                        <strong>First match</strong>
+                        <small>
+                          {transactionWindow
+                            ? "This gameweek is scheduled automatically."
+                            : active.game_format === "pack"
+                              ? "Activates automatically when the league is ready."
+                              : `Activates automatically after the ${active.game_format === "auction" ? "auction" : "draft"} is complete.`}
+                        </small>
+                      </span>
+                      <b>
+                        {new Date(scheduleFixture.kickoff).toLocaleString([], {
+                          dateStyle: "medium",
+                          timeStyle: "short",
+                        })}
+                      </b>
+                    </div>
+                  </div>
+                </section>
+              ) : settings ? (
+                <section className="panel league-overview">
+                  <p className="eyebrow">FANTASY CALENDAR</p>
+                  <h2>Schedule pending</h2>
+                  <p className="league-data-copy">
+                    The next {settings.calendar_competition} gameweek will
+                    appear here automatically.
+                  </p>
                 </section>
               ) : null}
               {active.is_commissioner ? (
