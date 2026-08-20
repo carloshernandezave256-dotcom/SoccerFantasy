@@ -759,15 +759,12 @@ export function HomeDashboard() {
           <section className="panel home-table-card">
             <div className="section-row">
               <div>
-                <p className="eyebrow">STANDINGS</p>
-                <h2>League table</h2>
+                <p className="eyebrow">{t("home.standings", "STANDINGS")}</p>
+                <h2>{t("home.leagueTable", "League table")}</h2>
               </div>
-              <Link
-                className="text-button"
-                href={`/matchup?league=${league.league_id}`}
-              >
-                Full table
-              </Link>
+              <span className="muted-chip">
+                {standings.length} {t("home.teams", "teams")}
+              </span>
             </div>
             <div className="home-table-head">
               <span>#</span>
@@ -775,7 +772,7 @@ export function HomeDashboard() {
               <span>W-D-L</span>
               <span>Pts</span>
             </div>
-            {standings.slice(0, 5).map((row) => (
+            {standings.map((row) => (
               <div
                 className={`home-table-row ${row.user_id === userId ? "mine" : ""}`}
                 key={row.user_id}
