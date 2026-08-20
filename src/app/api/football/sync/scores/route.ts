@@ -11,11 +11,17 @@ type ApiPlayer={player:{id:number};statistics:Array<{games:{minutes:number|null}
 type PlayersPage={response:Array<{players:ApiPlayer[]}>};
 type LeagueRow={calendar_competition:string;player_pool:string};
 type PlayerRow={id:number;api_football_id:number|null};
+type CachedFixture={kickoff:string;status:string;competition:string};
 
 export const maxDuration=300;
 
 function adminHeaders(key:string){return{apikey:key,Authorization:`Bearer ${key}`,"Content-Type":"application/json"}}
 function parseGameweek(round:string){const match=round.match(/(\d+)\s*$/);return match?Number(match[1]):1}
+function localDateKey(value:Date){
+  const parts=new Intl.DateTimeFormat("en-US",{timeZone:"America/Los_Angeles",year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(value);
+  const part=(type:Intl.DateTimeFormatPartTypes)=>parts.find(item=>item.type===type)?.value??"";
+  return `${part("year")}-${part("month")}-${part("day")}`;
+}
 
 export async function POST(request:NextRequest){
   const authorization=request.headers.get("authorization")??"";
@@ -40,7 +46,35 @@ export async function POST(request:NextRequest){
 
   const now=new Date();
   const season=now.getUTCMonth()<=5?now.getUTCFullYear()-1:now.getUTCFullYear();
+  const requestId=request.headers.get("x-vercel-id");
+  const startedAt=Date.now();
+  console.log(JSON.stringify({level:"info",msg:"score_sync_start",route:"/api/football/sync/scores",requestId,leagueId:body.leagueId}));
   try{
+    const cachedResponse=await fetch(`${supabaseUrl}/rest/v1/league_headline_fixtures?league_id=eq.${encodeURIComponent(body.leagueId)}&competition=eq.${encodeURIComponent(competition)}&select=kickoff,status,competition&limit=1000`,{headers:adminHeaders(serviceRoleKey),cache:"no-store"});
+    const cachedFixtures=cachedResponse.ok?await cachedResponse.json() as CachedFixture[]:[];
+    const today=localDateKey(now);
+    const todayFixtures=cachedFixtures.filter(fixture=>localDateKey(new Date(fixture.kickoff))===today);
+    if(cachedFixtures.length>0&&todayFixtures.length===0){
+      console.log(JSON.stringify({level:"info",msg:"score_sync_skipped_no_games_today",route:"/api/football/sync/scores",requestId,leagueId:body.leagueId,competition,ms:Date.now()-startedAt}));
+      return NextResponse.json({ok:true,skipped:true,status:"no-games-today",competition,requestsUsed:0,message:`${competition} has no games today. No provider requests were used.`});
+    }
+    if(todayFixtures.length>0&&todayFixtures.every(fixture=>unstartedStatuses.has(fixture.status)||new Date(fixture.kickoff)>now)){
+      console.log(JSON.stringify({level:"info",msg:"score_sync_skipped_before_kickoff",route:"/api/football/sync/scores",requestId,leagueId:body.leagueId,competition,ms:Date.now()-startedAt}));
+      return NextResponse.json({ok:true,skipped:true,status:"before-kickoff",competition,requestsUsed:0,message:`${competition}'s games have not started yet. No provider requests were used.`});
+    }
+    if(todayFixtures.length>0&&todayFixtures.every(fixture=>finalStatuses.has(fixture.status))){
+      console.log(JSON.stringify({level:"info",msg:"score_sync_skipped_already_final",route:"/api/football/sync/scores",requestId,leagueId:body.leagueId,competition,ms:Date.now()-startedAt}));
+      return NextResponse.json({ok:true,skipped:true,status:"already-final",competition,requestsUsed:0,message:`${competition}'s games are already final. No provider requests were used.`});
+    }
+
+    const lockResponse=await fetch(`${supabaseUrl}/rest/v1/rpc/acquire_score_sync_lock`,{method:"POST",headers:adminHeaders(serviceRoleKey),body:JSON.stringify({p_league_id:body.leagueId,p_cooldown_seconds:900}),cache:"no-store"});
+    if(!lockResponse.ok)throw new Error((await lockResponse.text())||"Score sync lock could not be acquired");
+    const lockAcquired=await lockResponse.json() as boolean;
+    if(!lockAcquired){
+      console.log(JSON.stringify({level:"info",msg:"score_sync_skipped_cooldown",route:"/api/football/sync/scores",requestId,leagueId:body.leagueId,competition,ms:Date.now()-startedAt}));
+      return NextResponse.json({ok:true,skipped:true,status:"cooldown",competition,requestsUsed:0,message:"A score sync was attempted recently. Try again in 15 minutes."},{status:202});
+    }
+
     const scheduleCompetitions=playerPool==="All Top Five"?Object.entries(competitions):[[competition,competitionId] as [string,number]];
     const scheduleBodies=await Promise.all(scheduleCompetitions.map(async([name,id])=>({name,body:await apiFootball<FixturePage>(`fixtures?league=${id}&season=${season}`)})));
     const fixtureBody=scheduleBodies.find(item=>item.name===competition)?.body??{response:[]};
@@ -87,6 +121,10 @@ export async function POST(request:NextRequest){
     const rows=players.map(player=>({league_id:body.leagueId,gameweek,player_id:player.id,minutes:0,goals:0,assists:0,shots_on_target:0,big_chances_missed:0,completed_passes:0,tackles_won:0,penalty_goals:0,penalties_missed:0,penalties_conceded:0,saves:0,penalties_saved:0,goals_conceded:0,yellow_cards:0,second_yellow_cards:0,red_cards:0,own_goals:0,man_of_the_match:false,status:roundStatus,source:"api-football-live",source_updated_at:new Date().toISOString(),updated_at:new Date().toISOString(),...(player.api_football_id?statsByApiId.get(player.api_football_id)??{}:{})}));
     const upsert=await fetch(`${supabaseUrl}/rest/v1/league_player_scores?on_conflict=league_id,gameweek,player_id`,{method:"POST",headers:{...adminHeaders(serviceRoleKey),Prefer:"resolution=merge-duplicates,return=minimal"},body:JSON.stringify(rows),cache:"no-store"});
     if(!upsert.ok)throw new Error((await upsert.text())||"Score database update failed");
+    console.log(JSON.stringify({level:"info",msg:"score_sync_done",route:"/api/football/sync/scores",requestId,leagueId:body.leagueId,competition,requestsUsed:scheduleBodies.length+activeFixtures.length,ms:Date.now()-startedAt}));
     return NextResponse.json({ok:true,competition,season,round,gameweek,status:roundStatus,fixturesStarted:activeFixtures.length,fixturesTotal:roundFixtures.length,seasonFixturesCached:fixtureRows.length,playersWithStats:statsByApiId.size,playersUpdated:rows.length,lineupPlayersUpdated:lineupPlayers.length,requestsUsed:scheduleBodies.length+activeFixtures.length,limitations:["Completed passes are estimated from total passes and API accuracy.","Big chances missed and Man of the Match remain unavailable from this endpoint and currently score zero."]});
-  }catch(error){return NextResponse.json({error:error instanceof Error?error.message:"Live score synchronization failed."},{status:502})}
+  }catch(error){
+    console.error(JSON.stringify({level:"error",msg:"score_sync_failed",route:"/api/football/sync/scores",requestId,leagueId:body.leagueId,competition,error:error instanceof Error?error.message:String(error),ms:Date.now()-startedAt}));
+    return NextResponse.json({error:error instanceof Error?error.message:"Live score synchronization failed."},{status:502});
+  }
 }
