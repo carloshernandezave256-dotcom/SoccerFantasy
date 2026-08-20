@@ -1198,3 +1198,190 @@ export default function LeaguePage() {
                   has a bye and no matchup is calculated.
                 </span>
               </div>
+              <p className="form-message">
+                <strong>Season lock:</strong> the player pool and fantasy
+                calendar cannot be changed after the league is created.
+              </p>
+            </section>
+          ) : null}
+          {tab === "join" || creationStep === "settings" ? (
+            <form
+              className="panel form-card create-league-form"
+              onSubmit={submit}
+            >
+              {tab === "create" ? (
+                <>
+                <div className="form-section-title">
+                  <p className="eyebrow">IDENTITY</p>
+                  <strong>Name your competition</strong>
+                </div>
+                <label>
+                  League name
+                  <input
+                    name="league"
+                    placeholder="Central Valley Champions"
+                    minLength={2}
+                    required
+                  />
+                </label>
+                <label>
+                  Your team name
+                  <input
+                    name="team"
+                    placeholder="Barrio XI"
+                    minLength={2}
+                    required
+                  />
+                </label>
+                <label>
+                  League capacity
+                  <select name="size" defaultValue="10">
+                    <option value="8">8 managers</option>
+                    <option value="10">10 managers</option>
+                    <option value="12">12 managers</option>
+                  </select>
+                </label>
+                {gameFormat === "auction" ? (
+                  <>
+                    <div className="form-section-title">
+                      <p className="eyebrow">AUCTION STYLE</p>
+                      <strong>Choose how players enter the room</strong>
+                    </div>
+                    <div className="format-choice auction-style-choice">
+                      <button
+                        type="button"
+                        className={
+                          auctionStyle === "nomination" ? "active" : ""
+                        }
+                        aria-pressed={auctionStyle === "nomination"}
+                        onClick={() => setAuctionStyle("nomination")}
+                      >
+                        <span>◎</span>
+                        <strong>Manager Nomination</strong>
+                        <small>
+                          Random order · managers choose each player
+                        </small>
+                      </button>
+                      <button
+                        type="button"
+                        className={auctionStyle === "mystery" ? "active" : ""}
+                        aria-pressed={auctionStyle === "mystery"}
+                        onClick={() => setAuctionStyle("mystery")}
+                      >
+                        <span>?</span>
+                        <strong>Mystery Reveal</strong>
+                        <small>The app randomly reveals each player</small>
+                      </button>
+                    </div>
+                  </>
+                ) : null}
+                <div className="form-section-title">
+                  <p className="eyebrow">RULES</p>
+                  <strong>Set up your league</strong>
+                </div>
+                {gameFormat === "draft" ? (
+                  <label>
+                    Draft clock
+                    <select name="draft_pick_seconds" defaultValue="90">
+                      <option value="30">30 seconds per pick</option>
+                      <option value="60">60 seconds per pick</option>
+                      <option value="90">90 seconds per pick</option>
+                      <option value="120">2 minutes per pick</option>
+                    </select>
+                  </label>
+                ) : (
+                  <input type="hidden" name="draft_pick_seconds" value="90" />
+                )}
+                <label>
+                  Lineup lock
+                  <select name="lineup_lock_minutes" defaultValue="0">
+                    <option value="0">At the first match kickoff</option>
+                    <option value="15">15 minutes before the first match</option>
+                    <option value="30">30 minutes before the first match</option>
+                    <option value="60">60 minutes before the first match</option>
+                  </select>
+                </label>
+                <label className="creation-toggle">
+                  <span>
+                    <strong>Allow trades</strong>
+                    <small>
+                      Managers can exchange equal numbers of players.
+                    </small>
+                  </span>
+                  <input name="trades_enabled" type="checkbox" defaultChecked />
+                </label>
+                <div className="creation-rule-summary">
+                  <strong>
+                    {gameFormat === "draft"
+                      ? "Draft League beta rules"
+                      : gameFormat === "pack"
+                        ? "Pack League beta rules"
+                        : "Auction League beta rules"}
+                  </strong>
+                  {gameFormat === "draft" ? (
+                    <span>3 managers minimum to draft</span>
+                  ) : gameFormat === "pack" ? (
+                    <>
+                      <span>
+                        22-card starter bundle · 50-card collection limit
+                      </span>
+                      <span>
+                        Duplicates, pack tokens and league auction house
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <span>$2B per manager · $1M bid increments</span>
+                      <span>Exclusive players · live open bidding</span>
+                      <span>
+                        {auctionStyle === "nomination"
+                          ? "Random nomination order"
+                          : "Random Mystery Reveal players"}
+                      </span>
+                    </>
+                  )}
+                  <span>18-player squads · 11 starters · 7 bench</span>
+                  <span>Weekly Star Pick · +5 when your prediction tops your XI</span>
+                  <span>Season-long standings · No playoffs</span>
+                </div>
+                </>
+              ) : (
+                <>
+                <label>
+                  Invite code
+                  <input
+                    name="code"
+                    value={code}
+                    onChange={(event) =>
+                      setCode(event.target.value.toUpperCase())
+                    }
+                    placeholder="XI-A1B2C3"
+                    required
+                  />
+                </label>
+                <label>
+                  Your team name
+                  <input
+                    name="team"
+                    placeholder="Barrio XI"
+                    minLength={2}
+                    required
+                  />
+                </label>
+                </>
+              )}
+              <button className="primary-button" disabled={busy}>
+                {busy
+                  ? "Saving…"
+                  : tab === "create"
+                    ? `Create ${gameFormat === "draft" ? "Draft" : gameFormat === "pack" ? "Pack" : "Auction"} League`
+                    : "Join league"}
+              </button>
+              {message ? <p className="form-message">{message}</p> : null}
+            </form>
+          ) : null}
+        </>
+      )}
+    </PageShell>
+  );
+}
