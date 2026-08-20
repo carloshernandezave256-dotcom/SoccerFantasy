@@ -8,6 +8,7 @@ import { PlayerStatsDialog } from "./player-stats-dialog";
 import { resolveActiveLeague } from "@/lib/active-league";
 import { calculateScore, type Position } from "@/lib/scoring";
 import { supabase } from "@/lib/supabase";
+import { useLanguage } from "@/lib/i18n";
 
 type League = {
   league_id: string;
@@ -141,6 +142,14 @@ function headlineWeight(name: string) {
 function fixtureHasStarted(status: string) {
   return !["TBD", "NS", "PST", "CANC", "ABD", "AWD", "WO"].includes(status);
 }
+function fixtureIsFinal(status: string) {
+  return ["FT", "AET", "PEN"].includes(status);
+}
+function fixtureDisplayPriority(status: string) {
+  if (fixtureHasStarted(status) && !fixtureIsFinal(status)) return 0;
+  if (!fixtureHasStarted(status)) return 1;
+  return 2;
+}
 
 function managerAtPick(order: Manager[], pickNumber: number) {
   if (!order.length) return undefined;
@@ -151,6 +160,7 @@ function managerAtPick(order: Manager[], pickNumber: number) {
 }
 
 export function HomeDashboard() {
+  const { t } = useLanguage();
   const [league, setLeague] = useState<League | null>(null),
     [draft, setDraft] = useState<Draft | null>(null),
     [order, setOrder] = useState<Manager[]>([]),
@@ -199,6 +209,9 @@ export function HomeDashboard() {
       setLoading(false);
       return;
     }
+    const today = new Date(),
+      dayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate()),
+      dayEnd = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
     const [d, o, p, t, l, c, w, s, m, scoreResult, fixtureResult] =
       await Promise.all([
         supabase
@@ -249,6 +262,8 @@ export function HomeDashboard() {
             "fixture_id,gameweek,competition,round_name,kickoff,status,home_team,away_team,home_score,away_score",
           )
           .eq("league_id", active.league_id)
+          .gte("kickoff", dayStart.toISOString())
+          .lt("kickoff", dayEnd.toISOString())
           .order("kickoff", { ascending: true }),
       ]);
     const pickData = (p.data ?? []) as unknown as Pick[],
@@ -520,28 +535,17 @@ export function HomeDashboard() {
     totalPicks,
     unreadTrades,
   ]);
-  const liveFixture = headlineFixtures.find(
-      (item) =>
-        fixtureHasStarted(item.status) &&
-        !["FT", "AET", "PEN"].includes(item.status),
-    ),
-    nextFixture = headlineFixtures.find(
-      (item) => !fixtureHasStarted(item.status),
-    ),
-    featuredWeek =
-      liveFixture?.gameweek ??
-      nextFixture?.gameweek ??
-      Math.max(0, ...headlineFixtures.map((item) => item.gameweek)),
-    bigGames = headlineFixtures
-      .filter((item) => item.gameweek === featuredWeek)
+  const featuredWeek = Math.max(0, ...headlineFixtures.map((item) => item.gameweek)),
+    todaysGames = [...headlineFixtures]
       .sort(
         (a, b) =>
+          fixtureDisplayPriority(a.status) - fixtureDisplayPriority(b.status) ||
           headlineWeight(b.home_team) +
             headlineWeight(b.away_team) -
             (headlineWeight(a.home_team) + headlineWeight(a.away_team)) ||
           new Date(a.kickoff).getTime() - new Date(b.kickoff).getTime(),
       )
-      .slice(0, 3);
+      .slice(0, 4);
 
   return (
     <main className="app-shell home-dashboard">
@@ -794,20 +798,19 @@ export function HomeDashboard() {
             <div className="section-row">
               <div>
                 <p className="eyebrow">
-                  REAL FOOTBALL · {bigGames[0]?.competition ?? "THIS WEEK"}
+                  {t("home.realFootball", "REAL FOOTBALL · TODAY")}
                 </p>
-                <h2>Big games this week</h2>
+                <h2>{t("home.todaysMatches", "Today's matches")}</h2>
               </div>
               <span className="muted-chip">GW {featuredWeek || "—"}</span>
             </div>
-            {bigGames.map((game) => (
+            {todaysGames.map((game) => (
               <article className="home-big-game" key={game.fixture_id}>
                 <span>
                   <strong>{game.home_team}</strong>
                   <small>
                     vs {game.away_team} ·{" "}
                     {new Date(game.kickoff).toLocaleString(undefined, {
-                      weekday: "short",
                       hour: "numeric",
                       minute: "2-digit",
                     })}
@@ -821,20 +824,23 @@ export function HomeDashboard() {
                 <em
                   className={
                     fixtureHasStarted(game.status)
-                      ? ["FT", "AET", "PEN"].includes(game.status)
+                      ? fixtureIsFinal(game.status)
                         ? "final"
                         : "live"
                       : "scheduled"
                   }
                 >
-                  {fixtureHasStarted(game.status) ? game.status : "UPCOMING"}
+                  {fixtureIsFinal(game.status)
+                    ? t("home.final", "FINAL")
+                    : fixtureHasStarted(game.status)
+                      ? t("home.live", "LIVE")
+                      : t("home.scheduled", "SCHEDULED")}
                 </em>
               </article>
             ))}
-            {!bigGames.length ? (
+            {!todaysGames.length ? (
               <p className="empty-state">
-                Headline fixtures will appear after the commissioner’s next
-                score sync.
+                {t("home.noMatches", "No matches are scheduled for today.")}
               </p>
             ) : null}
           </section>
