@@ -7,7 +7,7 @@ import { calculateScore, type LedgerEntry, type PlayerMatchStats, type Position 
 import { resolveActiveLeague } from "@/lib/active-league";
 import { PlayerHeadshot } from "./player-headshot";
 
-type League={league_id:string;league_name:string;team_name:string};
+type League={league_id:string;league_name:string;team_name:string;game_format:string};
 type Manager={draft_slot:number;user_id:string;team_name:string};
 type Matchup={id:string;gameweek:number;home_user_id:string;away_user_id:string;home_score:number|string;away_score:number|string;status:"scheduled"|"live"|"final"};
 type Player={id:number;full_name:string;position:string;club:string;photo_url?:string|null;starPick?:boolean;score:number;rating:number|null;manOfTheMatch:boolean;status:"not_started"|"live"|"final";ledger:LedgerEntry[]};
@@ -40,6 +40,14 @@ export function RealMatchup(){
     const active=resolveActiveLeague(leagues,new URLSearchParams(window.location.search).get("league"))??null;
     setLeague(active);
     if(!active){setMessage("Create or join a league to generate your schedule.");setLoading(false);return}
+    if(active.game_format==="draft"){
+      const{data:draft}=await supabase.from("drafts").select("status").eq("league_id",active.league_id).maybeSingle();
+      if(draft?.status!=="complete"){
+        setMessage("Your randomized matchups will generate when the draft is complete.");
+        setLoading(false);
+        return;
+      }
+    }
     const{error:scheduleError}=await supabase.rpc("ensure_league_schedule",{p_league_id:active.league_id});
     if(scheduleError){setMessage(scheduleError.message);setLoading(false);return}
     await supabase.rpc("refresh_league_matchup_scores",{p_league_id:active.league_id,p_gameweek:1});
