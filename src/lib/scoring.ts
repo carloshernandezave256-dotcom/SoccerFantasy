@@ -26,6 +26,17 @@ export interface PlayerMatchStats {
 export interface LedgerEntry { code: string; label: string; detail: string; points: number }
 export interface ScoreResult { total: number; entries: LedgerEntry[] }
 
+export function resolvePlayerScoreStatus(
+  playerFixtureStatuses: string[],
+  gameweekIsFinal: boolean,
+): "live" | "final" {
+  const terminalStatuses = new Set(["FT", "AET", "PEN", "PST", "CANC", "ABD", "AWD", "WO"]);
+  if (playerFixtureStatuses.length > 0) {
+    return playerFixtureStatuses.every((status) => terminalStatuses.has(status)) ? "final" : "live";
+  }
+  return gameweekIsFinal ? "final" : "live";
+}
+
 const goalPoints: Record<Position, number> = { GK: 7, DEF: 5, MID: 4, FWD: 3 };
 const baseHatTrickBonus: Record<Position, number> = { GK: 9, DEF: 5, MID: 3, FWD: 1 };
 
