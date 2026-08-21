@@ -7,7 +7,6 @@ import { supabase } from "@/lib/supabase";
 import { resolveActiveLeague } from "@/lib/active-league";
 import { PlayerHeadshot } from "@/components/player-headshot";
 import { PlayerStatsDialog } from "@/components/player-stats-dialog";
-import { calculateScore, type Position } from "@/lib/scoring";
 
 type League = { league_id: string; league_name: string; team_name: string; is_commissioner: boolean; game_format?: string; player_pool?: string };
 type Player = { id: number; full_name: string; position: string; club: string; competition: string; draft_rank?: number; photo_url?:string|null };
@@ -16,7 +15,7 @@ type Claim = { id: string; user_id: string; add_player_id: number; drop_player_i
 type ContractOffer = { id:string;user_id:string;add_player_id:number;release_player_id:number;gameweek:number;offer_rank:number;amount:number;status:string;created_at:string;processed_at:string|null;note:string|null };
 type Priority = { rank: number; user_id: string; team_name: string };
 type TransactionWindow={gameweek:number;waiver_process_at:string;roster_lock_at:string;phase:"waivers"|"free_agency"|"locked"};
-type ScoreRow = { gameweek: number; player_id: number; minutes: number; goals: number; assists: number; shots_on_target: number; big_chances_missed: number; completed_passes: number; tackles_won: number; penalty_goals: number; penalties_missed: number; penalties_conceded: number; saves: number; penalties_saved: number; goals_conceded: number; yellow_cards: number; second_yellow_cards: number; red_cards: number; own_goals: number; man_of_the_match: boolean; status: string };
+type SeasonTotal = { player_id:number;points:number;appearances:number;minutes:number;goals:number;assists:number;shots_on_target:number;completed_passes:number;tackles_won:number;saves:number;clean_sheets:number;yellow_cards:number;red_cards:number;motm:number;latest_gameweek:number|null;latest_status:string|null };
 type PlayerTotals = { points: number; appearances: number; minutes: number; goals: number; assists: number; shotsOnTarget: number; completedPasses: number; tacklesWon: number; saves: number; cleanSheets: number; yellowCards: number; redCards: number; motm: number; gameweeks: { gameweek: number; points: number; status: string }[] };
 
 export default function WaiversPage() {
@@ -27,7 +26,7 @@ export default function WaiversPage() {
   const [contractOffers,setContractOffers]=useState<ContractOffer[]>([]);
   const [contractBudget,setContractBudget]=useState(0);
   const [priority, setPriority] = useState<Priority[]>([]);
-  const [scores, setScores] = useState<ScoreRow[]>([]);
+  const [seasonTotals, setSeasonTotals] = useState<SeasonTotal[]>([]);
   const [userId, setUserId] = useState("");
   const [query, setQuery] = useState("");
   const [position, setPosition] = useState("ALL");
@@ -50,7 +49,7 @@ export default function WaiversPage() {
       supabase.from("draft_picks").select("user_id,player_id,players(id,full_name,position,club,competition,draft_rank,photo_url)").eq("league_id", active.league_id),
       supabase.from("waiver_claims").select("id,user_id,add_player_id,drop_player_id,gameweek,claim_rank,status,created_at,processed_at,note").eq("league_id", active.league_id).order("created_at", { ascending: false }),
       supabase.rpc("waiver_priority", { p_league_id: active.league_id }),
-      supabase.from("league_player_scores").select("gameweek,player_id,minutes,goals,assists,shots_on_target,big_chances_missed,completed_passes,tackles_won,penalty_goals,penalties_missed,penalties_conceded,saves,penalties_saved,goals_conceded,yellow_cards,second_yellow_cards,red_cards,own_goals,man_of_the_match,status").eq("league_id", active.league_id).order("gameweek", { ascending: false }),
+      supabase.rpc("player_season_totals"),
       supabase.rpc("transaction_window",{p_league_id:active.league_id}),
       supabase.from("auction_contract_offers").select("id,user_id,add_player_id,release_player_id,gameweek,offer_rank,amount,status,created_at,processed_at,note").eq("league_id",active.league_id).order("created_at",{ascending:false}),
       supabase.from("auction_budgets").select("remaining_budget").eq("league_id",active.league_id).eq("user_id",currentUser).maybeSingle(),
@@ -61,7 +60,7 @@ export default function WaiversPage() {
     setPicks((pickResult.data ?? []) as unknown as Pick[]);
     setClaims((claimResult.data ?? []) as Claim[]);
     setPriority((priorityResult.data ?? []) as Priority[]);
-    setScores((scoreResult.data ?? []) as ScoreRow[]);
+    setSeasonTotals((scoreResult.data ?? []) as SeasonTotal[]);
     setWindowState(((windowResult.data??[])[0] as TransactionWindow)??null);
     setContractOffers((offerResult.data??[]) as ContractOffer[]);
     setContractBudget(Number(budgetResult.data?.remaining_budget??0));
@@ -94,31 +93,7 @@ export default function WaiversPage() {
   const playerMap = useMemo(() => new Map(players.map((player) => [player.id, player])), [players]);
   const teamMap = useMemo(() => new Map(priority.map((item) => [item.user_id, item.team_name])), [priority]);
   const ownerByPlayer = useMemo(() => new Map(picks.map((pick) => [pick.player_id, teamMap.get(pick.user_id) ?? "Owned"])), [picks, teamMap]);
-  const totalsByPlayer = useMemo(() => {
-    const totals = new Map<number, PlayerTotals>();
-    for (const row of scores) {
-      const player = playerMap.get(row.player_id);
-      if (!player) continue;
-      const points = calculateScore({ position: player.position as Position, minutes: row.minutes, goals: row.goals, assists: row.assists, shotsOnTarget: row.shots_on_target, completedPasses: row.completed_passes, tacklesWon: row.tackles_won, penaltyGoals: row.penalty_goals, penaltiesMissed: row.penalties_missed, penaltiesConceded: row.penalties_conceded, saves: row.saves, penaltiesSaved: row.penalties_saved, goalsConceded: row.goals_conceded, yellowCards: row.yellow_cards, secondYellowCards: row.second_yellow_cards, redCards: row.red_cards, ownGoals: row.own_goals, manOfTheMatch: row.man_of_the_match }).total;
-      const current = totals.get(row.player_id) ?? { points: 0, appearances: 0, minutes: 0, goals: 0, assists: 0, shotsOnTarget: 0, completedPasses: 0, tacklesWon: 0, saves: 0, cleanSheets: 0, yellowCards: 0, redCards: 0, motm: 0, gameweeks: [] };
-      current.points += points;
-      current.appearances += row.minutes > 0 ? 1 : 0;
-      current.minutes += row.minutes;
-      current.goals += row.goals;
-      current.assists += row.assists;
-      current.shotsOnTarget += row.shots_on_target;
-      current.completedPasses += row.completed_passes;
-      current.tacklesWon += row.tackles_won;
-      current.saves += row.saves;
-      current.cleanSheets += row.minutes >= 60 && row.goals_conceded === 0 && (player.position === "GK" || player.position === "DEF") ? 1 : 0;
-      current.yellowCards += row.yellow_cards;
-      current.redCards += row.red_cards + row.second_yellow_cards;
-      current.motm += row.man_of_the_match ? 1 : 0;
-      current.gameweeks.push({ gameweek: row.gameweek, points, status: row.status });
-      totals.set(row.player_id, current);
-    }
-    return totals;
-  }, [scores, playerMap]);
+  const totalsByPlayer = useMemo(() => new Map(seasonTotals.map((row):[number,PlayerTotals] => [row.player_id,{points:Number(row.points),appearances:Number(row.appearances),minutes:Number(row.minutes),goals:Number(row.goals),assists:Number(row.assists),shotsOnTarget:Number(row.shots_on_target),completedPasses:Number(row.completed_passes),tacklesWon:Number(row.tackles_won),saves:Number(row.saves),cleanSheets:Number(row.clean_sheets),yellowCards:Number(row.yellow_cards),redCards:Number(row.red_cards),motm:Number(row.motm),gameweeks:[]} ])),[seasonTotals]);
   const emptyTotals: PlayerTotals = { points: 0, appearances: 0, minutes: 0, goals: 0, assists: 0, shotsOnTarget: 0, completedPasses: 0, tacklesWon: 0, saves: 0, cleanSheets: 0, yellowCards: 0, redCards: 0, motm: 0, gameweeks: [] };
   const marketPlayers = useMemo(() => players.filter((player) => {
     const search = query.trim().toLowerCase();
