@@ -8,6 +8,7 @@ type LiveFixture={fixture:{id:number;date:string;status:{short:string}};goals:{h
 type LivePage={response:LiveFixture[]};
 type ApiPlayer={player:{id:number};statistics:Array<{games:{minutes:number|null;rating:string|null};shots:{on:number|null};goals:{total:number|null;assists:number|null;conceded:number|null;saves:number|null};passes:{total:number|null;accuracy:number|string|null};tackles:{total:number|null};cards:{yellow:number|null;red:number|null};penalty:{scored:number|null;missed:number|null;saved:number|null;commited:number|null}}>};
 type PlayersPage={response:Array<{players:ApiPlayer[]}>};
+type FixtureDetailPage={response:Array<LiveFixture&{players?:PlayersPage["response"]}>};
 type Player={id:number;api_football_id:number|null};
 type LeagueFixture={league_id:string;fixture_id:number};
 type LeagueRow={calendar_competition:string;player_pool:string};
@@ -56,15 +57,21 @@ export async function GET(request:NextRequest){
     }));
     if(fixtureUpdates.some(ok=>!ok))throw new Error("Fixture status update failed");
 
-    const pages=await Promise.all(fixtures.map(async fixture=>({fixture,body:await apiFootball<PlayersPage>(`fixtures/players?fixture=${fixture.fixture.id}`)})));
+    // The full fixture response carries the live player statistics in the same
+    // single request. This is more reliable during a match than observing the
+    // score from /fixtures?live=all and then reading a separate player endpoint.
+    const pages=await Promise.all(fixtures.map(async fixture=>{
+      const body=await apiFootball<FixtureDetailPage>(`fixtures?id=${fixture.fixture.id}`);
+      return{fixture,teams:body.response[0]?.players??[]};
+    }));
     requestsUsed+=pages.length;
-    const apiIds=[...new Set(pages.flatMap(({body})=>body.response.flatMap(team=>team.players.map(entry=>entry.player.id))))];
+    const apiIds=[...new Set(pages.flatMap(({teams})=>teams.flatMap(team=>team.players.map(entry=>entry.player.id))))];
     const playersResponse=apiIds.length?await fetch(`${url}/rest/v1/players?api_football_id=in.(${apiIds.join(",")})&select=id,api_football_id`,{headers:headers(key),cache:"no-store"}):null;
     const players=playersResponse?.ok?await playersResponse.json() as Player[]:[];
     const internalByApi=new Map(players.map(player=>[player.api_football_id,player.id]));
     const cachedStats:StatRow[]=[];
-    for(const {fixture,body} of pages){
-      const entries=body.response.flatMap(team=>team.players).flatMap(entry=>entry.statistics.slice(0,1).map(stat=>({entry,stat})));
+    for(const {fixture,teams} of pages){
+      const entries=teams.flatMap(team=>team.players).flatMap(entry=>entry.statistics.slice(0,1).map(stat=>({entry,stat})));
       const motm=selectManOfTheMatchId(entries.map(({entry,stat})=>({playerId:entry.player.id,rating:Number(stat.games.rating)||0,minutes:stat.games.minutes??0,goals:stat.goals.total??0,assists:stat.goals.assists??0,shotsOnTarget:stat.shots.on??0})));
       for(const {entry,stat} of entries){
         const playerId=internalByApi.get(entry.player.id);if(!playerId)continue;
@@ -72,11 +79,14 @@ export async function GET(request:NextRequest){
         cachedStats.push({fixture_id:fixture.fixture.id,player_id:playerId,rating:Number(stat.games.rating)||null,minutes:stat.games.minutes??0,goals:stat.goals.total??0,assists:stat.goals.assists??0,shots_on_target:stat.shots.on??0,completed_passes:Math.round((stat.passes.total??0)*accuracy/100),tackles_won:stat.tackles.total??0,penalty_goals:stat.penalty.scored??0,penalties_missed:stat.penalty.missed??0,penalties_conceded:stat.penalty.commited??0,saves:stat.goals.saves??0,penalties_saved:stat.penalty.saved??0,goals_conceded:stat.goals.conceded??0,yellow_cards:stat.cards.yellow??0,red_cards:stat.cards.red??0,man_of_the_match:entry.player.id===motm,source_updated_at:now.toISOString()});
       }
     }
+    console.info("[cron/scores] live player payload",{fixtureIds,providerPlayers:apiIds.length,mappedPlayers:cachedStats.length});
     if(cachedStats.length){
       const response=await fetch(`${url}/rest/v1/football_fixture_player_stats?on_conflict=fixture_id,player_id`,{method:"POST",headers:{...headers(key),Prefer:"resolution=merge-duplicates,return=minimal"},body:JSON.stringify(cachedStats),cache:"no-store"});
       if(!response.ok)throw new Error((await response.text())||"Shared player-stat cache update failed");
+      await fetch(`${url}/rest/v1/football_fixture_cache?fixture_id=in.(${fixtureIds.join(",")})`,{method:"PATCH",headers:{...headers(key),Prefer:"return=minimal"},body:JSON.stringify({stats_synced_at:now.toISOString()}),cache:"no-store"});
+    }else{
+      console.warn("[cron/scores] provider returned no mapped live player statistics",{fixtureIds});
     }
-    await fetch(`${url}/rest/v1/football_fixture_cache?fixture_id=in.(${fixtureIds.join(",")})`,{method:"PATCH",headers:{...headers(key),Prefer:"return=minimal"},body:JSON.stringify({stats_synced_at:now.toISOString()}),cache:"no-store"});
 
     const affectedResponse=await fetch(`${url}/rest/v1/league_headline_fixtures?fixture_id=in.(${fixtureIds.join(",")})&select=league_id,fixture_id`,{headers:headers(key),cache:"no-store"});
     const affected=affectedResponse.ok?await affectedResponse.json() as LeagueFixture[]:[];
