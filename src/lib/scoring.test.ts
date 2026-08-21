@@ -2,9 +2,11 @@ import { describe, expect, it } from "vitest";
 import { calculateScore } from "./scoring";
 
 describe("custom scoring", () => {
-  it("uses shots on target without scoring the display-only match award", () => {
+  it("awards one point for each complete group of three shots on target", () => {
     const result = calculateScore({ position: "MID", minutes: 90, shotsOnTarget: 3, manOfTheMatch: true });
-    expect(result.total).toBe(5); // minutes 2 + SOT 3
+    expect(result.total).toBe(3); // minutes 2 + one complete SOT group
+    expect(calculateScore({ position: "MID", minutes: 90, shotsOnTarget: 2 }).total).toBe(2);
+    expect(calculateScore({ position: "MID", minutes: 90, shotsOnTarget: 6 }).total).toBe(4);
   });
 
   it("awards position goals and the hat-trick target bonus", () => {
