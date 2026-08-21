@@ -244,11 +244,12 @@ export function HomeDashboard() {
       transactionWindow =
         ((w.data ?? [])[0] as WindowState | undefined) ?? null,
       scoreRows = (scoreResult.data ?? []) as unknown as ScoreRow[],
-      scoredPlayerIds = scoreRows.map(row=>row.player_id),
+      nonzeroScoreRows = scoreRows.filter(row=>Number(row.points)!==0),
+      scoredPlayerIds = nonzeroScoreRows.map(row=>row.player_id),
       {data:pulsePlayers}=scoredPlayerIds.length?await supabase.from("players").select("id,full_name,position,club,competition,photo_url").in("id",scoredPlayerIds):{data:[]},
       pulsePlayerMap=new Map((pulsePlayers??[]).map(player=>[player.id,player])),
-      pulse = scoreRows
-        .filter((row) => Number(row.points)!==0 && pulsePlayerMap.has(row.player_id))
+      pulse = nonzeroScoreRows
+        .filter((row) => pulsePlayerMap.has(row.player_id))
         .map((row) => {
           const player=pulsePlayerMap.get(row.player_id)!;
           return {

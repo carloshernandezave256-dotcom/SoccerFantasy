@@ -9,7 +9,8 @@ type LiveFixture={fixture:{id:number;date:string;status:{short:string}};goals:{h
 type LivePage={response:LiveFixture[]};
 type ApiPlayer={player:{id:number};statistics:Array<{games:{minutes:number|null;rating:string|null};shots:{on:number|null};goals:{total:number|null;assists:number|null;conceded:number|null;saves:number|null};passes:{total:number|null;accuracy:number|string|null};tackles:{total:number|null};cards:{yellow:number|null;red:number|null};penalty:{scored:number|null;missed:number|null;saved:number|null;commited:number|null}}>};
 type PlayersPage={response:Array<{players:ApiPlayer[]}>};
-type FixtureDetailPage={response:Array<LiveFixture&{players?:PlayersPage["response"]}>};
+type FixtureDetail=LiveFixture&{players?:PlayersPage["response"]};
+type FixtureDetailPage={response:FixtureDetail[]};
 type Player={id:number;api_football_id:number|null};
 type LeagueFixture={league_id:string;fixture_id:number};
 type LeagueRow={calendar_competition:string;player_pool:string};
@@ -44,8 +45,21 @@ export async function GET(request:NextRequest){
     const live=await apiFootball<LivePage>("fixtures?live=all");
     let requestsUsed=1;
     const candidateIds=new Set(candidates.map(item=>item.fixture_id));
-    const fixtures=live.response.filter(item=>candidateIds.has(item.fixture.id));
-    if(!fixtures.length)return NextResponse.json({ok:true,ranAt:now.toISOString(),requestsUsed,fixturesEligible:candidates.length,fixturesLive:0,reason:"Cached fixtures were near kickoff, but none is live at the provider."});
+    const liveFixtures=live.response.filter(item=>candidateIds.has(item.fixture.id));
+    const liveIds=new Set(liveFixtures.map(item=>item.fixture.id));
+
+    // A completed match disappears from fixtures?live=all. Query each dropped
+    // candidate once more so its final status, final minutes and player stats
+    // do not remain frozen at the last live poll (for example, 83 minutes).
+    const droppedCandidates=candidates.filter(item=>!liveIds.has(item.fixture_id));
+    const droppedPages=await Promise.all(droppedCandidates.map(async candidate=>{
+      const body=await apiFootball<FixtureDetailPage>(`fixtures?id=${candidate.fixture_id}`);
+      return body.response[0]??null;
+    }));
+    requestsUsed+=droppedPages.length;
+    const finalizedPages=droppedPages.filter((item):item is FixtureDetail=>item!==null&&terminal.has(item.fixture.status.short));
+    const fixtures=[...liveFixtures,...finalizedPages];
+    if(!fixtures.length)return NextResponse.json({ok:true,ranAt:now.toISOString(),requestsUsed,fixturesEligible:candidates.length,fixturesLive:0,reason:"Cached fixtures were near kickoff, but none is live or newly final at the provider."});
     const fixtureIds=fixtures.map(item=>item.fixture.id);
 
     const fixtureUpdates=await Promise.all(fixtures.map(async item=>{
@@ -61,11 +75,12 @@ export async function GET(request:NextRequest){
     // The full fixture response carries the live player statistics in the same
     // single request. This is more reliable during a match than observing the
     // score from /fixtures?live=all and then reading a separate player endpoint.
-    const pages=await Promise.all(fixtures.map(async fixture=>{
+    const livePages=await Promise.all(liveFixtures.map(async fixture=>{
       const body=await apiFootball<FixtureDetailPage>(`fixtures?id=${fixture.fixture.id}`);
       return{fixture,teams:body.response[0]?.players??[]};
     }));
-    requestsUsed+=pages.length;
+    requestsUsed+=livePages.length;
+    const pages=[...livePages,...finalizedPages.map(fixture=>({fixture,teams:fixture.players??[]}))];
     const apiIds=[...new Set(pages.flatMap(({teams})=>teams.flatMap(team=>team.players.map(entry=>entry.player.id))))];
     const playersResponse=apiIds.length?await fetch(`${url}/rest/v1/players?api_football_id=in.(${apiIds.join(",")})&select=id,api_football_id`,{headers:headers(key),cache:"no-store"}):null;
     const players=playersResponse?.ok?await playersResponse.json() as Player[]:[];

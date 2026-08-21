@@ -14,6 +14,18 @@ describe("custom scoring", () => {
     expect(calculateScore({ position: "MID", minutes: 90, goals: 3 }).total).toBe(17); // 2 + 12 + 3
   });
 
+  it.each([
+    ["FWD", 10],
+    ["MID", 15],
+    ["DEF", 20],
+    ["GK", 30],
+  ] as const)("scores a three-penalty %s hat-trick at the published total", (position, total) => {
+    const result = calculateScore({ position, minutes: 0, goals: 3, penaltyGoals: 3 });
+    expect(result.total).toBe(total);
+    expect(result.entries.find((entry) => entry.code === "penalty-goals")?.points).toBe(6);
+    expect(result.entries.find((entry) => entry.code === "goals")).toBeUndefined();
+  });
+
   it("uses complete threshold blocks", () => {
     const result = calculateScore({ position: "DEF", minutes: 59, completedPasses: 29, tacklesWon: 5 });
     expect(result.total).toBe(4); // minutes 1 + passes 2 + tackles 1
@@ -29,6 +41,19 @@ describe("custom scoring", () => {
   it("awards and removes defensive clean-sheet points correctly", () => {
     expect(calculateScore({ position: "DEF", minutes: 90, goalsConceded: 0 }).total).toBe(5);
     expect(calculateScore({ position: "DEF", minutes: 90, goalsConceded: 3 }).total).toBe(-1);
+  });
+
+  it("awards clean sheets for any appearance by position", () => {
+    expect(calculateScore({ position: "GK", minutes: 1, goalsConceded: 0 }).total).toBe(4);
+    expect(calculateScore({ position: "DEF", minutes: 1, goalsConceded: 0 }).total).toBe(4);
+    expect(calculateScore({ position: "MID", minutes: 1, goalsConceded: 0 }).total).toBe(2);
+    expect(calculateScore({ position: "FWD", minutes: 1, goalsConceded: 0 }).total).toBe(1);
+  });
+
+  it("waits until full time to award a clean sheet", () => {
+    const result = calculateScore({ position: "DEF", minutes: 75, goalsConceded: 0, status: "live" });
+    expect(result.total).toBe(2);
+    expect(result.entries.find((entry) => entry.code === "clean-sheet")).toBeUndefined();
   });
 
   it("keeps an itemized ledger that reconciles to the total", () => {

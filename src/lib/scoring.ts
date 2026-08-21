@@ -20,13 +20,14 @@ export interface PlayerMatchStats {
   ownGoals?: number;
   manOfTheMatch?: boolean;
   captain?: boolean;
+  status?: "not_started" | "live" | "final";
 }
 
 export interface LedgerEntry { code: string; label: string; detail: string; points: number }
 export interface ScoreResult { total: number; entries: LedgerEntry[] }
 
 const goalPoints: Record<Position, number> = { GK: 7, DEF: 5, MID: 4, FWD: 3 };
-const hatTrickBonus: Record<Position, number> = { GK: 9, DEF: 5, MID: 3, FWD: 1 };
+const baseHatTrickBonus: Record<Position, number> = { GK: 9, DEF: 5, MID: 3, FWD: 1 };
 
 function countLabel(count: number, singular: string, plural = `${singular}s`): string {
   return `${count} ${count === 1 ? singular : plural}`;
@@ -46,15 +47,19 @@ export function calculateScore(stats: PlayerMatchStats): ScoreResult {
   if (stats.minutes > 0) add("minutes", "Playing time", `${stats.minutes} minutes`, stats.minutes >= 60 ? 2 : 1);
 
   const goals = stats.goals ?? 0;
-  add("goals", "Goals", `${countLabel(goals, "goal")} · ${goalPoints[stats.position]} FP each for a ${stats.position}`, goals * goalPoints[stats.position]);
-  if (goals >= 3) add("hat-trick", "Hat-trick bonus", `Extra ${hatTrickBonus[stats.position]} FP for a ${stats.position} scoring 3+ goals`, hatTrickBonus[stats.position]);
+  const penaltyGoals = Math.min(stats.penaltyGoals ?? 0, goals);
+  const openPlayGoals = Math.max(goals - penaltyGoals, 0);
+  const hatTrickBonus = baseHatTrickBonus[stats.position]
+    + Math.min(penaltyGoals, 3) * (goalPoints[stats.position] - 2);
+  add("goals", "Non-penalty goals", `${countLabel(openPlayGoals, "non-penalty goal")} · ${goalPoints[stats.position]} FP each for a ${stats.position}`, openPlayGoals * goalPoints[stats.position]);
+  if (goals >= 3) add("hat-trick", "Hat-trick bonus", `${countLabel(goals, "goal")} including penalties · ${hatTrickBonus} FP bonus for a ${stats.position}`, hatTrickBonus);
   add("assists", "Assists", `${countLabel(stats.assists ?? 0, "assist")} · 2 FP each`, (stats.assists ?? 0) * 2);
 
   // Latest Dreamflow clarifications supersede the earlier spreadsheet thresholds.
   add("shots-on-target", "Shots on target", `${countLabel(stats.shotsOnTarget ?? 0, "shot")} on target · 1 FP for every 3`, Math.floor((stats.shotsOnTarget ?? 0) / 3));
   add("passes", "Completed passes", `${countLabel(stats.completedPasses ?? 0, "completed pass", "completed passes")} · 1 FP for every 10`, Math.floor((stats.completedPasses ?? 0) / 10));
   add("tackles", "Tackles won", `${countLabel(stats.tacklesWon ?? 0, "tackle")} won · 1 FP for every 3`, Math.floor((stats.tacklesWon ?? 0) / 3));
-  add("penalty-goals", "Penalties scored", `${countLabel(stats.penaltyGoals ?? 0, "penalty")} scored · 2 FP each`, (stats.penaltyGoals ?? 0) * 2);
+  add("penalty-goals", "Penalty goals", `${countLabel(penaltyGoals, "penalty")} scored · 2 FP each, regardless of position`, penaltyGoals * 2);
   add("penalties-missed", "Penalties missed", `${countLabel(stats.penaltiesMissed ?? 0, "penalty")} missed · −2 FP each`, -(stats.penaltiesMissed ?? 0) * 2);
   add("penalties-conceded", "Penalties conceded", `${countLabel(stats.penaltiesConceded ?? 0, "penalty")} conceded · −2 FP each`, -(stats.penaltiesConceded ?? 0) * 2);
 
@@ -63,9 +68,14 @@ export function calculateScore(stats: PlayerMatchStats): ScoreResult {
     add("penalties-saved", "Penalties saved", `${countLabel(stats.penaltiesSaved ?? 0, "penalty")} saved · 2 FP each`, (stats.penaltiesSaved ?? 0) * 2);
   }
 
+  if (stats.minutes > 0 && stats.status !== "live" && stats.status !== "not_started") {
+    const conceded = stats.goalsConceded ?? 0;
+    const cleanSheetPoints: Record<Position, number> = { GK: 3, DEF: 3, MID: 1, FWD: 0 };
+    if (conceded === 0) add("clean-sheet", "Clean sheet", `Team finished with a clean sheet · ${cleanSheetPoints[stats.position]} FP for any appearance as a ${stats.position}`, cleanSheetPoints[stats.position]);
+  }
+
   if ((stats.position === "GK" || stats.position === "DEF") && stats.minutes >= 60) {
     const conceded = stats.goalsConceded ?? 0;
-    if (conceded === 0) add("clean-sheet", "Clean sheet", "60+ minutes, no goals conceded", 3);
     add("goals-conceded", "Goals conceded", `${countLabel(conceded, "goal")} conceded · deductions begin at 2`, concededPenalty(conceded));
   }
 
