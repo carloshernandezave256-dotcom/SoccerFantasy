@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { calculateScore } from "./scoring";
+import { calculateScore, resolvePlayerScoreStatus } from "./scoring";
 
 describe("custom scoring", () => {
   it("awards one point for each complete group of three shots on target", () => {
@@ -72,5 +72,20 @@ describe("custom scoring", () => {
     const captain = calculateScore({ position: "FWD", minutes: 1, redCards: 1, captain: true });
     expect(captain.total).toBe(-3); // base -2 multiplied by 1.5
     expect(captain.entries.find((entry) => entry.code === "captain-bonus")?.points).toBe(-1);
+  });
+});
+
+describe("resolvePlayerScoreStatus", () => {
+  it("finalizes a player when their own fixture ends before the gameweek", () => {
+    expect(resolvePlayerScoreStatus(["FT"], false)).toBe("final");
+  });
+
+  it("keeps a player live while their own fixture is live", () => {
+    expect(resolvePlayerScoreStatus(["2H"], false)).toBe("live");
+  });
+
+  it("uses gameweek status when a player has no fixture stats", () => {
+    expect(resolvePlayerScoreStatus([], false)).toBe("live");
+    expect(resolvePlayerScoreStatus([], true)).toBe("final");
   });
 });
