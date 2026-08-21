@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AccountMenu } from "./account-menu";
 import { BottomNav } from "./bottom-nav";
 import { PlayerStatsDialog } from "./player-stats-dialog";
@@ -155,8 +155,10 @@ export function HomeDashboard() {
   const [userId, setUserId] = useState<string | null>(null),
     [name, setName] = useState("Manager"),
     [loading, setLoading] = useState(true),
+    [refreshing, setRefreshing] = useState(false),
     [signedIn, setSignedIn] = useState(true),
     [now, setNow] = useState(Date.now());
+  const refreshTimer = useRef<number | undefined>(undefined);
 
   const load = useCallback(async () => {
     const {
@@ -303,6 +305,13 @@ export function HomeDashboard() {
   }, [load]);
   useEffect(() => {
     if (!league) return;
+    const refresh = () => {
+      setRefreshing(true);
+      window.clearTimeout(refreshTimer.current);
+      refreshTimer.current = window.setTimeout(() => {
+        void load().finally(() => setRefreshing(false));
+      }, 400);
+    };
     const channel = supabase
       .channel(`home:${league.league_id}`)
       .on(
@@ -313,7 +322,7 @@ export function HomeDashboard() {
           table: "drafts",
           filter: `league_id=eq.${league.league_id}`,
         },
-        () => void load(),
+        refresh,
       )
       .on(
         "postgres_changes",
@@ -323,7 +332,7 @@ export function HomeDashboard() {
           table: "draft_picks",
           filter: `league_id=eq.${league.league_id}`,
         },
-        () => void load(),
+        refresh,
       )
       .on(
         "postgres_changes",
@@ -333,10 +342,32 @@ export function HomeDashboard() {
           table: "league_matchups",
           filter: `league_id=eq.${league.league_id}`,
         },
-        () => void load(),
+        refresh,
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "league_player_scores",
+          filter: `league_id=eq.${league.league_id}`,
+        },
+        refresh,
       )
       .subscribe();
+    const heartbeat = window.setInterval(() => {
+      if (document.visibilityState === "visible") refresh();
+    }, 15000);
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === "visible") refresh();
+    };
+    window.addEventListener("pageshow", refresh);
+    document.addEventListener("visibilitychange", refreshWhenVisible);
     return () => {
+      window.clearInterval(heartbeat);
+      window.clearTimeout(refreshTimer.current);
+      window.removeEventListener("pageshow", refresh);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
       void supabase.removeChannel(channel);
     };
   }, [league, load]);
@@ -589,7 +620,7 @@ export function HomeDashboard() {
               </h2>
             </div>
             <span className={`home-status ${matchup.status}`}>
-              {matchup.status}
+              {refreshing ? "updating" : matchup.status}
             </span>
           </div>
           <div className="home-scoreboard">

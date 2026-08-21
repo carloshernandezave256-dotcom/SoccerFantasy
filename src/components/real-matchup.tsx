@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PageShell } from "./page-shell";
 import { supabase } from "@/lib/supabase";
 import { calculateScore, type LedgerEntry, type PlayerMatchStats, type Position } from "@/lib/scoring";
@@ -49,8 +49,10 @@ export function RealMatchup(){
   const[selected,setSelected]=useState<Player|null>(null);
   const[loading,setLoading]=useState(true);
   const[message,setMessage]=useState("");
+  const[refreshing,setRefreshing]=useState(false);
   const[lineupVersion,setLineupVersion]=useState(0);
   const[selectedMatchupId,setSelectedMatchupId]=useState<string|null>(null);
+  const refreshRequest=useRef(0);
 
   const load=useCallback(async()=>{
     setLoading(true);setMessage("");
@@ -93,7 +95,12 @@ export function RealMatchup(){
 
   useEffect(()=>{
     if(!league)return;
-    const refreshLineups=()=>setLineupVersion(version=>version+1);
+    let refreshTimer:number|undefined;
+    const refreshLineups=()=>{
+      setRefreshing(true);
+      window.clearTimeout(refreshTimer);
+      refreshTimer=window.setTimeout(()=>setLineupVersion(version=>version+1),400);
+    };
     const channel=supabase.channel(`matchup-live-${league.league_id}`)
       .on("postgres_changes",{event:"*",schema:"public",table:"lineup_players",filter:`league_id=eq.${league.league_id}`},refreshLineups)
       .on("postgres_changes",{event:"*",schema:"public",table:"league_player_scores",filter:`league_id=eq.${league.league_id}`},refreshLineups)
@@ -101,13 +108,14 @@ export function RealMatchup(){
       .subscribe();
     // Realtime is primary. This database-only heartbeat covers a temporarily
     // interrupted websocket without causing another football-provider request.
-    const heartbeat=window.setInterval(()=>{if(document.visibilityState==="visible")refreshLineups()},30000);
+    const heartbeat=window.setInterval(()=>{if(document.visibilityState==="visible")refreshLineups()},15000);
     const refreshWhenVisible=()=>{if(document.visibilityState==="visible")refreshLineups()};
     window.addEventListener("pageshow",refreshLineups);
     document.addEventListener("visibilitychange",refreshWhenVisible);
     return()=>{
       window.removeEventListener("pageshow",refreshLineups);
       document.removeEventListener("visibilitychange",refreshWhenVisible);
+      window.clearTimeout(refreshTimer);
       window.clearInterval(heartbeat);
       void supabase.removeChannel(channel);
     };
@@ -119,6 +127,7 @@ export function RealMatchup(){
 
   useEffect(()=>{
     if(!featured||!league)return;
+    const request=++refreshRequest.current;
     void(async()=>{
       setLoading(true);
       const ids=[featured.home_user_id,featured.away_user_id];
@@ -153,9 +162,13 @@ export function RealMatchup(){
         const source=saved.length?saved.map(row=>scoredPlayer(row.players!,row.is_captain,true)):pickRows.filter(row=>row.user_id===owner&&row.players).slice(0,11).map(row=>scoredPlayer(row.players!,false,false));
         return{userId:owner,name:managers.find(manager=>manager.user_id===owner)?.team_name??"Manager",score:Number(score),players:source.sort((a,b)=>(positionOrder[a.position]??9)-(positionOrder[b.position]??9)),lineupSet:saved.length>0};
       };
-      setTeams([build(featured.home_user_id,liveMatchup?.home_score??featured.home_score),build(featured.away_user_id,liveMatchup?.away_score??featured.away_score)]);
-      setStandings((standingsResult.data??[]) as Standing[]);
-      setLoading(false);
+      if(request===refreshRequest.current){
+        const nextTeams=[build(featured.home_user_id,liveMatchup?.home_score??featured.home_score),build(featured.away_user_id,liveMatchup?.away_score??featured.away_score)];
+        setTeams(nextTeams);
+        setSelected(current=>current?nextTeams.flatMap(team=>team.players).find(player=>player.id===current.id)??current:null);
+        setStandings((standingsResult.data??[]) as Standing[]);
+        setLoading(false);setRefreshing(false);
+      }
     })();
   },[featured,league,managers,gameweek,lineupVersion]);
 
@@ -168,7 +181,7 @@ export function RealMatchup(){
         <span className="simulation-chip">{featured.status==="final"?"FINAL":featured.status==="live"?"LIVE":"SCHEDULED"}</span>
         <div className="versus"><div><strong>{teams[0].score}</strong><span>{teams[0].name}</span></div><div className="versus-mark">VS</div><div><strong>{teams[1].score}</strong><span>{teams[1].name}</span></div></div>
         <div className="progress"><span style={{width:teams[0].score+teams[1].score>0?`${teams[0].score/(teams[0].score+teams[1].score)*100}%`:"50%"}}/></div>
-        <div className="match-status"><span className="live-dot"/> {featured.status==="scheduled"?"Scores begin when live match data is connected":featured.status==="live"?"Scoring in progress":"Matchup complete"}</div>
+        <div className="match-status"><span className="live-dot"/> {refreshing?"Updating scores…":featured.status==="scheduled"?"Scores begin when live match data is connected":featured.status==="live"?"Scoring in progress":"Matchup complete"}</div>
       </section>
       <section className="panel matchup-pitch-card"><div className="lineup-pitch shared-matchup-pitch"><span className="pitch-markings" aria-hidden="true"/>{teams[0]?<div className="pitch-half home-half">{homePitchRows.map(position=>{const players=teams[0].players.filter(player=>player.position===position);return <div className={`pitch-row ${position.toLowerCase()}`} key={`home-${position}`} style={{gridTemplateColumns:`repeat(${Math.max(players.length,1)}, minmax(0, 1fr))`}}>{players.map(player=><PitchPlayer player={player} onSelect={setSelected} key={player.id}/>)}</div>})}</div>:null}{teams[1]?<div className="pitch-half away-half">{awayPitchRows.map(position=>{const players=teams[1].players.filter(player=>player.position===position);return <div className={`pitch-row ${position.toLowerCase()}`} key={`away-${position}`} style={{gridTemplateColumns:`repeat(${Math.max(players.length,1)}, minmax(0, 1fr))`}}>{players.map(player=><PitchPlayer player={player} onSelect={setSelected} key={player.id}/>)}</div>})}</div>:null}</div>{teams.some(team=>team.players.length===0)?<p className="empty-state">A starting XI has not been saved for this matchup yet.</p>:null}</section>
       <section className="panel fixture-list"><div className="section-row"><div><h2>Gameweek {gameweek} fixtures</h2><small className="lineup-state">Open any matchup to view both Starting XIs and scoring ledgers.</small></div><span className="muted-chip">{weekFixtures.length}</span></div>{weekFixtures.map(matchup=><button className={`fixture-row fixture-button${featured.id===matchup.id?" active":""}`} key={matchup.id} onClick={()=>{if(featured.id===matchup.id)return;setTeams([]);setSelectedMatchupId(matchup.id);setSelected(null);window.scrollTo({top:0,behavior:"smooth"})}} aria-label={`Open ${managers.find(manager=>manager.user_id===matchup.home_user_id)?.team_name??"home team"} versus ${managers.find(manager=>manager.user_id===matchup.away_user_id)?.team_name??"away team"}`} aria-current={featured.id===matchup.id?"true":undefined}><span>{managers.find(manager=>manager.user_id===matchup.home_user_id)?.team_name}</span><b>{Number(matchup.home_score)}–{Number(matchup.away_score)}</b><span>{managers.find(manager=>manager.user_id===matchup.away_user_id)?.team_name}</span><i aria-hidden="true">›</i></button>)}</section>
