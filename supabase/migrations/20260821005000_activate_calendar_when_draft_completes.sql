@@ -35,8 +35,8 @@ begin
     where draft.status = 'complete'
       and not exists (
         select 1
-        from public.league_transaction_windows window
-        where window.league_id = draft.league_id
+        from public.league_transaction_windows transaction_window
+        where transaction_window.league_id = draft.league_id
       )
   loop
     perform private.refresh_league_calendar(draft_row.league_id);
