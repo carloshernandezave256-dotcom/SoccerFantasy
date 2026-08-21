@@ -50,13 +50,21 @@ export function RealMatchup(){
     }
     const{error:scheduleError}=await supabase.rpc("ensure_league_schedule",{p_league_id:active.league_id});
     if(scheduleError){setMessage(scheduleError.message);setLoading(false);return}
-    await supabase.rpc("refresh_league_matchup_scores",{p_league_id:active.league_id,p_gameweek:1});
-    const[orderResult,matchupResult]=await Promise.all([
+    const[orderResult,matchupResult,scoreWeekResult,windowResult]=await Promise.all([
       supabase.rpc("draft_order",{p_league_id:active.league_id}),
       supabase.from("league_matchups").select("id,gameweek,home_user_id,away_user_id,home_score,away_score,status").eq("league_id",active.league_id).order("gameweek"),
+      supabase.from("league_player_scores").select("gameweek").eq("league_id",active.league_id).order("gameweek",{ascending:false}).limit(1).maybeSingle(),
+      supabase.rpc("transaction_window",{p_league_id:active.league_id}),
     ]);
+    const loadedMatchups=(matchupResult.data??[]) as Matchup[];
+    const scoredWeek=Number((scoreWeekResult.data as {gameweek?:number}|null)?.gameweek)||0;
+    const windowWeek=Number(((windowResult.data??[]) as Array<{gameweek?:number}>)[0]?.gameweek)||0;
+    const firstScheduledWeek=Math.min(...loadedMatchups.map(matchup=>matchup.gameweek));
+    const activeWeek=scoredWeek||windowWeek||(Number.isFinite(firstScheduledWeek)?firstScheduledWeek:1);
+    setGameweek(activeWeek);
+    await supabase.rpc("refresh_league_matchup_scores",{p_league_id:active.league_id,p_gameweek:activeWeek});
     setManagers((orderResult.data??[]) as Manager[]);
-    setMatchups((matchupResult.data??[]) as Matchup[]);
+    setMatchups(loadedMatchups);
     setLoading(false);
   },[]);
 
