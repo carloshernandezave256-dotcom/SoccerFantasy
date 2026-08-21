@@ -10,12 +10,32 @@ import { PlayerHeadshot } from "./player-headshot";
 type League={league_id:string;league_name:string;team_name:string;game_format:string};
 type Manager={draft_slot:number;user_id:string;team_name:string};
 type Matchup={id:string;gameweek:number;home_user_id:string;away_user_id:string;home_score:number|string;away_score:number|string;status:"scheduled"|"live"|"final"};
-type Player={id:number;full_name:string;position:string;club:string;photo_url?:string|null;captain?:boolean;score:number;rating:number|null;manOfTheMatch:boolean;status:"not_started"|"live"|"final";ledger:LedgerEntry[]};
+type Player={id:number;full_name:string;position:string;club:string;photo_url?:string|null;captain?:boolean;score:number;rating:number|null;manOfTheMatch:boolean;status:"not_started"|"live"|"final";ledger:LedgerEntry[];goals:number;assists:number;yellowCards:number;redCards:number};
 type TeamView={userId:string;name:string;score:number;players:Player[];lineupSet:boolean};
 type ScoreRow={player_id:number;rating:number|null;minutes:number;goals:number;assists:number;shots_on_target:number;big_chances_missed:number;completed_passes:number;tackles_won:number;penalty_goals:number;penalties_missed:number;penalties_conceded:number;saves:number;penalties_saved:number;goals_conceded:number;yellow_cards:number;second_yellow_cards:number;red_cards:number;own_goals:number;man_of_the_match:boolean;status:"not_started"|"live"|"final"};
 type Standing={rank:number;user_id:string;team_name:string;played:number;wins:number;draws:number;losses:number;points:number;fantasy_points:number|string};
 
 const positionOrder:Record<string,number>={GK:0,DEF:1,MID:2,FWD:3};
+const pitchRows=["FWD","MID","DEF","GK"] as const;
+
+function EventBadges({player}:{player:Player}){
+  return <span className="pitch-events">
+    {player.goals>0?<span className="pitch-event goal" title={`${player.goals} ${player.goals===1?"goal":"goals"}`} aria-label={`${player.goals} ${player.goals===1?"goal":"goals"}`}>⚽{player.goals>1?<b>{player.goals}</b>:null}</span>:null}
+    {player.assists>0?<span className="pitch-event assist" title={`${player.assists} ${player.assists===1?"assist":"assists"}`} aria-label={`${player.assists} ${player.assists===1?"assist":"assists"}`}>A{player.assists>1?<b>{player.assists}</b>:null}</span>:null}
+    {player.yellowCards>0?<span className="pitch-event card yellow" title={`${player.yellowCards} yellow card`} aria-label={`${player.yellowCards} yellow card`}>{player.yellowCards>1?<b>{player.yellowCards}</b>:null}</span>:null}
+    {player.redCards>0?<span className="pitch-event card red" title="Red card" aria-label="Red card"/>:null}
+    {player.captain?<span className="pitch-event captain" title="Captain: +50% fantasy points" aria-label="Captain">★</span>:null}
+    {player.manOfTheMatch?<span className="pitch-event motm" title="Man of the Match"><img src="/motm-badge.png" alt="Man of the Match"/></span>:null}
+  </span>;
+}
+
+function PitchPlayer({player,onSelect}:{player:Player;onSelect:(player:Player)=>void}){
+  return <button className="pitch-player" onClick={()=>onSelect(player)} aria-label={`Open ${player.full_name} scoring breakdown`}>
+    <span className="pitch-player-photo"><PlayerHeadshot name={player.full_name} position={player.position} photoUrl={player.photo_url}/><b className={player.score<0?"negative":"positive"}>{player.score}</b><EventBadges player={player}/></span>
+    <strong>{player.full_name}</strong>
+    <small>{player.position} · {player.club}</small>
+  </button>;
+}
 
 export function RealMatchup(){
   const[league,setLeague]=useState<League|null>(null);
@@ -25,7 +45,6 @@ export function RealMatchup(){
   const[gameweek,setGameweek]=useState(1);
   const[teams,setTeams]=useState<TeamView[]>([]);
   const[standings,setStandings]=useState<Standing[]>([]);
-  const[activeTeam,setActiveTeam]=useState(0);
   const[selected,setSelected]=useState<Player|null>(null);
   const[loading,setLoading]=useState(true);
   const[message,setMessage]=useState("");
@@ -110,20 +129,20 @@ export function RealMatchup(){
         supabase.from("league_matchups").select("home_score,away_score,status").eq("id",featured.id).single(),
         supabase.rpc("league_standings",{p_league_id:league.league_id}),
       ]);
-      const lineupRows=(lineupResult.data??[]) as unknown as {user_id:string;is_starter:boolean;is_captain:boolean;players:Omit<Player,"score"|"rating"|"manOfTheMatch"|"status"|"ledger">|null}[];
-      const snapshotRows=(snapshotResult.data??[]) as unknown as {user_id:string;is_starter:boolean;is_star_pick:boolean;players:Omit<Player,"score"|"rating"|"manOfTheMatch"|"status"|"ledger">|null}[];
-      const pickRows=(picksResult.data??[]) as unknown as {user_id:string;pick_number:number;players:Omit<Player,"score"|"rating"|"manOfTheMatch"|"status"|"ledger">|null}[];
+      const lineupRows=(lineupResult.data??[]) as unknown as {user_id:string;is_starter:boolean;is_captain:boolean;players:Omit<Player,"score"|"rating"|"manOfTheMatch"|"status"|"ledger"|"goals"|"assists"|"yellowCards"|"redCards">|null}[];
+      const snapshotRows=(snapshotResult.data??[]) as unknown as {user_id:string;is_starter:boolean;is_star_pick:boolean;players:Omit<Player,"score"|"rating"|"manOfTheMatch"|"status"|"ledger"|"goals"|"assists"|"yellowCards"|"redCards">|null}[];
+      const pickRows=(picksResult.data??[]) as unknown as {user_id:string;pick_number:number;players:Omit<Player,"score"|"rating"|"manOfTheMatch"|"status"|"ledger"|"goals"|"assists"|"yellowCards"|"redCards">|null}[];
       const scoreRows=(scoreResult.data??[]) as ScoreRow[];
       const liveMatchup=matchupResult.data as {home_score:number|string;away_score:number|string;status:Matchup["status"]}|null;
       if(liveMatchup&&(Number(liveMatchup.home_score)!==Number(featured.home_score)||Number(liveMatchup.away_score)!==Number(featured.away_score)||liveMatchup.status!==featured.status)){
         setMatchups(current=>current.map(matchup=>matchup.id===featured.id?{...matchup,...liveMatchup}:matchup));
       }
-      const scoredPlayer=(player:Omit<Player,"score"|"rating"|"manOfTheMatch"|"status"|"ledger">,captain:boolean,lineupSet:boolean):Player=>{
+      const scoredPlayer=(player:Omit<Player,"score"|"rating"|"manOfTheMatch"|"status"|"ledger"|"goals"|"assists"|"yellowCards"|"redCards">,captain:boolean,lineupSet:boolean):Player=>{
         const row=scoreRows.find(score=>score.player_id===player.id);
-        if(!row||!lineupSet)return{...player,captain,score:0,rating:null,manOfTheMatch:false,status:"not_started",ledger:[]};
+        if(!row||!lineupSet)return{...player,captain,score:0,rating:null,manOfTheMatch:false,status:"not_started",ledger:[],goals:0,assists:0,yellowCards:0,redCards:0};
         const stats:PlayerMatchStats={position:player.position as Position,minutes:row.minutes,goals:row.goals,assists:row.assists,shotsOnTarget:row.shots_on_target,completedPasses:row.completed_passes,tacklesWon:row.tackles_won,penaltyGoals:row.penalty_goals,penaltiesMissed:row.penalties_missed,penaltiesConceded:row.penalties_conceded,saves:row.saves,penaltiesSaved:row.penalties_saved,goalsConceded:row.goals_conceded,yellowCards:row.yellow_cards,secondYellowCards:row.second_yellow_cards,redCards:row.red_cards,ownGoals:row.own_goals,captain};
         const result=calculateScore(stats);
-        return{...player,captain,score:result.total,rating:row.rating,manOfTheMatch:row.man_of_the_match,status:row.status,ledger:result.entries};
+        return{...player,captain,score:result.total,rating:row.rating,manOfTheMatch:row.man_of_the_match,status:row.status,ledger:result.entries,goals:row.goals,assists:row.assists,yellowCards:row.yellow_cards,redCards:row.red_cards};
       };
       const build=(owner:string,score:number|string):TeamView=>{
         const snapshot=snapshotRows.filter(row=>row.user_id===owner&&row.is_starter&&row.players).map(row=>({...row,is_captain:row.is_star_pick}));
@@ -135,7 +154,7 @@ export function RealMatchup(){
       };
       setTeams([build(featured.home_user_id,liveMatchup?.home_score??featured.home_score),build(featured.away_user_id,liveMatchup?.away_score??featured.away_score)]);
       setStandings((standingsResult.data??[]) as Standing[]);
-      setActiveTeam(0);setLoading(false);
+      setLoading(false);
     })();
   },[featured,league,managers,gameweek,lineupVersion]);
 
@@ -150,9 +169,8 @@ export function RealMatchup(){
         <div className="progress"><span style={{width:teams[0].score+teams[1].score>0?`${teams[0].score/(teams[0].score+teams[1].score)*100}%`:"50%"}}/></div>
         <div className="match-status"><span className="live-dot"/> {featured.status==="scheduled"?"Scores begin when live match data is connected":featured.status==="live"?"Scoring in progress":"Matchup complete"}</div>
       </section>
-      <div className="segmented team-tabs" aria-label="Matchup teams">{teams.map((team,index)=><button key={team.userId} className={activeTeam===index?"active":""} onClick={()=>setActiveTeam(index)}>{team.name}<b>{team.score}</b></button>)}</div>
-      <div className="matchup-lineups">{teams.map((team,teamIndex)=><section className={`panel matchup-team ${activeTeam===teamIndex?"active":""}`} key={team.userId}><div className="section-row"><div><h2>{team.name}</h2><small className="lineup-state">{team.lineupSet?"Saved starting XI":"Squad preview · lineup not set"}</small></div><strong className="team-total">{team.score} pts</strong></div>{team.players.map(player=><button className="scored-player" key={player.id} onClick={()=>setSelected(player)}><PlayerHeadshot name={player.full_name} position={player.position} photoUrl={player.photo_url}/><span><strong>{player.full_name}{player.captain?<em className="captain-badge" title="Captain: +50% fantasy points" aria-label="Captain">★</em>:null}</strong><small>{player.club} · {player.status==="live"?"Live":player.status==="final"?"Final":"Not started"}</small></span><b className={player.score<0?"negative":"positive"}>{player.score}</b><i>›</i></button>)}{team.players.length===0?<p className="empty-state">This manager has not drafted any players yet.</p>:null}</section>)}</div>
-      <section className="panel fixture-list"><div className="section-row"><div><h2>Gameweek {gameweek} fixtures</h2><small className="lineup-state">Open any matchup to view both Starting XIs and scoring ledgers.</small></div><span className="muted-chip">{weekFixtures.length}</span></div>{weekFixtures.map(matchup=><button className={`fixture-row fixture-button${featured.id===matchup.id?" active":""}`} key={matchup.id} onClick={()=>{if(featured.id===matchup.id)return;setTeams([]);setSelectedMatchupId(matchup.id);setSelected(null);setActiveTeam(0);window.scrollTo({top:0,behavior:"smooth"})}} aria-label={`Open ${managers.find(manager=>manager.user_id===matchup.home_user_id)?.team_name??"home team"} versus ${managers.find(manager=>manager.user_id===matchup.away_user_id)?.team_name??"away team"}`} aria-current={featured.id===matchup.id?"true":undefined}><span>{managers.find(manager=>manager.user_id===matchup.home_user_id)?.team_name}</span><b>{Number(matchup.home_score)}–{Number(matchup.away_score)}</b><span>{managers.find(manager=>manager.user_id===matchup.away_user_id)?.team_name}</span><i aria-hidden="true">›</i></button>)}</section>
+      <div className="matchup-pitches">{teams.map((team,teamIndex)=><section className={`panel matchup-pitch-card ${teamIndex===1?"away":"home"}`} key={team.userId}><div className="section-row pitch-team-header"><div><h2>{team.name}</h2><small className="lineup-state">{team.lineupSet?"Saved starting XI":"Squad preview · lineup not set"}</small></div><strong className="team-total">{team.score} pts</strong></div><div className="lineup-pitch"><span className="pitch-markings" aria-hidden="true"/>{pitchRows.map(position=>{const players=team.players.filter(player=>player.position===position);return <div className={`pitch-row ${position.toLowerCase()}`} key={position} style={{gridTemplateColumns:`repeat(${Math.max(players.length,1)}, minmax(0, 1fr))`}}>{players.map(player=><PitchPlayer player={player} onSelect={setSelected} key={player.id}/>)}</div>})}</div>{team.players.length===0?<p className="empty-state">This manager has not drafted any players yet.</p>:null}</section>)}</div>
+      <section className="panel fixture-list"><div className="section-row"><div><h2>Gameweek {gameweek} fixtures</h2><small className="lineup-state">Open any matchup to view both Starting XIs and scoring ledgers.</small></div><span className="muted-chip">{weekFixtures.length}</span></div>{weekFixtures.map(matchup=><button className={`fixture-row fixture-button${featured.id===matchup.id?" active":""}`} key={matchup.id} onClick={()=>{if(featured.id===matchup.id)return;setTeams([]);setSelectedMatchupId(matchup.id);setSelected(null);window.scrollTo({top:0,behavior:"smooth"})}} aria-label={`Open ${managers.find(manager=>manager.user_id===matchup.home_user_id)?.team_name??"home team"} versus ${managers.find(manager=>manager.user_id===matchup.away_user_id)?.team_name??"away team"}`} aria-current={featured.id===matchup.id?"true":undefined}><span>{managers.find(manager=>manager.user_id===matchup.home_user_id)?.team_name}</span><b>{Number(matchup.home_score)}–{Number(matchup.away_score)}</b><span>{managers.find(manager=>manager.user_id===matchup.away_user_id)?.team_name}</span><i aria-hidden="true">›</i></button>)}</section>
       <section className="panel standings-result"><div className="section-row"><h2>League table</h2><span className="muted-chip">LIVE TABLE</span></div><div className="standings-head"><span>#</span><span>Team</span><span>P</span><span>W-D-L</span><span>Pts</span><span>FP</span></div>{standings.map(row=><div className="standing-row" key={row.user_id}><span>{row.rank}</span><strong>{row.team_name}</strong><span>{row.played}</span><span>{row.wins}-{row.draws}-{row.losses}</span><b>{row.points}</b><span>{Number(row.fantasy_points)}</span></div>)}</section>
     </>:null}
     {selected?<div className="confirm-overlay ledger-overlay" role="presentation" onClick={()=>setSelected(null)}><section className="confirm-card player-ledger" role="dialog" aria-modal="true" onClick={event=>event.stopPropagation()}><button className="ledger-close" onClick={()=>setSelected(null)}>×</button><span className={`position ${selected.position.toLowerCase()}`}>{selected.position}</span><p className="eyebrow">SCORING BREAKDOWN</p><h2>{selected.full_name}</h2><p>{selected.club}{selected.captain?" · Captain":""}</p>{selected.rating!==null||selected.manOfTheMatch?<div className="match-award-summary"><span><small>API MATCH RATING</small><strong>{selected.rating!==null?selected.rating.toFixed(1):"—"}</strong></span>{selected.manOfTheMatch?<span className="motm-award"><img src="/motm-badge.png" alt="Man of the Match trophy"/><b>Man of the Match</b></span>:null}</div>:null}<div className="ledger-total"><span>Fantasy points</span><strong>{selected.score}</strong></div>{selected.ledger.length?<><div className="ledger">{selected.ledger.map(entry=><div key={entry.code}><span><strong>{entry.label}</strong><small>{entry.detail}</small></span><b className={entry.points<0?"negative":"positive"}>{entry.points>0?"+":""}{entry.points}</b></div>)}</div><div className="ledger-reconcile"><span>Ledger total</span><strong>{selected.score} pts</strong></div></>:<p className="empty-state">No match statistics have been recorded for this player yet. Their itemized ledger will populate automatically when scoring begins.</p>}</section></div>:null}

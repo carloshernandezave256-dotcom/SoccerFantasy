@@ -21,6 +21,11 @@ describe("custom scoring", () => {
     expect(result.entries.find((entry) => entry.code === "tackles")?.detail).toBe("5 tackles won · 1 FP for every 3");
   });
 
+  it.each(["GK", "DEF", "MID", "FWD"] as const)("awards completed-pass points to %s players", (position) => {
+    const result = calculateScore({ position, minutes: 1, completedPasses: 29 });
+    expect(result.entries.find((entry) => entry.code === "passes")?.points).toBe(2);
+  });
+
   it("awards and removes defensive clean-sheet points correctly", () => {
     expect(calculateScore({ position: "DEF", minutes: 90, goalsConceded: 0 }).total).toBe(5);
     expect(calculateScore({ position: "DEF", minutes: 90, goalsConceded: 3 }).total).toBe(-1);
