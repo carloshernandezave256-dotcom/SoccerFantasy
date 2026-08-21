@@ -9,7 +9,10 @@ type LivePage={response:LiveFixture[]};
 type ApiPlayer={player:{id:number};statistics:Array<{games:{minutes:number|null;rating:string|null};shots:{on:number|null};goals:{total:number|null;assists:number|null;conceded:number|null;saves:number|null};passes:{total:number|null;accuracy:number|string|null};tackles:{total:number|null};cards:{yellow:number|null;red:number|null};penalty:{scored:number|null;missed:number|null;saved:number|null;commited:number|null}}>};
 type PlayersPage={response:Array<{players:ApiPlayer[]}>};
 type Player={id:number;api_football_id:number|null};
-type LeagueFixture={league_id:string;fixture_id:number;gameweek:number};
+type LeagueFixture={league_id:string;fixture_id:number};
+type LeagueRow={calendar_competition:string;player_pool:string};
+type WindowRow={gameweek:number;roster_lock_at:string};
+type WeekFixture={fixture_id:number;status:string;kickoff:string};
 type StatRow=Record<string,number|boolean|null|string> & {fixture_id:number;player_id:number};
 
 export const dynamic="force-dynamic";
@@ -75,32 +78,51 @@ export async function GET(request:NextRequest){
     }
     await fetch(`${url}/rest/v1/football_fixture_cache?fixture_id=in.(${fixtureIds.join(",")})`,{method:"PATCH",headers:{...headers(key),Prefer:"return=minimal"},body:JSON.stringify({stats_synced_at:now.toISOString()}),cache:"no-store"});
 
-    const affectedResponse=await fetch(`${url}/rest/v1/league_headline_fixtures?fixture_id=in.(${fixtureIds.join(",")})&select=league_id,fixture_id,gameweek`,{headers:headers(key),cache:"no-store"});
+    const affectedResponse=await fetch(`${url}/rest/v1/league_headline_fixtures?fixture_id=in.(${fixtureIds.join(",")})&select=league_id,fixture_id`,{headers:headers(key),cache:"no-store"});
     const affected=affectedResponse.ok?await affectedResponse.json() as LeagueFixture[]:[];
-    const groups=[...new Map(affected.map(row=>[`${row.league_id}:${row.gameweek}`,row])).values()];
+    const leagueIds=[...new Set(affected.map(row=>row.league_id))];
     let leagueRowsUpdated=0;
-    for(const group of groups){
-      const weekFixturesResponse=await fetch(`${url}/rest/v1/league_headline_fixtures?league_id=eq.${group.league_id}&gameweek=eq.${group.gameweek}&select=fixture_id,status`,{headers:headers(key),cache:"no-store"});
-      const weekFixtures=weekFixturesResponse.ok?await weekFixturesResponse.json() as Array<{fixture_id:number;status:string}>:[];
+    let leagueGameweeksUpdated=0;
+    for(const leagueId of leagueIds){
+      const [leagueResponse,windowResponse]=await Promise.all([
+        fetch(`${url}/rest/v1/leagues?id=eq.${leagueId}&select=calendar_competition,player_pool`,{headers:headers(key),cache:"no-store"}),
+        fetch(`${url}/rest/v1/league_transaction_windows?league_id=eq.${leagueId}&select=gameweek,roster_lock_at&order=gameweek.desc&limit=1`,{headers:headers(key),cache:"no-store"}),
+      ]);
+      const league=(leagueResponse.ok?await leagueResponse.json() as LeagueRow[]:[])[0];
+      const window=(windowResponse.ok?await windowResponse.json() as WindowRow[]:[])[0];
+      if(!league||!window||new Date(window.roster_lock_at)>now)continue;
+
+      const calendarQuery=new URLSearchParams({league_id:`eq.${leagueId}`,competition:`eq.${league.calendar_competition}`,gameweek:`eq.${window.gameweek}`,select:"fixture_id,status,kickoff",order:"kickoff.asc"});
+      const calendarResponse=await fetch(`${url}/rest/v1/league_headline_fixtures?${calendarQuery}`,{headers:headers(key),cache:"no-store"});
+      const calendarFixtures=calendarResponse.ok?await calendarResponse.json() as WeekFixture[]:[];
+      if(!calendarFixtures.length||new Date(calendarFixtures[0].kickoff)>now)continue;
+
+      const firstKickoff=calendarFixtures[0].kickoff;
+      const lastKickoff=calendarFixtures[calendarFixtures.length-1].kickoff;
+      const fixtureQuery=new URLSearchParams({league_id:`eq.${leagueId}`,and:`(kickoff.gte.${firstKickoff},kickoff.lte.${lastKickoff})`,select:"fixture_id,status,kickoff"});
+      if(league.player_pool!=="All Top Five")fixtureQuery.set("competition",`eq.${league.player_pool}`);
+      const weekFixturesResponse=await fetch(`${url}/rest/v1/league_headline_fixtures?${fixtureQuery}`,{headers:headers(key),cache:"no-store"});
+      const weekFixtures=weekFixturesResponse.ok?await weekFixturesResponse.json() as WeekFixture[]:[];
       const ids=weekFixtures.map(item=>item.fixture_id);if(!ids.length)continue;
       const statsResponse=await fetch(`${url}/rest/v1/football_fixture_player_stats?fixture_id=in.(${ids.join(",")})&select=*`,{headers:headers(key),cache:"no-store"});
       const stats=statsResponse.ok?await statsResponse.json() as StatRow[]:[];
-      const lineupResponse=await fetch(`${url}/rest/v1/lineup_players?league_id=eq.${group.league_id}&select=player_id`,{headers:headers(key),cache:"no-store"});
+      const lineupResponse=await fetch(`${url}/rest/v1/lineup_players?league_id=eq.${leagueId}&select=player_id`,{headers:headers(key),cache:"no-store"});
       const lineup=lineupResponse.ok?await lineupResponse.json() as Array<{player_id:number}>:[];
       const playerIds=[...new Set([...lineup.map(item=>item.player_id),...stats.map(item=>item.player_id)])];
       const isFinal=weekFixtures.length>0&&weekFixtures.every(item=>terminal.has(item.status));
       const rows=playerIds.map(playerId=>{
         const playerStats=stats.filter(item=>item.player_id===playerId);
         const ratings=playerStats.map(item=>Number(item.rating)).filter(Boolean);
-        return {league_id:group.league_id,gameweek:group.gameweek,player_id:playerId,rating:ratings.length?Math.max(...ratings):null,minutes:sum(playerStats,"minutes"),goals:sum(playerStats,"goals"),assists:sum(playerStats,"assists"),shots_on_target:sum(playerStats,"shots_on_target"),big_chances_missed:0,completed_passes:sum(playerStats,"completed_passes"),tackles_won:sum(playerStats,"tackles_won"),penalty_goals:sum(playerStats,"penalty_goals"),penalties_missed:sum(playerStats,"penalties_missed"),penalties_conceded:sum(playerStats,"penalties_conceded"),saves:sum(playerStats,"saves"),penalties_saved:sum(playerStats,"penalties_saved"),goals_conceded:sum(playerStats,"goals_conceded"),yellow_cards:sum(playerStats,"yellow_cards"),second_yellow_cards:0,red_cards:sum(playerStats,"red_cards"),own_goals:0,man_of_the_match:playerStats.some(item=>item.man_of_the_match===true),status:isFinal?"final":"live",source:"api-football-shared-cache",source_updated_at:now.toISOString(),updated_at:now.toISOString()};
+        return {league_id:leagueId,gameweek:window.gameweek,player_id:playerId,rating:ratings.length?Math.max(...ratings):null,minutes:sum(playerStats,"minutes"),goals:sum(playerStats,"goals"),assists:sum(playerStats,"assists"),shots_on_target:sum(playerStats,"shots_on_target"),big_chances_missed:0,completed_passes:sum(playerStats,"completed_passes"),tackles_won:sum(playerStats,"tackles_won"),penalty_goals:sum(playerStats,"penalty_goals"),penalties_missed:sum(playerStats,"penalties_missed"),penalties_conceded:sum(playerStats,"penalties_conceded"),saves:sum(playerStats,"saves"),penalties_saved:sum(playerStats,"penalties_saved"),goals_conceded:sum(playerStats,"goals_conceded"),yellow_cards:sum(playerStats,"yellow_cards"),second_yellow_cards:0,red_cards:sum(playerStats,"red_cards"),own_goals:0,man_of_the_match:playerStats.some(item=>item.man_of_the_match===true),status:isFinal?"final":"live",source:"api-football-shared-cache",source_updated_at:now.toISOString(),updated_at:now.toISOString()};
       });
       if(rows.length){
         const response=await fetch(`${url}/rest/v1/league_player_scores?on_conflict=league_id,gameweek,player_id`,{method:"POST",headers:{...headers(key),Prefer:"resolution=merge-duplicates,return=minimal"},body:JSON.stringify(rows),cache:"no-store"});
-        if(!response.ok)throw new Error((await response.text())||`League score update failed for ${group.league_id}`);
+        if(!response.ok)throw new Error((await response.text())||`League score update failed for ${leagueId}`);
         leagueRowsUpdated+=rows.length;
-        await fetch(`${url}/rest/v1/rpc/refresh_league_matchup_scores`,{method:"POST",headers:headers(key),body:JSON.stringify({p_league_id:group.league_id,p_gameweek:group.gameweek}),cache:"no-store"});
+        leagueGameweeksUpdated+=1;
+        await fetch(`${url}/rest/v1/rpc/refresh_league_matchup_scores`,{method:"POST",headers:headers(key),body:JSON.stringify({p_league_id:leagueId,p_gameweek:window.gameweek}),cache:"no-store"});
       }
     }
-    return NextResponse.json({ok:true,ranAt:now.toISOString(),requestsUsed,fixturesEligible:candidates.length,fixturesLive:fixtures.length,sharedPlayerRowsUpdated:cachedStats.length,fantasyLeagueGameweeksUpdated:groups.length,leaguePlayerRowsUpdated:leagueRowsUpdated});
+    return NextResponse.json({ok:true,ranAt:now.toISOString(),requestsUsed,fixturesEligible:candidates.length,fixturesLive:fixtures.length,sharedPlayerRowsUpdated:cachedStats.length,fantasyLeagueGameweeksUpdated:leagueGameweeksUpdated,leaguePlayerRowsUpdated:leagueRowsUpdated});
   }catch(error){return NextResponse.json({error:error instanceof Error?error.message:"Shared live score synchronization failed."},{status:502})}
 }
