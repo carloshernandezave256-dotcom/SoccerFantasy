@@ -60,7 +60,7 @@ export function RealMatchup(){
     const scoredWeek=Number((scoreWeekResult.data as {gameweek?:number}|null)?.gameweek)||0;
     const windowWeek=Number(((windowResult.data??[]) as Array<{gameweek?:number}>)[0]?.gameweek)||0;
     const firstScheduledWeek=Math.min(...loadedMatchups.map(matchup=>matchup.gameweek));
-    const activeWeek=scoredWeek||windowWeek||(Number.isFinite(firstScheduledWeek)?firstScheduledWeek:1);
+    const activeWeek=windowWeek||scoredWeek||(Number.isFinite(firstScheduledWeek)?firstScheduledWeek:1);
     setGameweek(activeWeek);
     await supabase.rpc("refresh_league_matchup_scores",{p_league_id:active.league_id,p_gameweek:activeWeek});
     setManagers((orderResult.data??[]) as Manager[]);
