@@ -66,7 +66,15 @@ export async function POST(request:NextRequest){
     const anchor=[...started].sort((a,b)=>Math.abs(now.getTime()-new Date(a.fixture.date).getTime())-Math.abs(now.getTime()-new Date(b.fixture.date).getTime()))[0];
     if(!anchor)return NextResponse.json({ok:true,competition,season,status:"upcoming",fixturesStarted:0,fixturesTotal:fixtureBody.response.length,seasonFixturesCached:fixtureRows.length,playersUpdated:0,requestsUsed:scheduleBodies.length,message:`${competition} has not started yet. Upcoming fixtures are now available on player profiles.`});
     const round=anchor.league.round;
-    const roundFixtures=fixtureBody.response.filter(item=>item.league.round===round);
+    const calendarRoundFixtures=fixtureBody.response.filter(item=>item.league.round===round);
+    const firstKickoff=Math.min(...calendarRoundFixtures.map(item=>new Date(item.fixture.date).getTime()));
+    const lastKickoff=Math.max(...calendarRoundFixtures.map(item=>new Date(item.fixture.date).getTime()));
+    const roundFixtures=scheduleBodies
+      .flatMap(item=>item.body.response)
+      .filter(item=>{
+        const kickoff=new Date(item.fixture.date).getTime();
+        return kickoff>=firstKickoff&&kickoff<=lastKickoff;
+      });
     const activeFixtures=roundFixtures.filter(item=>!unstartedStatuses.has(item.fixture.status.short)&&new Date(item.fixture.date)<=now);
     const allFinal=roundFixtures.length>0&&roundFixtures.every(item=>finalStatuses.has(item.fixture.status.short));
     const roundStatus=allFinal?"final":"live";
