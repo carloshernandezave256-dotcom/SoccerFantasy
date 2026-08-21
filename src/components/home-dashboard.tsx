@@ -272,7 +272,9 @@ export function HomeDashboard() {
       transactionWindow =
         ((w.data ?? [])[0] as WindowState | undefined) ?? null,
       scoreRows = (scoreResult.data ?? []) as unknown as ScoreRow[],
-      latestScoreWeek = Math.max(0, ...scoreRows.map((row) => row.gameweek)),
+      latestScoreWeek =
+        transactionWindow?.gameweek ??
+        Math.max(0, ...scoreRows.map((row) => row.gameweek)),
       pulse = scoreRows
         .filter((row) => row.gameweek === latestScoreWeek && row.players)
         .map((row) => ({
@@ -324,20 +326,20 @@ export function HomeDashboard() {
     setStandings((s.data ?? []) as Standing[]);
     setPlayerPulse(pulse);
     setHeadlineFixtures((fixtureResult.data ?? []) as RealFixture[]);
+    const myMatches = matches.filter(
+      (x) => x.home_user_id === user.id || x.away_user_id === user.id,
+    );
     setMatchup(
-      matches.find(
-        (x) =>
-          (x.home_user_id === user.id || x.away_user_id === user.id) &&
-          x.status === "live",
-      ) ??
+      (transactionWindow
+        ? myMatches.find((x) => x.gameweek === transactionWindow.gameweek)
+        : null) ??
+        myMatches.find((x) => x.status === "live") ??
         matches.find(
           (x) =>
             (x.home_user_id === user.id || x.away_user_id === user.id) &&
             x.status === "scheduled",
         ) ??
-        matches.find(
-          (x) => x.home_user_id === user.id || x.away_user_id === user.id,
-        ) ??
+        myMatches[0] ??
         null,
     );
     setLoading(false);
