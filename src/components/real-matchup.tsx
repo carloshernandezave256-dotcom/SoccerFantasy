@@ -64,7 +64,6 @@ export function RealMatchup(){
     const firstScheduledWeek=Math.min(...loadedMatchups.map(matchup=>matchup.gameweek));
     const activeWeek=windowWeek||scoredWeek||(Number.isFinite(firstScheduledWeek)?firstScheduledWeek:1);
     setGameweek(activeWeek);
-    await supabase.rpc("refresh_league_matchup_scores",{p_league_id:active.league_id,p_gameweek:activeWeek});
     setManagers((orderResult.data??[]) as Manager[]);
     setMatchups(loadedMatchups);
     setLoading(false);
@@ -75,15 +74,21 @@ export function RealMatchup(){
   useEffect(()=>{
     if(!league)return;
     const refreshLineups=()=>setLineupVersion(version=>version+1);
-    const channel=supabase.channel(`matchup-lineups-${league.league_id}`)
+    const channel=supabase.channel(`matchup-live-${league.league_id}`)
       .on("postgres_changes",{event:"*",schema:"public",table:"lineup_players",filter:`league_id=eq.${league.league_id}`},refreshLineups)
+      .on("postgres_changes",{event:"*",schema:"public",table:"league_player_scores",filter:`league_id=eq.${league.league_id}`},refreshLineups)
+      .on("postgres_changes",{event:"*",schema:"public",table:"league_matchups",filter:`league_id=eq.${league.league_id}`},refreshLineups)
       .subscribe();
+    // Realtime is primary. This database-only heartbeat covers a temporarily
+    // interrupted websocket without causing another football-provider request.
+    const heartbeat=window.setInterval(()=>{if(document.visibilityState==="visible")refreshLineups()},30000);
     const refreshWhenVisible=()=>{if(document.visibilityState==="visible")refreshLineups()};
     window.addEventListener("pageshow",refreshLineups);
     document.addEventListener("visibilitychange",refreshWhenVisible);
     return()=>{
       window.removeEventListener("pageshow",refreshLineups);
       document.removeEventListener("visibilitychange",refreshWhenVisible);
+      window.clearInterval(heartbeat);
       void supabase.removeChannel(channel);
     };
   },[league]);
@@ -97,7 +102,6 @@ export function RealMatchup(){
     void(async()=>{
       setLoading(true);
       const ids=[featured.home_user_id,featured.away_user_id];
-      await supabase.rpc("refresh_league_matchup_scores",{p_league_id:league.league_id,p_gameweek:gameweek});
       const[lineupResult,snapshotResult,picksResult,scoreResult,matchupResult,standingsResult]=await Promise.all([
         supabase.from("lineup_players").select("user_id,is_starter,is_captain,players(id,full_name,position,club,photo_url)").eq("league_id",league.league_id).in("user_id",ids),
         supabase.from("lineup_gameweek_players").select("user_id,is_starter,is_star_pick,players(id,full_name,position,club,photo_url)").eq("league_id",league.league_id).eq("gameweek",gameweek).in("user_id",ids),
