@@ -9,6 +9,10 @@ type ApiPage={paging:{current:number;total:number};response:ApiEntry[]};
 type TeamsPage={response:Array<{team:{id:number;name:string}}>} ;
 type SquadPlayer={id:number;name:string;position:string;photo:string|null};
 type SquadPage={response:Array<{team:{id:number;name:string};players:SquadPlayer[]}>};
+type InjuryEntry={player:{id:number;name:string;type?:string|null;reason?:string|null};team:{id:number;name:string}};
+type InjuriesPage={response:InjuryEntry[]};
+type SidelinedEntry={type?:string|null;start?:string|null;end?:string|null};
+type SidelinedPage={response:SidelinedEntry[]};
 
 export const maxDuration=300;
 
@@ -20,6 +24,12 @@ function performance(stat:ApiStat|undefined){
   const rating=Number(stat.games.rating)||0,minutes=stat.games.minutes??0,apps=stat.games.appearences??0;
   return rating*100+minutes+apps*90;
 }
+function expectedReturn(rows:SidelinedEntry[]){
+  const today=new Date().toISOString().slice(0,10);
+  const latest=[...rows].sort((a,b)=>String(b.start??"").localeCompare(String(a.start??"")))[0];
+  const end=latest?.end?.trim();
+  return end&&/^\d{4}-\d{2}-\d{2}$/.test(end)&&end>=today?end:null;
+}
 
 export async function POST(request:NextRequest){
   const authorization=request.headers.get("authorization")??"";
@@ -29,9 +39,9 @@ export async function POST(request:NextRequest){
   const serviceRoleKey=process.env.SUPABASE_SERVICE_ROLE_KEY;
   if(!serviceRoleKey)return NextResponse.json({error:"Server database credential is not configured."},{status:503});
   const adminHeaders={apikey:serviceRoleKey,Authorization:`Bearer ${serviceRoleKey}`,"Content-Type":"application/json"};
-  const season=2026,rankingSeason=2025,seasonsUsed:Record<string,number>={},unavailable:string[]=[];
+  const season=2026,rankingSeason=2025,seasonsUsed:Record<string,number>={},unavailable:string[]=[],injuriesUnavailable:string[]=[];
   const eligiblePlayers:Array<{id:number;score:number}>=[];
-  let imported=0,requestsUsed=0;
+  let imported=0,requestsUsed=0,injuriesSynced=0,sidelinedLookups=0;
   for(const competition of competitions){
     const priorById=new Map<number,{entry:ApiEntry;score:number}>();
     let page=1,total=1;
@@ -61,11 +71,32 @@ export async function POST(request:NextRequest){
       if(!response.ok)throw new Error((await response.text())||"Player database sync failed");
       imported+=Number(await response.json())||0;
     }
+
+    try{
+      const injuryBody=await apiFootball<InjuriesPage>(`injuries?league=${competition.id}&season=${season}`);requestsUsed++;
+      const clearResponse=await fetch(`${supabaseUrl}/rest/v1/players?competition=eq.${encodeURIComponent(competition.name)}`,{method:"PATCH",headers:{...adminHeaders,Prefer:"return=minimal"},body:JSON.stringify({injured:false,injury_type:null,injury_reason:null,expected_return:null,injury_updated_at:new Date().toISOString()}),cache:"no-store"});
+      if(!clearResponse.ok)throw new Error((await clearResponse.text())||"Could not clear stale injury statuses");
+      const currentByPlayer=[...new Map(injuryBody.response.map(entry=>[entry.player.id,entry])).values()];
+      for(const injury of currentByPlayer){
+        let returnDate:string|null=null;
+        try{
+          const sidelined=await apiFootball<SidelinedPage>(`sidelined?player=${injury.player.id}`);requestsUsed++;sidelinedLookups++;
+          returnDate=expectedReturn(sidelined.response);
+        }catch{
+          // Current injury data remains useful even when historical/return-date coverage is unavailable.
+        }
+        const injuryResponse=await fetch(`${supabaseUrl}/rest/v1/players?api_football_id=eq.${injury.player.id}`,{method:"PATCH",headers:{...adminHeaders,Prefer:"return=minimal"},body:JSON.stringify({injured:true,injury_type:injury.player.type??"Injury",injury_reason:injury.player.reason??null,expected_return:returnDate,injury_updated_at:new Date().toISOString()}),cache:"no-store"});
+        if(!injuryResponse.ok)throw new Error((await injuryResponse.text())||"Could not save player injury status");
+        injuriesSynced++;
+      }
+    }catch{
+      injuriesUnavailable.push(competition.name);
+    }
   }
   const uniqueEligible=[...new Map(eligiblePlayers.sort((a,b)=>b.score-a.score||a.id-b.id).map(player=>[player.id,player])).values()].map(player=>player.id);
   if(uniqueEligible.length===0)return NextResponse.json({error:"The API returned no current 2026 squad players.",season,rankingSeason,unavailable,requestsUsed},{status:502});
   const finalizeResponse=await fetch(`${supabaseUrl}/rest/v1/rpc/finalize_api_football_draft_pool`,{method:"POST",headers:adminHeaders,body:JSON.stringify({p_api_ids:uniqueEligible}),cache:"no-store"});
   if(!finalizeResponse.ok)throw new Error((await finalizeResponse.text())||"Draft pool finalization failed");
   const eligible=Number(await finalizeResponse.json())||0;
-  return NextResponse.json({ok:true,season,rankingSeason,seasonsUsed,unavailable,imported,eligible,clubLimit:null,requestsUsed});
+  return NextResponse.json({ok:true,season,rankingSeason,seasonsUsed,unavailable,imported,eligible,clubLimit:null,requestsUsed,injuriesSynced,sidelinedLookups,injuriesUnavailable});
 }
