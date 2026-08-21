@@ -7,6 +7,7 @@ drop trigger if exists populate_new_league_cache on public.leagues;
 delete from public.league_player_scores score
 using public.leagues league
 where league.id = score.league_id
+  and league.calendar_competition = 'Premier League'
   and score.source in ('api-football-live', 'api-football-shared-cache')
   and not exists (
     select 1
@@ -23,7 +24,13 @@ update public.league_matchups matchup
 set home_score = 0,
     away_score = 0,
     status = 'scheduled'
-where not exists (
+where exists (
+  select 1
+  from public.leagues league
+  where league.id = matchup.league_id
+    and league.calendar_competition = 'Premier League'
+)
+  and not exists (
   select 1
   from public.league_player_scores score
   where score.league_id = matchup.league_id
