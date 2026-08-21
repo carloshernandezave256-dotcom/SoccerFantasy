@@ -793,9 +793,9 @@ export default function LeaguePage() {
                     </label>
                     <div className="settings-readonly">
                       <span>
-                        <strong>Star Pick</strong>
+                        <strong>Captain</strong>
                         <small>
-                          Predict your highest-scoring starter · +5 points if correct.
+                          Captain earns +50% fantasy points.
                         </small>
                       </span>
                       <b>WEEKLY PICK</b>
@@ -888,8 +888,8 @@ export default function LeaguePage() {
                   </div>
                   <div>
                     <span>
-                      <strong>Star Pick</strong>
-                      <small>+5 when your prediction finishes tied for or alone as your highest-scoring starter.</small>
+                      <strong>Captain</strong>
+                      <small>Captain earns +50% fantasy points.</small>
                     </span>
                     <b>Settles automatically</b>
                   </div>
@@ -1301,7 +1301,7 @@ export default function LeaguePage() {
                     </>
                   )}
                   <span>18-player squads · 11 starters · 7 bench</span>
-                  <span>Weekly Star Pick · +5 when your prediction tops your XI</span>
+                  <span>Captain earns +50% fantasy points</span>
                   <span>Season-long standings · No playoffs</span>
                 </div>
                 </>

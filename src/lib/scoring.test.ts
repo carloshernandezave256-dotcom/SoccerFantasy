@@ -30,10 +30,15 @@ describe("custom scoring", () => {
     expect(result.total).toBe(8); // minutes 2 + saves 2 + pen save 2 + clean sheet 3 - yellow 1
   });
 
-  it("awards one five-point Star Pick bonus after the team-level prediction is settled", () => {
-    const winner = calculateScore({ position: "MID", minutes: 90, starPickWinner: true });
-    const regular = calculateScore({ position: "MID", minutes: 90 });
-    expect(winner.total).toBe(regular.total + 5);
-    expect(winner.entries.find((entry) => entry.code === "star-pick")?.points).toBe(5);
+  it("gives the captain exactly 50 percent additional fantasy points", () => {
+    const winner = calculateScore({ position: "MID", minutes: 90, goals: 1, captain: true });
+    expect(winner.total).toBe(9); // base 6 multiplied by 1.5
+    expect(winner.entries.find((entry) => entry.code === "captain-bonus")?.points).toBe(3);
+  });
+
+  it("also multiplies a negative captain score by 1.5", () => {
+    const captain = calculateScore({ position: "FWD", minutes: 1, redCards: 1, captain: true });
+    expect(captain.total).toBe(-3); // base -2 multiplied by 1.5
+    expect(captain.entries.find((entry) => entry.code === "captain-bonus")?.points).toBe(-1);
   });
 });

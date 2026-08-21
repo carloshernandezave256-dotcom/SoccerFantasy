@@ -38,7 +38,7 @@ export function SimulatedMatchup() {
           <div className="section-row"><h2>{team.name}</h2><strong className="team-total">{team.players.reduce((sum, player) => sum + player.score.total, 0)} pts</strong></div>
           {team.players.map((player) => <button className="scored-player" key={player.id} onClick={() => setSelected(player)}>
             <span className={`position ${player.stats.position.toLowerCase()}`}>{player.stats.position}</span>
-            <span><strong>{player.name}{player.stats.starPickWinner ? <em className="captain-badge">★</em> : null}</strong><small>{player.club} · {player.stats.minutes} min</small></span>
+            <span><strong>{player.name}{player.stats.captain ? <em className="captain-badge" title="Captain: +50% fantasy points" aria-label="Captain">★</em> : null}</strong><small>{player.club} · {player.stats.minutes} min</small></span>
             <b className={player.score.total < 0 ? "negative" : "positive"}>{player.score.total}</b>
             <i>›</i>
           </button>)}
@@ -55,7 +55,7 @@ export function SimulatedMatchup() {
           <span className={`position ${selected.stats.position.toLowerCase()}`}>{selected.stats.position}</span>
           <p className="eyebrow">SCORING BREAKDOWN</p>
           <h2 id="player-ledger-title">{selected.name}</h2>
-          <p>{selected.club} · {selected.stats.minutes} minutes {selected.stats.starPickWinner ? "· Winning Star Pick" : ""}</p>
+          <p>{selected.club} · {selected.stats.minutes} minutes {selected.stats.captain ? "· Captain" : ""}</p>
           <div className="ledger-total"><span>Fantasy points</span><strong>{selectedScore.total}</strong></div>
           <div className="ledger">
             {selectedScore.entries.map((entry) => <div key={entry.code}><span><strong>{entry.label}</strong><small>{entry.detail}</small></span><b className={entry.points < 0 ? "negative" : "positive"}>{entry.points > 0 ? "+" : ""}{entry.points}</b></div>)}
