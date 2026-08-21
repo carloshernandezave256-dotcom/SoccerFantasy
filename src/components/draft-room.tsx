@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {useRouter} from "next/navigation";
 import { PageShell } from "./page-shell";
 import { supabase } from "@/lib/supabase";
+import { loadActivePlayerPool } from "@/lib/active-player-pool";
 import { PlayerHeadshot } from "./player-headshot";
 import { DraftRoomChat } from "./draft-room-chat";
 
@@ -55,7 +56,7 @@ export function DraftRoom({leagueId}:{leagueId:string}){
       supabase.from("drafts").select("id,status,current_pick,pick_deadline,pick_seconds").eq("league_id",leagueId).maybeSingle(),
       supabase.from("draft_picks").select("id,pick_number,round,user_id,player_id,auto_picked,players(full_name,position,photo_url)").eq("league_id",leagueId).order("pick_number",{ascending:false}),
       supabase.rpc("draft_order",{p_league_id:leagueId}),
-      supabase.from("players").select("id,full_name,position,club,competition,draft_rank,photo_url").eq("active",true).order("draft_rank",{ascending:true,nullsFirst:false}),
+      loadActivePlayerPool(),
       supabase.from("draft_queue").select("player_id,priority,players(id,full_name,position,club,competition,draft_rank,photo_url)").eq("league_id",leagueId).order("priority"),
       supabase.rpc("league_settings",{p_league_id:leagueId}),
       supabase.rpc("draft_lobby_status",{p_league_id:leagueId}),

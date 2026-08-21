@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { PageShell } from "@/components/page-shell";
 import { supabase } from "@/lib/supabase";
+import { loadActivePlayerPool } from "@/lib/active-player-pool";
 import { resolveActiveLeague } from "@/lib/active-league";
 import { PlayerHeadshot } from "@/components/player-headshot";
 import { PlayerStatsDialog } from "@/components/player-stats-dialog";
@@ -45,7 +46,7 @@ export default function WaiversPage() {
   async function loadLeague(active: League, currentUser: string) {
     setLoading(true);
     const [playerResult, pickResult, claimResult, priorityResult, scoreResult,windowResult,offerResult,budgetResult] = await Promise.all([
-      supabase.from("players").select("id,full_name,position,club,competition,draft_rank,photo_url").eq("active", true).order("draft_rank").limit(1000),
+      loadActivePlayerPool(active.player_pool),
       supabase.from("draft_picks").select("user_id,player_id,players(id,full_name,position,club,competition,draft_rank,photo_url)").eq("league_id", active.league_id),
       supabase.from("waiver_claims").select("id,user_id,add_player_id,drop_player_id,gameweek,claim_rank,status,created_at,processed_at,note").eq("league_id", active.league_id).order("created_at", { ascending: false }),
       supabase.rpc("waiver_priority", { p_league_id: active.league_id }),

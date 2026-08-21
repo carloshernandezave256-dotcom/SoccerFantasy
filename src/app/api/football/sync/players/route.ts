@@ -46,7 +46,7 @@ export async function POST(request:NextRequest){
     const squadResponses:SquadPage[]=[];
     for(const {team} of teams.response){squadResponses.push(await apiFootball<SquadPage>(`players/squads?team=${team.id}`));requestsUsed++}
     const selected=squadResponses.flatMap(body=>body.response.flatMap(squad=>{
-      return [...squad.players].sort((a,b)=>(priorById.get(b.id)?.score??0)-(priorById.get(a.id)?.score??0)||a.name.localeCompare(b.name)).slice(0,25)
+      return [...squad.players].sort((a,b)=>(priorById.get(b.id)?.score??0)-(priorById.get(a.id)?.score??0)||a.name.localeCompare(b.name))
         .map(player=>({player,team:squad.team,score:priorById.get(player.id)?.score??0,prior:priorById.get(player.id)?.entry}));
     })).sort((a,b)=>b.score-a.score||a.player.name.localeCompare(b.player.name));
     if(!selected.length){unavailable.push(competition.name);continue}
@@ -67,5 +67,5 @@ export async function POST(request:NextRequest){
   const finalizeResponse=await fetch(`${supabaseUrl}/rest/v1/rpc/finalize_api_football_draft_pool`,{method:"POST",headers:adminHeaders,body:JSON.stringify({p_api_ids:uniqueEligible}),cache:"no-store"});
   if(!finalizeResponse.ok)throw new Error((await finalizeResponse.text())||"Draft pool finalization failed");
   const eligible=Number(await finalizeResponse.json())||0;
-  return NextResponse.json({ok:true,season,rankingSeason,seasonsUsed,unavailable,imported,eligible,clubLimit:25,requestsUsed});
+  return NextResponse.json({ok:true,season,rankingSeason,seasonsUsed,unavailable,imported,eligible,clubLimit:null,requestsUsed});
 }

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { PageShell } from "./page-shell";
 import { PlayerHeadshot } from "./player-headshot";
 import { supabase } from "@/lib/supabase";
+import { loadActivePlayerPool } from "@/lib/active-player-pool";
 import { DraftRoomChat } from "./draft-room-chat";
 
 type League = {
@@ -143,16 +144,9 @@ export function AuctionRoom({ leagueId }: { leagueId: string }) {
     setPicks((pickResult.data ?? []) as unknown as Pick[]);
     if (active) {
       const pool = active.player_pool ?? "All Top Five";
-      let request = supabase
-        .from("players")
-        .select("id,full_name,position,club,competition,draft_rank,photo_url")
-        .eq("active", true)
-        .order("draft_rank", { ascending: true, nullsFirst: false })
-        .limit(1000);
-      if (pool !== "All Top Five") request = request.eq("competition", pool);
-      const { data } = await request;
+      const { data } = await loadActivePlayerPool(pool);
       if (sequence !== loadSequence.current) return;
-      setPlayers((data ?? []) as Player[]);
+      setPlayers(data as Player[]);
     }
   }, [leagueId]);
 
