@@ -59,15 +59,21 @@ export function TeamManager(){
   const suppressRefreshUntil=useRef(0);
   const dirtyRef=useRef(false);
   const savedStarterIdsRef=useRef<Set<number>>(new Set());
+  const loadedRosterKeyRef=useRef("");
+  const rosterRequestRef=useRef(0);
 
   const loadRoster=useCallback(async(id:string,ownerId:string)=>{
-    setLoading(true);setMessage("");setRoster([]);setStarters(new Set());setStarterOrder([]);setCaptain(null);setInfoPlayer(null);setUndoOrder(null);setSelectedStarter(null);
+    const requestId=++rosterRequestRef.current;
+    const rosterKey=`${id}:${ownerId}`;
+    const switchingRoster=loadedRosterKeyRef.current!==rosterKey;
+    if(switchingRoster){setLoading(true);setMessage("");setRoster([]);setStarters(new Set());setStarterOrder([]);setCaptain(null);setInfoPlayer(null);setUndoOrder(null);setSelectedStarter(null)}
     const[{data:draftPicks},{data:packCards},{data:lineup},{data:lockRows}]=await Promise.all([
       supabase.from("draft_picks").select("player_id,players(id,full_name,position,club,competition,photo_url)").eq("league_id",id).eq("user_id",ownerId),
       supabase.from("pack_cards").select("player_id,active_slot,players(id,full_name,position,club,competition,photo_url)").eq("league_id",id).eq("user_id",ownerId).not("active_slot","is",null).order("active_slot"),
       supabase.from("lineup_players").select("player_id,is_starter,is_captain,bench_order,pitch_order").eq("league_id",id).eq("user_id",ownerId),
       supabase.rpc("lineup_lock_state",{p_league_id:id}),
     ]);
+    if(requestId!==rosterRequestRef.current)return;
     const currentLock=((lockRows??[]) as LineupLock[])[0]??null;
     setLineupLock(currentLock);
     let saved=(lineup??[]) as LineupRow[];
@@ -81,6 +87,7 @@ export function TeamManager(){
         const defaultOrder=centerHaaland(loadedRoster.filter(player=>defaults.has(player.id)).map(player=>player.id),loadedRoster);
         const defaultBench=loadedRoster.filter(player=>!defaults.has(player.id)).slice(0,7).map(player=>player.id);
         const{data:initialized,error}=await supabase.rpc("initialize_default_lineup",{p_league_id:id,p_starters:defaultOrder,p_bench:defaultBench});
+        if(requestId!==rosterRequestRef.current)return;
         if(error)setMessage(error.message);
         else if(initialized){
           saved=[...defaultOrder.map((player_id,index)=>({player_id,is_starter:true,is_captain:false,bench_order:null,pitch_order:index+1})),...defaultBench.map((player_id,index)=>({player_id,is_starter:false,is_captain:false,bench_order:index+1,pitch_order:null}))];
@@ -99,7 +106,9 @@ export function TeamManager(){
     const savedCaptain=saved.find(row=>row.is_captain)?.player_id??null;
     savedStarterIdsRef.current=new Set(savedStarterIds);
     setCaptain(savedLineupIsValid&&savedCaptain!==null&&starterIds.has(savedCaptain)?savedCaptain:null);
-    setEditing(!currentLock?.locked&&(!savedLineupIsValid||savedCaptain===null));setDirty(false);setCaptainMode(false);setSelectedBench(null);setSelectedStarter(null);setLoading(false);
+    loadedRosterKeyRef.current=rosterKey;
+    if(switchingRoster){setEditing(!currentLock?.locked&&(!savedLineupIsValid||savedCaptain===null));setDirty(false);setCaptainMode(false);setSelectedBench(null);setSelectedStarter(null)}
+    setLoading(false);
   },[]);
 
   const loadLeague=useCallback(async(id:string,preferredUser?:string)=>{
