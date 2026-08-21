@@ -1,6 +1,7 @@
 import {NextRequest,NextResponse} from "next/server";
 import {apiFootball} from "@/lib/api-football-server";
 import {selectManOfTheMatchId} from "@/lib/match-awards";
+import {completedPassesFromApi} from "@/lib/api-football-stats";
 
 const terminal=new Set(["FT","AET","PEN","PST","CANC","ABD","AWD","WO"]);
 type CachedFixture={fixture_id:number;status:string;kickoff:string};
@@ -75,8 +76,7 @@ export async function GET(request:NextRequest){
       const motm=selectManOfTheMatchId(entries.map(({entry,stat})=>({playerId:entry.player.id,rating:Number(stat.games.rating)||0,minutes:stat.games.minutes??0,goals:stat.goals.total??0,assists:stat.goals.assists??0,shotsOnTarget:stat.shots.on??0})));
       for(const {entry,stat} of entries){
         const playerId=internalByApi.get(entry.player.id);if(!playerId)continue;
-        const accuracy=Number(String(stat.passes.accuracy??"0").replace("%",""))||0;
-        cachedStats.push({fixture_id:fixture.fixture.id,player_id:playerId,rating:Number(stat.games.rating)||null,minutes:stat.games.minutes??0,goals:stat.goals.total??0,assists:stat.goals.assists??0,shots_on_target:stat.shots.on??0,completed_passes:Math.round((stat.passes.total??0)*accuracy/100),tackles_won:stat.tackles.total??0,penalty_goals:stat.penalty.scored??0,penalties_missed:stat.penalty.missed??0,penalties_conceded:stat.penalty.commited??0,saves:stat.goals.saves??0,penalties_saved:stat.penalty.saved??0,goals_conceded:stat.goals.conceded??0,yellow_cards:stat.cards.yellow??0,red_cards:stat.cards.red??0,man_of_the_match:entry.player.id===motm,source_updated_at:now.toISOString()});
+        cachedStats.push({fixture_id:fixture.fixture.id,player_id:playerId,rating:Number(stat.games.rating)||null,minutes:stat.games.minutes??0,goals:stat.goals.total??0,assists:stat.goals.assists??0,shots_on_target:stat.shots.on??0,completed_passes:completedPassesFromApi(stat.passes.total,stat.passes.accuracy),tackles_won:stat.tackles.total??0,penalty_goals:stat.penalty.scored??0,penalties_missed:stat.penalty.missed??0,penalties_conceded:stat.penalty.commited??0,saves:stat.goals.saves??0,penalties_saved:stat.penalty.saved??0,goals_conceded:stat.goals.conceded??0,yellow_cards:stat.cards.yellow??0,red_cards:stat.cards.red??0,man_of_the_match:entry.player.id===motm,source_updated_at:now.toISOString()});
       }
     }
     console.info("[cron/scores] live player payload",{fixtureIds,providerPlayers:apiIds.length,mappedPlayers:cachedStats.length});
