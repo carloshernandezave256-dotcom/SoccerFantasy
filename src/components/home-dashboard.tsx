@@ -450,15 +450,14 @@ export function HomeDashboard() {
         href: `/trades?league=${league.league_id}`,
         label: "Review trades",
       };
+    if (matchup?.status === "live") return null;
     if (matchup)
       return {
         eyebrow: `GAMEWEEK ${matchup.gameweek}`,
         title:
-          matchup.status === "live"
-            ? "Your matchup is live."
-            : matchup.status === "final"
-              ? "Your result is ready."
-              : `Next up: ${opponent}`,
+          matchup.status === "final"
+            ? "Your result is ready."
+            : `Next up: ${opponent}`,
         copy:
           matchup.status === "scheduled"
             ? "Your saved Starting XI will score when the matchweek begins."
