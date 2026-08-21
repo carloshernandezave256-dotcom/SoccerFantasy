@@ -29,6 +29,7 @@ export function RealMatchup(){
   const[selected,setSelected]=useState<Player|null>(null);
   const[loading,setLoading]=useState(true);
   const[message,setMessage]=useState("");
+  const[lineupVersion,setLineupVersion]=useState(0);
 
   const load=useCallback(async()=>{
     setLoading(true);setMessage("");
@@ -70,6 +71,22 @@ export function RealMatchup(){
 
   useEffect(()=>{void load()},[load]);
 
+  useEffect(()=>{
+    if(!league)return;
+    const refreshLineups=()=>setLineupVersion(version=>version+1);
+    const channel=supabase.channel(`matchup-lineups-${league.league_id}`)
+      .on("postgres_changes",{event:"*",schema:"public",table:"lineup_players",filter:`league_id=eq.${league.league_id}`},refreshLineups)
+      .subscribe();
+    const refreshWhenVisible=()=>{if(document.visibilityState==="visible")refreshLineups()};
+    window.addEventListener("pageshow",refreshLineups);
+    document.addEventListener("visibilitychange",refreshWhenVisible);
+    return()=>{
+      window.removeEventListener("pageshow",refreshLineups);
+      document.removeEventListener("visibilitychange",refreshWhenVisible);
+      void supabase.removeChannel(channel);
+    };
+  },[league]);
+
   const weekFixtures=useMemo(()=>matchups.filter(matchup=>matchup.gameweek===gameweek),[matchups,gameweek]);
   const featured=useMemo(()=>weekFixtures.find(matchup=>matchup.home_user_id===userId||matchup.away_user_id===userId)??weekFixtures[0]??null,[weekFixtures,userId]);
   const maxWeek=Math.max(1,...matchups.map(matchup=>matchup.gameweek));
@@ -105,7 +122,9 @@ export function RealMatchup(){
       };
       const build=(owner:string,score:number|string):TeamView=>{
         const snapshot=snapshotRows.filter(row=>row.user_id===owner&&row.is_starter&&row.players).map(row=>({...row,is_captain:row.is_star_pick}));
-        const saved=snapshot.length?snapshot:lineupRows.filter(row=>row.user_id===owner&&row.is_starter&&row.players);
+        const current=lineupRows.filter(row=>row.user_id===owner&&row.is_starter&&row.players);
+        const matchupStatus=liveMatchup?.status??featured.status;
+        const saved=matchupStatus==="scheduled"?(current.length?current:snapshot):(snapshot.length?snapshot:current);
         const source=saved.length?saved.map(row=>scoredPlayer(row.players!,row.is_captain,true)):pickRows.filter(row=>row.user_id===owner&&row.players).slice(0,11).map(row=>scoredPlayer(row.players!,false,false));
         return{userId:owner,name:managers.find(manager=>manager.user_id===owner)?.team_name??"Manager",score:Number(score),players:source.sort((a,b)=>(positionOrder[a.position]??9)-(positionOrder[b.position]??9)),lineupSet:saved.length>0};
       };
@@ -113,7 +132,7 @@ export function RealMatchup(){
       setStandings((standingsResult.data??[]) as Standing[]);
       setActiveTeam(0);setLoading(false);
     })();
-  },[featured,league,managers,gameweek]);
+  },[featured,league,managers,gameweek,lineupVersion]);
 
   return <PageShell eyebrow={league?.league_name??"LEAGUE MATCHUPS"} title="Head to head">
     <div className="gameweek-picker"><button disabled={gameweek===1} onClick={()=>setGameweek(week=>week-1)}>←</button><label>Gameweek<select value={gameweek} onChange={event=>setGameweek(Number(event.target.value))}>{Array.from({length:maxWeek},(_,index)=>index+1).map(week=><option key={week}>{week}</option>)}</select></label><button disabled={gameweek===maxWeek} onClick={()=>setGameweek(week=>week+1)}>→</button></div>
