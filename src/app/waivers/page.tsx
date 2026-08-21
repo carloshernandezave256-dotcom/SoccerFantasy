@@ -10,7 +10,7 @@ import { PlayerHeadshot } from "@/components/player-headshot";
 import { PlayerStatsDialog } from "@/components/player-stats-dialog";
 
 type League = { league_id: string; league_name: string; team_name: string; is_commissioner: boolean; game_format?: string; player_pool?: string };
-type Player = { id: number; full_name: string; position: string; club: string; competition: string; draft_rank?: number; photo_url?:string|null };
+type Player = { id: number; full_name: string; position: string; club: string; competition: string; draft_rank?: number; photo_url?:string|null; injured?:boolean; injury_type?:string|null; injury_reason?:string|null; expected_return?:string|null };
 type Pick = { user_id: string; player_id: number; players: Player | null };
 type Claim = { id: string; user_id: string; add_player_id: number; drop_player_id: number | null; gameweek:number; claim_rank:number; status: string; created_at: string; processed_at: string | null; note: string | null };
 type ContractOffer = { id:string;user_id:string;add_player_id:number;release_player_id:number;gameweek:number;offer_rank:number;amount:number;status:string;created_at:string;processed_at:string|null;note:string|null };
@@ -18,6 +18,7 @@ type Priority = { rank: number; user_id: string; team_name: string };
 type TransactionWindow={gameweek:number;waiver_process_at:string;roster_lock_at:string;phase:"waivers"|"free_agency"|"locked"};
 type SeasonTotal = { player_id:number;points:number;appearances:number;minutes:number;goals:number;assists:number;shots_on_target:number;completed_passes:number;tackles_won:number;saves:number;clean_sheets:number;yellow_cards:number;red_cards:number;motm:number;latest_gameweek:number|null;latest_status:string|null };
 type PlayerTotals = { points: number; appearances: number; minutes: number; goals: number; assists: number; shotsOnTarget: number; completedPasses: number; tacklesWon: number; saves: number; cleanSheets: number; yellowCards: number; redCards: number; motm: number; gameweeks: { gameweek: number; points: number; status: string }[] };
+type WatchRow={player_id:number};
 
 export default function WaiversPage() {
   const [league, setLeague] = useState<League | null>(null);
@@ -28,6 +29,7 @@ export default function WaiversPage() {
   const [contractBudget,setContractBudget]=useState(0);
   const [priority, setPriority] = useState<Priority[]>([]);
   const [seasonTotals, setSeasonTotals] = useState<SeasonTotal[]>([]);
+  const [watchlist,setWatchlist]=useState<Set<number>>(new Set());
   const [userId, setUserId] = useState("");
   const [query, setQuery] = useState("");
   const [position, setPosition] = useState("ALL");
@@ -38,24 +40,25 @@ export default function WaiversPage() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [tab, setTab] = useState<"market" | "claims">("market");
-  const [marketFilter, setMarketFilter] = useState<"ALL" | "AVAILABLE" | "OWNED">("ALL");
+  const [marketFilter, setMarketFilter] = useState<"ALL" | "AVAILABLE" | "WATCHLIST">("ALL");
   const [sort, setSort] = useState<"RANK" | "POINTS">("RANK");
   const [statsPlayer, setStatsPlayer] = useState<Player | null>(null);
   const [windowState,setWindowState]=useState<TransactionWindow|null>(null);
 
   async function loadLeague(active: League, currentUser: string) {
     setLoading(true);
-    const [playerResult, pickResult, claimResult, priorityResult, scoreResult,windowResult,offerResult,budgetResult] = await Promise.all([
+    const [playerResult, pickResult, claimResult, priorityResult, scoreResult,windowResult,offerResult,budgetResult,watchResult] = await Promise.all([
       loadActivePlayerPool(active.player_pool),
-      supabase.from("draft_picks").select("user_id,player_id,players(id,full_name,position,club,competition,draft_rank,photo_url)").eq("league_id", active.league_id),
+      supabase.from("draft_picks").select("user_id,player_id,players(id,full_name,position,club,competition,draft_rank,photo_url,injured,injury_type,injury_reason,expected_return)").eq("league_id", active.league_id),
       supabase.from("waiver_claims").select("id,user_id,add_player_id,drop_player_id,gameweek,claim_rank,status,created_at,processed_at,note").eq("league_id", active.league_id).order("created_at", { ascending: false }),
       supabase.rpc("waiver_priority", { p_league_id: active.league_id }),
       supabase.rpc("player_season_totals"),
       supabase.rpc("transaction_window",{p_league_id:active.league_id}),
       supabase.from("auction_contract_offers").select("id,user_id,add_player_id,release_player_id,gameweek,offer_rank,amount,status,created_at,processed_at,note").eq("league_id",active.league_id).order("created_at",{ascending:false}),
       supabase.from("auction_budgets").select("remaining_budget").eq("league_id",active.league_id).eq("user_id",currentUser).maybeSingle(),
+      supabase.from("player_watchlists").select("player_id").eq("league_id",active.league_id).eq("user_id",currentUser),
     ]);
-    const error = playerResult.error ?? pickResult.error ?? claimResult.error ?? priorityResult.error ?? scoreResult.error??windowResult.error??offerResult.error??budgetResult.error;
+    const error = playerResult.error ?? pickResult.error ?? claimResult.error ?? priorityResult.error ?? scoreResult.error??windowResult.error??offerResult.error??budgetResult.error??watchResult.error;
     if (error) setMessage(error.message);
     setPlayers(((playerResult.data ?? []) as Player[]).filter(player=>!active.player_pool||active.player_pool==="All Top Five"||player.competition===active.player_pool));
     setPicks((pickResult.data ?? []) as unknown as Pick[]);
@@ -65,6 +68,7 @@ export default function WaiversPage() {
     setWindowState(((windowResult.data??[])[0] as TransactionWindow)??null);
     setContractOffers((offerResult.data??[]) as ContractOffer[]);
     setContractBudget(Number(budgetResult.data?.remaining_budget??0));
+    setWatchlist(new Set(((watchResult.data??[]) as WatchRow[]).map(row=>row.player_id)));
     setUserId(currentUser);
     setLoading(false);
   }
@@ -99,8 +103,21 @@ export default function WaiversPage() {
   const marketPlayers = useMemo(() => players.filter((player) => {
     const search = query.trim().toLowerCase();
     const isOwned = ownedIds.has(player.id);
-    return (marketFilter === "ALL" || (marketFilter === "AVAILABLE" && !isOwned) || (marketFilter === "OWNED" && isOwned)) && (position === "ALL" || player.position === position) && (!search || `${player.full_name} ${player.club} ${player.competition}`.toLowerCase().includes(search));
-  }).sort((a, b) => sort === "POINTS" ? (totalsByPlayer.get(b.id)?.points ?? 0) - (totalsByPlayer.get(a.id)?.points ?? 0) || (a.draft_rank ?? 9999) - (b.draft_rank ?? 9999) : (a.draft_rank ?? 9999) - (b.draft_rank ?? 9999)), [players, ownedIds, query, position, marketFilter, sort, totalsByPlayer]);
+    return (marketFilter === "ALL" || (marketFilter === "AVAILABLE" && !isOwned) || (marketFilter === "WATCHLIST" && watchlist.has(player.id))) && (position === "ALL" || player.position === position) && (!search || `${player.full_name} ${player.club} ${player.competition}`.toLowerCase().includes(search));
+  }).sort((a, b) => sort === "POINTS" ? (totalsByPlayer.get(b.id)?.points ?? 0) - (totalsByPlayer.get(a.id)?.points ?? 0) || (a.draft_rank ?? 9999) - (b.draft_rank ?? 9999) : (a.draft_rank ?? 9999) - (b.draft_rank ?? 9999)), [players, ownedIds, watchlist, query, position, marketFilter, sort, totalsByPlayer]);
+
+  async function toggleWatchlist(playerId:number){
+    if(!league||!userId)return;
+    const alreadyWatching=watchlist.has(playerId);
+    setWatchlist(current=>{const next=new Set(current);if(alreadyWatching)next.delete(playerId);else next.add(playerId);return next});
+    const result=alreadyWatching
+      ?await supabase.from("player_watchlists").delete().eq("league_id",league.league_id).eq("user_id",userId).eq("player_id",playerId)
+      :await supabase.from("player_watchlists").insert({league_id:league.league_id,user_id:userId,player_id:playerId});
+    if(result.error){
+      setWatchlist(current=>{const next=new Set(current);if(alreadyWatching)next.add(playerId);else next.delete(playerId);return next});
+      setMessage(result.error.message);
+    }
+  }
 
   async function submitClaim() {
     if (!league || !selected || !dropId) return;
@@ -141,14 +158,13 @@ export default function WaiversPage() {
       {message ? <p className="panel waiver-message">{message}</p> : null}
       {tab === "market" ? <section className="panel">
         <div className="section-row"><div><h2>{isAuction?"Available players":"Player market"}</h2><small>Showing {Math.min(marketPlayers.length, 60)} of {marketPlayers.length}</small></div><label className="market-sort">Sort<select value={sort} onChange={(event) => setSort(event.target.value as "RANK" | "POINTS")}><option value="RANK">Player rank</option><option value="POINTS">Fantasy points</option></select></label></div>
-        <div className="market-status-filter">{(["ALL", "AVAILABLE", "OWNED"] as const).map((item) => <button key={item} className={marketFilter === item ? "active" : ""} onClick={() => setMarketFilter(item)}>{item}</button>)}</div>
+        <div className="market-status-filter">{(["ALL", "AVAILABLE", "WATCHLIST"] as const).map((item) => <button key={item} className={marketFilter === item ? "active" : ""} onClick={() => setMarketFilter(item)}>{item}</button>)}</div>
         <div className="search-box"><span>⌕</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search player, club, or league" /></div>
         <div className="filter-row">{["ALL", "GK", "DEF", "MID", "FWD"].map((item) => <button key={item} className={position === item ? "active" : ""} onClick={() => setPosition(item)}>{item}</button>)}</div>
-        <div className="player-list waiver-player-list">{marketPlayers.slice(0, 60).map((player) => { const owner = ownerByPlayer.get(player.id); const totals = totalsByPlayer.get(player.id) ?? emptyTotals; return <article key={player.id} role="button" tabIndex={0} onClick={() => setStatsPlayer(player)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") setStatsPlayer(player); }}><PlayerHeadshot name={player.full_name} position={player.position} photoUrl={player.photo_url}/><div><strong>{player.full_name}</strong><small>#{player.draft_rank ?? "—"} · {player.club} · {player.competition}</small>{owner ? <small className="ownership-label">{isAuction?"Under contract with":"Owned by"} {owner}</small> : <small className="available-label">Available · tap for stats</small>}</div><b className="fantasy-points-chip">{totals.points} FP</b>{owner ? <span className="owned-chip">{isAuction?"SIGNED":"OWNED"}</span> : <button className="claim-button" disabled={!windowState||windowState.phase==="locked"||(isAuction&&windowState.phase!=="waivers")} onClick={(event) => { event.stopPropagation(); setSelected(player); setDropId("");setOfferAmount(""); }}>{isAuction?windowState?.phase==="waivers"?"OFFER":"WINDOW CLOSED":windowState?.phase==="free_agency"?"ADD NOW":"CLAIM"}</button>}</article>; })}{!loading && marketPlayers.length === 0 ? <p className="empty-state">No players match those filters.</p> : null}</div>
+        <div className="player-list waiver-player-list">{marketPlayers.slice(0, 60).map((player) => { const owner = ownerByPlayer.get(player.id); const totals = totalsByPlayer.get(player.id) ?? emptyTotals; const watching=watchlist.has(player.id); return <article key={player.id} role="button" tabIndex={0} onClick={() => setStatsPlayer(player)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") setStatsPlayer(player); }}><PlayerHeadshot name={player.full_name} position={player.position} photoUrl={player.photo_url}/><div><strong>{player.full_name}</strong><small>#{player.draft_rank ?? "—"} · {player.club} · {player.competition}</small>{owner ? <small className="ownership-label">{isAuction?"Under contract with":"Owned by"} {owner}</small> : <small className="available-label">Available · tap for stats</small>}</div><button type="button" aria-label={watching?`Remove ${player.full_name} from watchlist`:`Add ${player.full_name} to watchlist`} title={watching?"Remove from watchlist":"Add to watchlist"} onClick={(event)=>{event.stopPropagation();void toggleWatchlist(player.id)}} style={{border:"0",background:"transparent",fontSize:"22px",lineHeight:1,padding:"4px",cursor:"pointer",color:watching?"var(--lime)":"var(--muted)"}}>{watching?"★":"☆"}</button><b className="fantasy-points-chip">{totals.points} FP</b>{owner ? <span className="owned-chip">{isAuction?"SIGNED":"OWNED"}</span> : <button className="claim-button" disabled={!windowState||windowState.phase==="locked"||(isAuction&&windowState.phase!=="waivers")} onClick={(event) => { event.stopPropagation(); setSelected(player); setDropId("");setOfferAmount(""); }}>{isAuction?windowState?.phase==="waivers"?"OFFER":"WINDOW CLOSED":windowState?.phase==="free_agency"?"ADD NOW":"CLAIM"}</button>}</article>; })}{!loading && marketPlayers.length === 0 ? <p className="empty-state">{marketFilter==="WATCHLIST"?"Your watchlist is empty.":"No players match those filters."}</p> : null}</div>
       </section> : isAuction?<section className="panel claim-history"><div className="section-row"><div><h2>My contract offers</h2><small>Competing offers remain private</small></div><span className="muted-chip">{contractOffers.length}</span></div>{contractOffers.length===0?<p className="empty-state">No contract offers yet.</p>:contractOffers.sort((a,b)=>a.status==="pending"&&b.status==="pending"?a.offer_rank-b.offer_rank:new Date(b.created_at).getTime()-new Date(a.created_at).getTime()).map(offer=>{const add=playerMap.get(offer.add_player_id),release=playerMap.get(offer.release_player_id),pending=offer.status==="pending";return <article key={offer.id}><div><span className={`claim-status ${offer.status}`}>{pending?`#${offer.offer_rank} private`:offer.status}</span><strong>{add?.full_name??"Player"} · ${Math.round(offer.amount/1000000)}M</strong><small>GW {offer.gameweek} · Release {release?.full_name??"player"}{offer.note?` · ${offer.note}`:""}</small></div>{pending?<div><button aria-label="Move offer up" onClick={()=>void moveContractOffer(offer.id,-1)} disabled={busy||offer.offer_rank===1}>↑</button><button aria-label="Move offer down" onClick={()=>void moveContractOffer(offer.id,1)} disabled={busy}>↓</button><button onClick={()=>void cancelContractOffer(offer.id)} disabled={busy}>Cancel</button></div>:null}</article>})}</section>:<><section className="panel waiver-priority"><div className="section-row"><h2>Waiver priority</h2><small>Randomized each gameweek</small></div>{priority.map((item) => <article key={item.user_id} className={item.user_id === userId ? "you" : ""}><span>{item.rank}</span><strong>{item.team_name}</strong>{item.user_id === userId ? <small>YOU</small> : null}</article>)}</section><section className="panel claim-history"><div className="section-row"><h2>Claim history</h2><span className="muted-chip">{claims.length}</span></div>{claims.length === 0 ? <p className="empty-state">No waiver claims yet.</p> : claims.sort((a,b)=>a.status==="pending"&&b.status==="pending"?a.claim_rank-b.claim_rank:new Date(b.created_at).getTime()-new Date(a.created_at).getTime()).map((claim) => { const add = playerMap.get(claim.add_player_id); const drop = claim.drop_player_id ? playerMap.get(claim.drop_player_id) : null; const minePending=claim.user_id===userId&&claim.status==="pending";return <article key={claim.id}><div><span className={`claim-status ${claim.status}`}>{minePending?`#${claim.claim_rank} ${claim.status}`:claim.status}</span><strong>{teamMap.get(claim.user_id) ?? "Your team"}: {add?.full_name ?? "Player"}</strong><small>GW {claim.gameweek} · {drop ? `Drop ${drop.full_name} · ` : ""}{new Date(claim.created_at).toLocaleString()}{claim.note ? ` · ${claim.note}` : ""}</small></div>{minePending?<div><button aria-label="Move claim up" onClick={()=>void moveClaim(claim.id,-1)} disabled={busy||claim.claim_rank===1}>↑</button><button aria-label="Move claim down" onClick={()=>void moveClaim(claim.id,1)} disabled={busy}>↓</button><button onClick={() => void cancelClaim(claim.id)} disabled={busy}>Cancel</button></div>:null}</article>; })}</section></>}
     </>}
     {selected ? <div className="waiver-overlay" role="dialog" aria-modal="true" aria-label="Submit player transaction"><section className="panel waiver-dialog"><p className="eyebrow">{isAuction?"BLIND CONTRACT OFFER":windowState?.phase==="free_agency"?"FREE AGENT":"WAIVER CLAIM"}</p><h2>{isAuction?"Offer a contract to":"Add"} {selected.full_name}</h2><p>{isAuction?"Your offer stays private until the processing day. Choose the player whose current contract will be released if this offer wins.":"Select the player who will leave your 18-player roster. Position limits and four players per club are enforced."}</p>{isAuction?<label>Contract offer ($M)<input type="number" min="1" step="1" inputMode="numeric" value={offerAmount} onChange={event=>setOfferAmount(event.target.value)} placeholder="Minimum $1M"/><small>${Math.round(contractBudget/1000000)}M available</small></label>:null}<label>{isAuction?"Release if offer wins":"Drop from your roster"}<select value={dropId} onChange={(event) => setDropId(event.target.value)}><option value="">Choose a player</option>{roster.map((player) => <option key={player.id} value={player.id}>{player.position} · {player.full_name}</option>)}</select></label><div><button className="secondary-button" onClick={() => setSelected(null)} disabled={busy}>Back</button><button className="primary-button" onClick={() => void submitClaim()} disabled={busy || !dropId||(isAuction&&(!offerAmount||Number(offerAmount)<1||Number(offerAmount)*1000000>contractBudget))}>{busy ? "Saving…" : isAuction?"Submit private offer":windowState?.phase==="free_agency"?"Add now":"Submit claim"}</button></div></section></div> : null}
     {statsPlayer&&league?<PlayerStatsDialog leagueId={league.league_id} player={statsPlayer} onClose={()=>setStatsPlayer(null)}/>:null}
   </PageShell>;
 }
-
