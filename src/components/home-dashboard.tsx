@@ -329,16 +329,15 @@ export function HomeDashboard() {
     const myMatches = matches.filter(
       (x) => x.home_user_id === user.id || x.away_user_id === user.id,
     );
+    const nextScheduledMatch = [...myMatches]
+      .filter((x) => x.status === "scheduled")
+      .sort((a, b) => a.gameweek - b.gameweek)[0];
     setMatchup(
       (transactionWindow
         ? myMatches.find((x) => x.gameweek === transactionWindow.gameweek)
         : null) ??
         myMatches.find((x) => x.status === "live") ??
-        matches.find(
-          (x) =>
-            (x.home_user_id === user.id || x.away_user_id === user.id) &&
-            x.status === "scheduled",
-        ) ??
+        nextScheduledMatch ??
         myMatches[0] ??
         null,
     );
