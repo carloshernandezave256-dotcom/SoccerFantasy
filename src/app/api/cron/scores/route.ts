@@ -2,6 +2,7 @@ import {NextRequest,NextResponse} from "next/server";
 import {apiFootball} from "@/lib/api-football-server";
 import {selectManOfTheMatchId} from "@/lib/match-awards";
 import {completedPassesFromApi} from "@/lib/api-football-stats";
+import {resolvePlayerScoreStatus} from "@/lib/scoring";
 
 const terminal=new Set(["FT","AET","PEN","PST","CANC","ABD","AWD","WO"]);
 type CachedFixture={fixture_id:number;status:string;kickoff:string};
@@ -134,10 +135,12 @@ export async function GET(request:NextRequest){
       const lineup=lineupResponse.ok?await lineupResponse.json() as Array<{player_id:number}>:[];
       const playerIds=[...new Set([...lineup.map(item=>item.player_id),...stats.map(item=>item.player_id)])];
       const isFinal=weekFixtures.length>0&&weekFixtures.every(item=>terminal.has(item.status));
+      const fixtureStatusById=new Map(weekFixtures.map(item=>[item.fixture_id,item.status]));
       const rows=playerIds.map(playerId=>{
         const playerStats=stats.filter(item=>item.player_id===playerId);
         const ratings=playerStats.map(item=>Number(item.rating)).filter(Boolean);
-        return {league_id:leagueId,gameweek:window.gameweek,player_id:playerId,rating:ratings.length?Math.max(...ratings):null,minutes:sum(playerStats,"minutes"),goals:sum(playerStats,"goals"),assists:sum(playerStats,"assists"),shots_on_target:sum(playerStats,"shots_on_target"),big_chances_missed:0,completed_passes:sum(playerStats,"completed_passes"),tackles_won:sum(playerStats,"tackles_won"),penalty_goals:sum(playerStats,"penalty_goals"),penalties_missed:sum(playerStats,"penalties_missed"),penalties_conceded:sum(playerStats,"penalties_conceded"),saves:sum(playerStats,"saves"),penalties_saved:sum(playerStats,"penalties_saved"),goals_conceded:sum(playerStats,"goals_conceded"),yellow_cards:sum(playerStats,"yellow_cards"),second_yellow_cards:0,red_cards:sum(playerStats,"red_cards"),own_goals:0,man_of_the_match:false,status:isFinal?"final":"live",source:"api-football-shared-cache",source_updated_at:now.toISOString(),updated_at:now.toISOString()};
+        const playerFixtureStatuses=[...new Set(playerStats.map(item=>fixtureStatusById.get(item.fixture_id)).filter((status):status is string=>Boolean(status)))];
+        return {league_id:leagueId,gameweek:window.gameweek,player_id:playerId,rating:ratings.length?Math.max(...ratings):null,minutes:sum(playerStats,"minutes"),goals:sum(playerStats,"goals"),assists:sum(playerStats,"assists"),shots_on_target:sum(playerStats,"shots_on_target"),big_chances_missed:0,completed_passes:sum(playerStats,"completed_passes"),tackles_won:sum(playerStats,"tackles_won"),penalty_goals:sum(playerStats,"penalty_goals"),penalties_missed:sum(playerStats,"penalties_missed"),penalties_conceded:sum(playerStats,"penalties_conceded"),saves:sum(playerStats,"saves"),penalties_saved:sum(playerStats,"penalties_saved"),goals_conceded:sum(playerStats,"goals_conceded"),yellow_cards:sum(playerStats,"yellow_cards"),second_yellow_cards:0,red_cards:sum(playerStats,"red_cards"),own_goals:0,man_of_the_match:false,status:resolvePlayerScoreStatus(playerFixtureStatuses,isFinal),source:"api-football-shared-cache",source_updated_at:now.toISOString(),updated_at:now.toISOString()};
       });
       const weeklyManOfTheMatchId=isFinal?selectManOfTheMatchId(rows.map(row=>({playerId:row.player_id,rating:Number(row.rating)||0,minutes:row.minutes,goals:row.goals,assists:row.assists,shotsOnTarget:row.shots_on_target}))):null;
       if(weeklyManOfTheMatchId!==null)rows.find(row=>row.player_id===weeklyManOfTheMatchId)!.man_of_the_match=true;
