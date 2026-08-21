@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { calculateScore, resolvePlayerScoreStatus } from "./scoring";
+import { calculateScore, isTerminalMatchStatus, resolvePlayerScoreStatus } from "./scoring";
 
 describe("custom scoring", () => {
   it("awards one point for each complete group of three shots on target", () => {
@@ -76,6 +76,12 @@ describe("custom scoring", () => {
 });
 
 describe("resolvePlayerScoreStatus", () => {
+  it("recognizes both app and API-Football completed statuses", () => {
+    expect(isTerminalMatchStatus("final")).toBe(true);
+    expect(isTerminalMatchStatus("FT")).toBe(true);
+    expect(isTerminalMatchStatus("2H")).toBe(false);
+  });
+
   it("finalizes a player when their own fixture ends before the gameweek", () => {
     expect(resolvePlayerScoreStatus(["FT"], false)).toBe("final");
   });

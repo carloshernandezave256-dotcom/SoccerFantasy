@@ -26,13 +26,16 @@ export interface PlayerMatchStats {
 export interface LedgerEntry { code: string; label: string; detail: string; points: number }
 export interface ScoreResult { total: number; entries: LedgerEntry[] }
 
+export function isTerminalMatchStatus(status: string): boolean {
+  return new Set(["final", "FT", "AET", "PEN", "PST", "CANC", "ABD", "AWD", "WO"]).has(status);
+}
+
 export function resolvePlayerScoreStatus(
   playerFixtureStatuses: string[],
   gameweekIsFinal: boolean,
 ): "live" | "final" {
-  const terminalStatuses = new Set(["FT", "AET", "PEN", "PST", "CANC", "ABD", "AWD", "WO"]);
   if (playerFixtureStatuses.length > 0) {
-    return playerFixtureStatuses.every((status) => terminalStatuses.has(status)) ? "final" : "live";
+    return playerFixtureStatuses.every(isTerminalMatchStatus) ? "final" : "live";
   }
   return gameweekIsFinal ? "final" : "live";
 }
