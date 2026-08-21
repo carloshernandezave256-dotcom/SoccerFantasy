@@ -6,7 +6,6 @@ import { AccountMenu } from "./account-menu";
 import { BottomNav } from "./bottom-nav";
 import { PlayerStatsDialog } from "./player-stats-dialog";
 import { resolveActiveLeague } from "@/lib/active-league";
-import { calculateScore, type Position } from "@/lib/scoring";
 import { supabase } from "@/lib/supabase";
 import { useLanguage } from "@/lib/i18n";
 
@@ -51,34 +50,12 @@ type Standing = {
 };
 type WindowState = { gameweek: number; phase: string };
 type ScoreRow = {
-  gameweek: number;
-  minutes: number;
+  player_id: number;
+  points: number;
+  latest_gameweek: number | null;
+  latest_status: string | null;
   goals: number;
   assists: number;
-  shots_on_target: number;
-  big_chances_missed: number;
-  completed_passes: number;
-  tackles_won: number;
-  penalty_goals: number;
-  penalties_missed: number;
-  penalties_conceded: number;
-  saves: number;
-  penalties_saved: number;
-  goals_conceded: number;
-  yellow_cards: number;
-  second_yellow_cards: number;
-  red_cards: number;
-  own_goals: number;
-  man_of_the_match: boolean;
-  status: string;
-  players: {
-    id: number;
-    full_name: string;
-    position: string;
-    club: string;
-    competition: string;
-    photo_url: string | null;
-  } | null;
 };
 type PlayerPulse = {
   id: number;
@@ -248,14 +225,7 @@ export function HomeDashboard() {
           )
           .eq("league_id", active.league_id)
           .order("gameweek", { ascending: false }),
-        supabase
-          .from("league_player_scores")
-          .select(
-            "gameweek,minutes,goals,assists,shots_on_target,big_chances_missed,completed_passes,tackles_won,penalty_goals,penalties_missed,penalties_conceded,saves,penalties_saved,goals_conceded,yellow_cards,second_yellow_cards,red_cards,own_goals,man_of_the_match,status,players(id,full_name,position,club,competition,photo_url)",
-          )
-          .eq("league_id", active.league_id)
-          .order("gameweek", { ascending: false })
-          .limit(1000),
+        supabase.rpc("player_season_totals"),
         supabase
           .from("league_headline_fixtures")
           .select(
@@ -272,43 +242,26 @@ export function HomeDashboard() {
       transactionWindow =
         ((w.data ?? [])[0] as WindowState | undefined) ?? null,
       scoreRows = (scoreResult.data ?? []) as unknown as ScoreRow[],
-      latestScoreWeek =
-        transactionWindow?.gameweek ??
-        Math.max(0, ...scoreRows.map((row) => row.gameweek)),
+      scoredPlayerIds = scoreRows.map(row=>row.player_id),
+      {data:pulsePlayers}=scoredPlayerIds.length?await supabase.from("players").select("id,full_name,position,club,competition,photo_url").in("id",scoredPlayerIds):{data:[]},
+      pulsePlayerMap=new Map((pulsePlayers??[]).map(player=>[player.id,player])),
       pulse = scoreRows
-        .filter((row) => row.gameweek === latestScoreWeek && row.players)
-        .map((row) => ({
-          id: row.players!.id,
-          name: row.players!.full_name,
-          club: row.players!.club,
-          position: row.players!.position,
-          competition: row.players!.competition,
-          photo_url: row.players!.photo_url,
-          gameweek: row.gameweek,
+        .filter((row) => Number(row.points)!==0 && pulsePlayerMap.has(row.player_id))
+        .map((row) => {
+          const player=pulsePlayerMap.get(row.player_id)!;
+          return {
+          id: player.id,
+          name: player.full_name,
+          club: player.club,
+          position: player.position,
+          competition: player.competition,
+          photo_url: player.photo_url,
+          gameweek: row.latest_gameweek??0,
           goals: row.goals,
           assists: row.assists,
-          status: row.status,
-          points: calculateScore({
-            position: row.players!.position as Position,
-            minutes: row.minutes,
-            goals: row.goals,
-            assists: row.assists,
-            shotsOnTarget: row.shots_on_target,
-            completedPasses: row.completed_passes,
-            tacklesWon: row.tackles_won,
-            penaltyGoals: row.penalty_goals,
-            penaltiesMissed: row.penalties_missed,
-            penaltiesConceded: row.penalties_conceded,
-            saves: row.saves,
-            penaltiesSaved: row.penalties_saved,
-            goalsConceded: row.goals_conceded,
-            yellowCards: row.yellow_cards,
-            secondYellowCards: row.second_yellow_cards,
-            redCards: row.red_cards,
-            ownGoals: row.own_goals,
-            manOfTheMatch: row.man_of_the_match,
-          }).total,
-        }))
+          status: row.latest_status??"NS",
+          points: Number(row.points),
+        }})
         .sort((a, b) => b.points - a.points)
         .slice(0, 5);
     setDraft((d.data as Draft | null) ?? null);
