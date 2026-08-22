@@ -79,12 +79,11 @@ export async function GET(request:NextRequest){
     }));
     if(fixtureUpdates.some(ok=>!ok))throw new Error("Fixture status update failed");
 
-    // The full fixture response carries the live player statistics in the same
-    // single request. This is more reliable during a match than observing the
-    // score from /fixtures?live=all and then reading a separate player endpoint.
+    // Always use the dedicated player-stat endpoint. Some competitions return
+    // player shells from the fixture endpoint with empty statistics arrays.
     const livePages=await Promise.all(liveFixtures.map(async fixture=>{
-      const body=await apiFootball<FixtureDetailPage>(`fixtures?id=${fixture.fixture.id}`);
-      return{fixture,teams:body.response[0]?.players??[]};
+      const body=await apiFootball<PlayersPage>(`fixtures/players?fixture=${fixture.fixture.id}`);
+      return{fixture,teams:body.response};
     }));
     requestsUsed+=livePages.length;
     const recoveredPlayerPages=await Promise.all(recoveredPages.map(async fixture=>{
