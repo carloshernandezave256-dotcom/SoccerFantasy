@@ -88,7 +88,6 @@ export async function GET(request:NextRequest){
     }));
     requestsUsed+=livePages.length;
     const recoveredPlayerPages=await Promise.all(recoveredPages.map(async fixture=>{
-      if(fixture.players?.length)return{fixture,teams:fixture.players};
       const body=await apiFootball<PlayersPage>(`fixtures/players?fixture=${fixture.fixture.id}`);
       requestsUsed+=1;
       return{fixture,teams:body.response};
