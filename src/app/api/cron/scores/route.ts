@@ -60,8 +60,12 @@ export async function GET(request:NextRequest){
       return body.response[0]??null;
     }));
     requestsUsed+=droppedPages.length;
-    const finalizedPages=droppedPages.filter((item):item is FixtureDetail=>item!==null&&terminal.has(item.fixture.status.short));
-    const fixtures=[...liveFixtures,...finalizedPages];
+    // Some competitions can be missing from `fixtures?live=all` even though an
+    // individual fixture lookup reports that the match is in progress. Keep
+    // every successfully recovered candidate, not only newly final matches, so
+    // those leagues still receive live player statistics.
+    const recoveredPages=droppedPages.filter((item):item is FixtureDetail=>item!==null);
+    const fixtures=[...liveFixtures,...recoveredPages];
     if(!fixtures.length)return NextResponse.json({ok:true,ranAt:now.toISOString(),requestsUsed,fixturesEligible:candidates.length,fixturesLive:0,reason:"Cached fixtures were near kickoff, but none is live or newly final at the provider."});
     const fixtureIds=fixtures.map(item=>item.fixture.id);
 
@@ -83,7 +87,7 @@ export async function GET(request:NextRequest){
       return{fixture,teams:body.response[0]?.players??[]};
     }));
     requestsUsed+=livePages.length;
-    const pages=[...livePages,...finalizedPages.map(fixture=>({fixture,teams:fixture.players??[]}))];
+    const pages=[...livePages,...recoveredPages.map(fixture=>({fixture,teams:fixture.players??[]}))];
     const apiIds=[...new Set(pages.flatMap(({teams})=>teams.flatMap(team=>team.players.map(entry=>entry.player.id))))];
     const playersResponse=apiIds.length?await fetch(`${url}/rest/v1/players?api_football_id=in.(${apiIds.join(",")})&select=id,api_football_id`,{headers:headers(key),cache:"no-store"}):null;
     const players=playersResponse?.ok?await playersResponse.json() as Player[]:[];
