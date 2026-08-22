@@ -97,6 +97,7 @@ export function calculateScore(stats: PlayerMatchStats): ScoreResult {
   add("second-yellow", "Second-yellow dismissals", `${countLabel(stats.secondYellowCards ?? 0, "second-yellow dismissal")} · −2 FP each`, -(stats.secondYellowCards ?? 0) * 2);
   add("red", "Straight red cards", `${countLabel(stats.redCards ?? 0, "straight red card")} · −3 FP each`, -(stats.redCards ?? 0) * 3);
   add("own-goals", "Own goals", `${countLabel(stats.ownGoals ?? 0, "own goal")} · −3 FP each`, -(stats.ownGoals ?? 0) * 3);
+  if (stats.manOfTheMatch) add("motm", "Man of the Match", "Man of the Match · 2 FP", 2);
   if (stats.captain) {
     const baseTotal = entries.reduce((sum, entry) => sum + entry.points, 0);
     entries.push({
