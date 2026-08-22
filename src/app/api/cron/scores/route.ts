@@ -38,7 +38,12 @@ export async function GET(request:NextRequest){
   const claimed=await claim.json() as Array<{singleton_id:number}>;
   if(!claimed.length)return NextResponse.json({ok:true,ranAt:now.toISOString(),requestsUsed:0,reason:"A shared live-score synchronization is already running."});
   const windowStart=new Date(now.getTime()-4*60*60*1000).toISOString();
-  const query=new URLSearchParams({select:"fixture_id,status,kickoff",and:`(kickoff.gte.${windowStart},kickoff.lte.${now.toISOString()},status.not.in.(FT,AET,PEN,PST,CANC,ABD,AWD,WO))`});
+  // Keep recently completed matches in the polling set. Providers often mark a
+  // fixture FT before the final player-stat payload (minutes, assists, passes,
+  // etc.) has caught up. A 150-minute kickoff window gives that payload time to
+  // settle without polling completed matches indefinitely.
+  const finalizationStart=new Date(now.getTime()-150*60*1000).toISOString();
+  const query=new URLSearchParams({select:"fixture_id,status,kickoff",and:`(kickoff.gte.${windowStart},kickoff.lte.${now.toISOString()})`,or:`(status.not.in.(FT,AET,PEN,PST,CANC,ABD,AWD,WO),and(status.in.(FT,AET,PEN),kickoff.gte.${finalizationStart}))`});
   const candidatesResponse=await fetch(`${url}/rest/v1/football_fixture_cache?${query}`,{headers:headers(key),cache:"no-store"});
   if(!candidatesResponse.ok)return NextResponse.json({error:(await candidatesResponse.text())||"Could not read the fixture cache."},{status:502});
   const candidates=await candidatesResponse.json() as CachedFixture[];
