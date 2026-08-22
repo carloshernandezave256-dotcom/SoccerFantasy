@@ -87,7 +87,13 @@ export async function GET(request:NextRequest){
       return{fixture,teams:body.response[0]?.players??[]};
     }));
     requestsUsed+=livePages.length;
-    const pages=[...livePages,...recoveredPages.map(fixture=>({fixture,teams:fixture.players??[]}))];
+    const recoveredPlayerPages=await Promise.all(recoveredPages.map(async fixture=>{
+      if(fixture.players?.length)return{fixture,teams:fixture.players};
+      const body=await apiFootball<PlayersPage>(`fixtures/players?fixture=${fixture.fixture.id}`);
+      requestsUsed+=1;
+      return{fixture,teams:body.response};
+    }));
+    const pages=[...livePages,...recoveredPlayerPages];
     const apiIds=[...new Set(pages.flatMap(({teams})=>teams.flatMap(team=>team.players.map(entry=>entry.player.id))))];
     const playersResponse=apiIds.length?await fetch(`${url}/rest/v1/players?api_football_id=in.(${apiIds.join(",")})&select=id,api_football_id`,{headers:headers(key),cache:"no-store"}):null;
     const players=playersResponse?.ok?await playersResponse.json() as Player[]:[];
@@ -104,7 +110,8 @@ export async function GET(request:NextRequest){
     if(cachedStats.length){
       const response=await fetch(`${url}/rest/v1/football_fixture_player_stats?on_conflict=fixture_id,player_id`,{method:"POST",headers:{...headers(key),Prefer:"resolution=merge-duplicates,return=minimal"},body:JSON.stringify(cachedStats),cache:"no-store"});
       if(!response.ok)throw new Error((await response.text())||"Shared player-stat cache update failed");
-      await fetch(`${url}/rest/v1/football_fixture_cache?fixture_id=in.(${fixtureIds.join(",")})`,{method:"PATCH",headers:{...headers(key),Prefer:"return=minimal"},body:JSON.stringify({stats_synced_at:now.toISOString()}),cache:"no-store"});
+      const syncedFixtureIds=[...new Set(cachedStats.map(row=>row.fixture_id))];
+      await fetch(`${url}/rest/v1/football_fixture_cache?fixture_id=in.(${syncedFixtureIds.join(",")})`,{method:"PATCH",headers:{...headers(key),Prefer:"return=minimal"},body:JSON.stringify({stats_synced_at:now.toISOString()}),cache:"no-store"});
     }else{
       console.warn("[cron/scores] provider returned no mapped live player statistics",{fixtureIds});
     }
