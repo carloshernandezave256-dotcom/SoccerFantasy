@@ -68,10 +68,16 @@ describe("custom scoring", () => {
     expect(winner.entries.find((entry) => entry.code === "captain-bonus")?.points).toBe(3);
   });
 
+  it("rounds a fractional captain score down to a whole point", () => {
+    const captain = calculateScore({ position: "FWD", minutes: 90, goals: 1, captain: true });
+    expect(captain.total).toBe(7); // base 5 × 1.5 = 7.5, rounded down
+    expect(captain.entries.find((entry) => entry.code === "captain-bonus")?.points).toBe(2);
+  });
+
   it("awards two points for Man of the Match before the captain multiplier", () => {
     const result = calculateScore({ position: "FWD", minutes: 1, manOfTheMatch: true, captain: true });
     expect(result.entries.find((entry) => entry.code === "motm")?.points).toBe(2);
-    expect(result.total).toBe(4.5); // base 3 multiplied by 1.5
+    expect(result.total).toBe(4); // base 3 multiplied by 1.5, rounded down
   });
 
   it("also multiplies a negative captain score by 1.5", () => {
