@@ -100,11 +100,12 @@ export function calculateScore(stats: PlayerMatchStats): ScoreResult {
   if (stats.manOfTheMatch) add("motm", "Man of the Match", "Man of the Match · 2 FP", 2);
   if (stats.captain) {
     const baseTotal = entries.reduce((sum, entry) => sum + entry.points, 0);
+    const captainTotal = Math.floor(baseTotal * 1.5);
     entries.push({
       code: "captain-bonus",
       label: "Captain +50%",
-      detail: "Captain earns 50% additional fantasy points",
-      points: baseTotal * 0.5,
+      detail: "Captain earns 50% additional fantasy points · final score rounded down",
+      points: captainTotal - baseTotal,
     });
   }
 
