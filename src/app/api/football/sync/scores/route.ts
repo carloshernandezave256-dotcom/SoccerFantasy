@@ -8,10 +8,10 @@ const competitions:Record<string,number>={"Premier League":39,"La Liga":140,"Ser
 const finalStatuses=new Set(["FT","AET","PEN"]);
 const unstartedStatuses=new Set(["TBD","NS","PST","CANC","ABD","AWD","WO"]);
 
-type Fixture={fixture:{id:number;date:string;status:{short:string}};league:{round:string};teams:{home:{name:string};away:{name:string}};goals:{home:number|null;away:number|null}};
+type Fixture={fixture:{id:number;date:string;status:{short:string}};league:{round:string};teams:{home:{id:number;name:string};away:{id:number;name:string}};goals:{home:number|null;away:number|null}};
 type FixturePage={response:Fixture[]};
 type ApiPlayer={player:{id:number};statistics:Array<{games:{minutes:number|null;rating:string|null};shots:{on:number|null};goals:{total:number|null;assists:number|null;conceded:number|null;saves:number|null};passes:{total:number|null;accuracy:number|string|null};tackles:{total:number|null};cards:{yellow:number|null;red:number|null};penalty:{scored:number|null;missed:number|null;saved:number|null;commited:number|null}}>};
-type PlayersPage={response:Array<{players:ApiPlayer[]}>};
+type PlayersPage={response:Array<{team:{id:number};players:ApiPlayer[]}>};
 type LeagueRow={calendar_competition:string;player_pool:string};
 type PlayerRow={id:number;api_football_id:number|null};
 
@@ -83,11 +83,12 @@ export async function POST(request:NextRequest){
 
     const fixturePlayers=await Promise.all(activeFixtures.map(async fixture=>({fixture,body:await apiFootball<PlayersPage>(`fixtures/players?fixture=${fixture.fixture.id}`)})));
     const statsByApiId=new Map<number,Record<string,number|boolean|null>>();
-    for(const {body:playerBody} of fixturePlayers){
-      const fixtureEntries=playerBody.response.flatMap(team=>team.players).flatMap(entry=>entry.statistics.slice(0,1).map(stat=>({entry,stat})));
-      for(const {entry,stat} of fixtureEntries){
+    for(const {fixture,body:playerBody} of fixturePlayers){
+      const fixtureEntries=playerBody.response.flatMap(team=>team.players.flatMap(entry=>entry.statistics.slice(0,1).map(stat=>({entry,stat,teamId:team.team.id}))));
+      for(const {entry,stat,teamId} of fixtureEntries){
         const rating=Number(stat.games.rating)||0;
-        statsByApiId.set(entry.player.id,{rating:rating>0?rating:null,minutes:stat.games.minutes??0,goals:stat.goals.total??0,assists:stat.goals.assists??0,shots_on_target:stat.shots.on??0,big_chances_missed:0,completed_passes:completedPassesFromApi(stat.passes.total,stat.passes.accuracy),tackles_won:stat.tackles.total??0,penalty_goals:stat.penalty.scored??0,penalties_missed:stat.penalty.missed??0,penalties_conceded:stat.penalty.commited??0,saves:stat.goals.saves??0,penalties_saved:stat.penalty.saved??0,goals_conceded:stat.goals.conceded??0,yellow_cards:stat.cards.yellow??0,second_yellow_cards:0,red_cards:stat.cards.red??0,own_goals:0,man_of_the_match:false});
+        const teamGoalsConceded=teamId===fixture.teams.home.id?fixture.goals.away:teamId===fixture.teams.away.id?fixture.goals.home:null;
+        statsByApiId.set(entry.player.id,{rating:rating>0?rating:null,minutes:stat.games.minutes??0,goals:stat.goals.total??0,assists:stat.goals.assists??0,shots_on_target:stat.shots.on??0,big_chances_missed:0,completed_passes:completedPassesFromApi(stat.passes.total,stat.passes.accuracy),tackles_won:stat.tackles.total??0,penalty_goals:stat.penalty.scored??0,penalties_missed:stat.penalty.missed??0,penalties_conceded:stat.penalty.commited??0,saves:stat.goals.saves??0,penalties_saved:stat.penalty.saved??0,goals_conceded:teamGoalsConceded??stat.goals.conceded??0,yellow_cards:stat.cards.yellow??0,second_yellow_cards:0,red_cards:stat.cards.red??0,own_goals:0,man_of_the_match:false});
       }
     }
     const weeklyManOfTheMatchApiId=allFinal?selectManOfTheMatchId([...statsByApiId.entries()].map(([playerId,stats])=>({playerId,rating:Number(stats.rating)||0,minutes:Number(stats.minutes)||0,goals:Number(stats.goals)||0,assists:Number(stats.assists)||0,shotsOnTarget:Number(stats.shots_on_target)||0}))):null;
