@@ -8,8 +8,8 @@ const terminal=new Set(["FT","AET","PEN","PST","CANC","ABD","AWD","WO"]);
 type CachedFixture={fixture_id:number;status:string;kickoff:string};
 type LiveFixture={fixture:{id:number;date:string;status:{short:string}};teams:{home:{id:number};away:{id:number}};goals:{home:number|null;away:number|null}};
 type LivePage={response:LiveFixture[]};
-type ApiPlayer={player:{id:number};statistics:Array<{games:{minutes:number|null;rating:string|null};shots:{on:number|null};goals:{total:number|null;assists:number|null;conceded:number|null;saves:number|null};passes:{total:number|null;accuracy:number|string|null};tackles:{total:number|null};cards:{yellow:number|null;red:number|null};penalty:{scored:number|null;missed:number|null;saved:number|null;commited:number|null}}>};
-type PlayersPage={response:Array<{team:{id:number};players:ApiPlayer[]}>};
+type ApiPlayer={player:{id:number;name:string};statistics:Array<{games:{minutes:number|null;rating:string|null};shots:{on:number|null};goals:{total:number|null;assists:number|null;conceded:number|null;saves:number|null};passes:{total:number|null;accuracy:number|string|null};tackles:{total:number|null};cards:{yellow:number|null;red:number|null};penalty:{scored:number|null;missed:number|null;saved:number|null;commited:number|null}}>};
+type PlayersPage={response:Array<{team:{id:number;name:string};players:ApiPlayer[]}>};
 type FixtureDetail=LiveFixture&{players?:PlayersPage["response"]};
 type FixtureDetailPage={response:FixtureDetail[]};
 type Player={id:number;api_football_id:number|null};
@@ -112,17 +112,24 @@ export async function GET(request:NextRequest){
     const cachedStats:StatRow[]=[];
     const providerRowsByFixture=new Map<number,number>();
     const mappedRowsByFixture=new Map<number,number>();
+    const unmappedPlayersByFixture=new Map<number,Array<{api_football_id:number;name:string;team_id:number;team_name:string}>>();
     for(const {fixture,teams} of pages){
-      const entries=teams.flatMap(team=>team.players.flatMap(entry=>entry.statistics.slice(0,1).map(stat=>({entry,stat,teamId:team.team.id}))));
+      const entries=teams.flatMap(team=>team.players.flatMap(entry=>entry.statistics.slice(0,1).map(stat=>({entry,stat,teamId:team.team.id,teamName:team.team.name}))));
       providerRowsByFixture.set(fixture.fixture.id,entries.length);
-      for(const {entry,stat,teamId} of entries){
-        const playerId=internalByApi.get(entry.player.id);if(!playerId)continue;
+      for(const {entry,stat,teamId,teamName} of entries){
+        const playerId=internalByApi.get(entry.player.id);
+        if(!playerId){
+          const unmapped=unmappedPlayersByFixture.get(fixture.fixture.id)??[];
+          unmapped.push({api_football_id:entry.player.id,name:entry.player.name,team_id:teamId,team_name:teamName});
+          unmappedPlayersByFixture.set(fixture.fixture.id,unmapped);
+          continue;
+        }
         const teamGoalsConceded=teamId===fixture.teams.home.id?fixture.goals.away:teamId===fixture.teams.away.id?fixture.goals.home:null;
         cachedStats.push({fixture_id:fixture.fixture.id,player_id:playerId,rating:Number(stat.games.rating)||null,minutes:stat.games.minutes??0,goals:stat.goals.total??0,assists:stat.goals.assists??0,shots_on_target:stat.shots.on??0,completed_passes:completedPassesFromApi(stat.passes.total,stat.passes.accuracy),tackles_won:stat.tackles.total??0,penalty_goals:stat.penalty.scored??0,penalties_missed:stat.penalty.missed??0,penalties_conceded:stat.penalty.commited??0,saves:stat.goals.saves??0,penalties_saved:stat.penalty.saved??0,goals_conceded:teamGoalsConceded??stat.goals.conceded??0,yellow_cards:stat.cards.yellow??0,red_cards:stat.cards.red??0,man_of_the_match:false,source_updated_at:now.toISOString()});
         mappedRowsByFixture.set(fixture.fixture.id,(mappedRowsByFixture.get(fixture.fixture.id)??0)+1);
       }
     }
-    await fetch(`${url}/rest/v1/football_fixture_sync_observations`,{method:"POST",headers:{...headers(key),Prefer:"return=minimal"},body:JSON.stringify(fixtures.map(fixture=>({fixture_id:fixture.fixture.id,observed_at:now.toISOString(),status:fixture.fixture.status.short,home_score:fixture.goals.home,away_score:fixture.goals.away,provider_player_rows:providerRowsByFixture.get(fixture.fixture.id)??0,mapped_player_rows:mappedRowsByFixture.get(fixture.fixture.id)??0}))),cache:"no-store"});
+    await fetch(`${url}/rest/v1/football_fixture_sync_observations`,{method:"POST",headers:{...headers(key),Prefer:"return=minimal"},body:JSON.stringify(fixtures.map(fixture=>({fixture_id:fixture.fixture.id,observed_at:now.toISOString(),status:fixture.fixture.status.short,home_score:fixture.goals.home,away_score:fixture.goals.away,provider_player_rows:providerRowsByFixture.get(fixture.fixture.id)??0,mapped_player_rows:mappedRowsByFixture.get(fixture.fixture.id)??0,unmapped_players:unmappedPlayersByFixture.get(fixture.fixture.id)??[]}))),cache:"no-store"});
     console.info("[cron/scores] live player payload",{fixtureIds,providerPlayers:apiIds.length,mappedPlayers:cachedStats.length});
     if(cachedStats.length){
       const response=await fetch(`${url}/rest/v1/football_fixture_player_stats?on_conflict=fixture_id,player_id`,{method:"POST",headers:{...headers(key),Prefer:"resolution=merge-duplicates,return=minimal"},body:JSON.stringify(cachedStats),cache:"no-store"});
