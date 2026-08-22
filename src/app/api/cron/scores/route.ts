@@ -31,7 +31,9 @@ export async function GET(request:NextRequest){
   const key=process.env.SUPABASE_SERVICE_ROLE_KEY;
   if(!key)return NextResponse.json({error:"Server database credential is not configured."},{status:503});
   const now=new Date();
-  const claim=await fetch(`${url}/rest/v1/football_sync_state?singleton_id=eq.1&live_claimed_until=lt.${now.toISOString()}`,{method:"PATCH",headers:{...headers(key),Prefer:"return=representation"},body:JSON.stringify({live_claimed_until:new Date(now.getTime()+150000).toISOString(),updated_at:now.toISOString()}),cache:"no-store"});
+  // Keep the overlap guard shorter than the two-minute scheduler cadence so
+  // every scheduled run can execute while a genuinely stuck run still expires.
+  const claim=await fetch(`${url}/rest/v1/football_sync_state?singleton_id=eq.1&live_claimed_until=lt.${now.toISOString()}`,{method:"PATCH",headers:{...headers(key),Prefer:"return=representation"},body:JSON.stringify({live_claimed_until:new Date(now.getTime()+105000).toISOString(),updated_at:now.toISOString()}),cache:"no-store"});
   if(!claim.ok)return NextResponse.json({error:(await claim.text())||"Could not claim the shared synchronization lock."},{status:502});
   const claimed=await claim.json() as Array<{singleton_id:number}>;
   if(!claimed.length)return NextResponse.json({ok:true,ranAt:now.toISOString(),requestsUsed:0,reason:"A shared live-score synchronization is already running."});
