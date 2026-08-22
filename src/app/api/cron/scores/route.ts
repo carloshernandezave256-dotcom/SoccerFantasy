@@ -38,10 +38,13 @@ export async function GET(request:NextRequest){
   const claimed=await claim.json() as Array<{singleton_id:number}>;
   if(!claimed.length)return NextResponse.json({ok:true,ranAt:now.toISOString(),requestsUsed:0,reason:"A shared live-score synchronization is already running."});
   const windowStart=new Date(now.getTime()-4*60*60*1000).toISOString();
+  const forcedFixtureId=Number(request.nextUrl.searchParams.get("fixtureId")??0);
   // Poll every cached Top-5 fixture for four full hours after kickoff,
   // regardless of status. Fixture status and player statistics can settle at
   // different times, so FT must never stop the player-stat refresh early.
-  const query=new URLSearchParams({select:"fixture_id,status,kickoff",and:`(kickoff.gte.${windowStart},kickoff.lte.${now.toISOString()})`});
+  const query=Number.isSafeInteger(forcedFixtureId)&&forcedFixtureId>0
+    ?new URLSearchParams({select:"fixture_id,status,kickoff",fixture_id:`eq.${forcedFixtureId}`})
+    :new URLSearchParams({select:"fixture_id,status,kickoff",and:`(kickoff.gte.${windowStart},kickoff.lte.${now.toISOString()})`});
   const candidatesResponse=await fetch(`${url}/rest/v1/football_fixture_cache?${query}`,{headers:headers(key),cache:"no-store"});
   if(!candidatesResponse.ok)return NextResponse.json({error:(await candidatesResponse.text())||"Could not read the fixture cache."},{status:502});
   const candidates=await candidatesResponse.json() as CachedFixture[];
