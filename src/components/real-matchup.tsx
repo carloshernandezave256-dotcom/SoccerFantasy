@@ -152,9 +152,10 @@ export function RealMatchup(){
         if(!row||!lineupSet)return{...player,captain,score:0,rating:null,manOfTheMatch:false,status:"not_started",ledger:[],goals:0,assists:0,yellowCards:0,redCards:0};
         const baseScore=Number(row.fantasy_points??0);
         const ledger=Array.isArray(row.score_ledger)?row.score_ledger:[];
-        const captainBonus=captain?baseScore*0.5:0;
-        const scoredLedger=captain?[...ledger,{code:"captain-bonus",label:"Captain +50%",detail:"Captain earns 50% additional fantasy points",points:captainBonus}]:ledger;
-        return{...player,captain,score:baseScore+captainBonus,rating:row.rating,manOfTheMatch:row.man_of_the_match,status:row.status,ledger:scoredLedger,goals:row.goals,assists:row.assists,yellowCards:row.yellow_cards,redCards:row.red_cards};
+        const captainScore=captain?Math.floor(baseScore*1.5):baseScore;
+        const captainBonus=captainScore-baseScore;
+        const scoredLedger=captain?[...ledger,{code:"captain-bonus",label:"Captain +50%",detail:"Captain earns 50% additional fantasy points · final score rounded down",points:captainBonus}]:ledger;
+        return{...player,captain,score:captainScore,rating:row.rating,manOfTheMatch:row.man_of_the_match,status:row.status,ledger:scoredLedger,goals:row.goals,assists:row.assists,yellowCards:row.yellow_cards,redCards:row.red_cards};
       };
       const build=(owner:string,score:number|string):TeamView=>{
         const snapshot=snapshotRows.filter(row=>row.user_id===owner&&row.is_starter&&row.players).map(row=>({...row,is_captain:row.is_star_pick}));
