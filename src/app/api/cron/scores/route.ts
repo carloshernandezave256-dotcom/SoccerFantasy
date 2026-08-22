@@ -38,12 +38,10 @@ export async function GET(request:NextRequest){
   const claimed=await claim.json() as Array<{singleton_id:number}>;
   if(!claimed.length)return NextResponse.json({ok:true,ranAt:now.toISOString(),requestsUsed:0,reason:"A shared live-score synchronization is already running."});
   const windowStart=new Date(now.getTime()-4*60*60*1000).toISOString();
-  // Keep recently completed matches in the polling set. Providers often mark a
-  // fixture FT before the final player-stat payload (minutes, assists, passes,
-  // etc.) has caught up. A 150-minute kickoff window gives that payload time to
-  // settle without polling completed matches indefinitely.
-  const finalizationStart=new Date(now.getTime()-150*60*1000).toISOString();
-  const query=new URLSearchParams({select:"fixture_id,status,kickoff",and:`(kickoff.gte.${windowStart},kickoff.lte.${now.toISOString()})`,or:`(status.not.in.(FT,AET,PEN,PST,CANC,ABD,AWD,WO),and(status.in.(FT,AET,PEN),kickoff.gte.${finalizationStart}))`});
+  // Poll every cached Top-5 fixture for four full hours after kickoff,
+  // regardless of status. Fixture status and player statistics can settle at
+  // different times, so FT must never stop the player-stat refresh early.
+  const query=new URLSearchParams({select:"fixture_id,status,kickoff",and:`(kickoff.gte.${windowStart},kickoff.lte.${now.toISOString()})`});
   const candidatesResponse=await fetch(`${url}/rest/v1/football_fixture_cache?${query}`,{headers:headers(key),cache:"no-store"});
   if(!candidatesResponse.ok)return NextResponse.json({error:(await candidatesResponse.text())||"Could not read the fixture cache."},{status:502});
   const candidates=await candidatesResponse.json() as CachedFixture[];
@@ -73,9 +71,19 @@ export async function GET(request:NextRequest){
     const fixtures=[...liveFixtures,...recoveredPages];
     if(!fixtures.length)return NextResponse.json({ok:true,ranAt:now.toISOString(),requestsUsed,fixturesEligible:candidates.length,fixturesLive:0,reason:"Cached fixtures were near kickoff, but none is live or newly final at the provider."});
     const fixtureIds=fixtures.map(item=>item.fixture.id);
+    const confirmationWindowStart=new Date(now.getTime()-10*60*1000).toISOString();
+    const priorObservationsResponse=await fetch(`${url}/rest/v1/football_fixture_sync_observations?fixture_id=in.(${fixtureIds.join(",")})&observed_at=gte.${confirmationWindowStart}&select=fixture_id,status,observed_at&order=observed_at.desc`,{headers:headers(key),cache:"no-store"});
+    const priorObservations=priorObservationsResponse.ok?await priorObservationsResponse.json() as Array<{fixture_id:number;status:string}>:[];
+    const priorStatusByFixture=new Map<number,string>();
+    for(const observation of priorObservations)if(!priorStatusByFixture.has(observation.fixture_id))priorStatusByFixture.set(observation.fixture_id,observation.status);
+    const cachedByFixture=new Map(candidates.map(candidate=>[candidate.fixture_id,candidate]));
 
     const fixtureUpdates=await Promise.all(fixtures.map(async item=>{
-      const values={status:item.fixture.status.short,kickoff:item.fixture.date,home_score:item.goals.home,away_score:item.goals.away,updated_at:now.toISOString()};
+      const providerStatus=item.fixture.status.short;
+      const priorStatus=priorStatusByFixture.get(item.fixture.id);
+      const terminalConfirmed=!terminal.has(providerStatus)||Boolean(priorStatus&&terminal.has(priorStatus));
+      const status=terminalConfirmed?providerStatus:cachedByFixture.get(item.fixture.id)?.status??providerStatus;
+      const values={status,kickoff:item.fixture.date,home_score:item.goals.home,away_score:item.goals.away,updated_at:now.toISOString()};
       const [canonical,leagueCopies]=await Promise.all([
         fetch(`${url}/rest/v1/football_fixture_cache?fixture_id=eq.${item.fixture.id}`,{method:"PATCH",headers:{...headers(key),Prefer:"return=minimal"},body:JSON.stringify(values),cache:"no-store"}),
         fetch(`${url}/rest/v1/league_headline_fixtures?fixture_id=eq.${item.fixture.id}`,{method:"PATCH",headers:{...headers(key),Prefer:"return=minimal"},body:JSON.stringify(values),cache:"no-store"}),
