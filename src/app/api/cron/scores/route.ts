@@ -8,7 +8,7 @@ const terminal=new Set(["FT","AET","PEN","PST","CANC","ABD","AWD","WO"]);
 type CachedFixture={fixture_id:number;status:string;kickoff:string};
 type LiveFixture={fixture:{id:number;date:string;status:{short:string}};teams:{home:{id:number};away:{id:number}};goals:{home:number|null;away:number|null}};
 type LivePage={response:LiveFixture[]};
-type ApiPlayer={player:{id:number;name:string};statistics:Array<{games:{minutes:number|null;rating:string|null};shots:{on:number|null};goals:{total:number|null;assists:number|null;conceded:number|null;saves:number|null};passes:{total:number|null;accuracy:number|string|null};tackles:{total:number|null};cards:{yellow:number|null;red:number|null};penalty:{scored:number|null;missed:number|null;saved:number|null;commited:number|null}}>};
+type ApiPlayer={player:{id:number;name:string};statistics:Array<{games:{minutes:number|null;rating:string|null;position:string|null};shots:{on:number|null};goals:{total:number|null;assists:number|null;conceded:number|null;saves:number|null};passes:{total:number|null;accuracy:number|string|null};tackles:{total:number|null};cards:{yellow:number|null;red:number|null};penalty:{scored:number|null;missed:number|null;saved:number|null;commited:number|null}}>};
 type PlayersPage={response:Array<{team:{id:number;name:string};players:ApiPlayer[]}>};
 type FixtureDetail=LiveFixture&{players?:PlayersPage["response"]};
 type FixtureDetailPage={response:FixtureDetail[]};
@@ -112,7 +112,7 @@ export async function GET(request:NextRequest){
     const cachedStats:StatRow[]=[];
     const providerRowsByFixture=new Map<number,number>();
     const mappedRowsByFixture=new Map<number,number>();
-    const unmappedPlayersByFixture=new Map<number,Array<{api_football_id:number;name:string;team_id:number;team_name:string}>>();
+    const unmappedPlayersByFixture=new Map<number,Array<{api_football_id:number;name:string;team_id:number;team_name:string;position:string|null;minutes:number}>>();
     for(const {fixture,teams} of pages){
       const entries=teams.flatMap(team=>team.players.flatMap(entry=>entry.statistics.slice(0,1).map(stat=>({entry,stat,teamId:team.team.id,teamName:team.team.name}))));
       providerRowsByFixture.set(fixture.fixture.id,entries.length);
@@ -120,7 +120,7 @@ export async function GET(request:NextRequest){
         const playerId=internalByApi.get(entry.player.id);
         if(!playerId){
           const unmapped=unmappedPlayersByFixture.get(fixture.fixture.id)??[];
-          unmapped.push({api_football_id:entry.player.id,name:entry.player.name,team_id:teamId,team_name:teamName});
+          unmapped.push({api_football_id:entry.player.id,name:entry.player.name,team_id:teamId,team_name:teamName,position:stat.games.position,minutes:stat.games.minutes??0});
           unmappedPlayersByFixture.set(fixture.fixture.id,unmapped);
           continue;
         }
