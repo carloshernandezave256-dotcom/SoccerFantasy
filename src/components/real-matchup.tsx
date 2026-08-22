@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PageShell } from "./page-shell";
 import { supabase } from "@/lib/supabase";
-import { calculateScore, type LedgerEntry, type PlayerMatchStats, type Position } from "@/lib/scoring";
+import { type LedgerEntry } from "@/lib/scoring";
 import { resolveActiveLeague } from "@/lib/active-league";
 import { PlayerHeadshot } from "./player-headshot";
 
@@ -12,7 +12,7 @@ type Manager={draft_slot:number;user_id:string;team_name:string};
 type Matchup={id:string;gameweek:number;home_user_id:string;away_user_id:string;home_score:number|string;away_score:number|string;status:"scheduled"|"live"|"final"};
 type Player={id:number;full_name:string;position:string;club:string;photo_url?:string|null;captain?:boolean;score:number;rating:number|null;manOfTheMatch:boolean;status:"not_started"|"live"|"final";ledger:LedgerEntry[];goals:number;assists:number;yellowCards:number;redCards:number};
 type TeamView={userId:string;name:string;score:number;players:Player[];lineupSet:boolean};
-type ScoreRow={player_id:number;rating:number|null;minutes:number;goals:number;assists:number;shots_on_target:number;big_chances_missed:number;completed_passes:number;tackles_won:number;penalty_goals:number;penalties_missed:number;penalties_conceded:number;saves:number;penalties_saved:number;goals_conceded:number;yellow_cards:number;second_yellow_cards:number;red_cards:number;own_goals:number;man_of_the_match:boolean;status:"not_started"|"live"|"final"};
+type ScoreRow={player_id:number;rating:number|null;minutes:number;goals:number;assists:number;shots_on_target:number;big_chances_missed:number;completed_passes:number;tackles_won:number;penalty_goals:number;penalties_missed:number;penalties_conceded:number;saves:number;penalties_saved:number;goals_conceded:number;yellow_cards:number;second_yellow_cards:number;red_cards:number;own_goals:number;man_of_the_match:boolean;status:"not_started"|"live"|"final";fantasy_points:number|string;score_ledger:LedgerEntry[]};
 type Standing={rank:number;user_id:string;team_name:string;played:number;wins:number;draws:number;losses:number;points:number;fantasy_points:number|string};
 
 const positionOrder:Record<string,number>={GK:0,DEF:1,MID:2,FWD:3};
@@ -135,7 +135,7 @@ export function RealMatchup(){
         supabase.from("lineup_players").select("user_id,is_starter,is_captain,players(id,full_name,position,club,photo_url)").eq("league_id",league.league_id).in("user_id",ids),
         supabase.from("lineup_gameweek_players").select("user_id,is_starter,is_star_pick,players(id,full_name,position,club,photo_url)").eq("league_id",league.league_id).eq("gameweek",gameweek).in("user_id",ids),
         supabase.from("draft_picks").select("user_id,pick_number,players(id,full_name,position,club,photo_url)").eq("league_id",league.league_id).in("user_id",ids).order("pick_number"),
-        supabase.from("league_player_scores").select("player_id,rating,minutes,goals,assists,shots_on_target,big_chances_missed,completed_passes,tackles_won,penalty_goals,penalties_missed,penalties_conceded,saves,penalties_saved,goals_conceded,yellow_cards,second_yellow_cards,red_cards,own_goals,man_of_the_match,status").eq("league_id",league.league_id).eq("gameweek",gameweek),
+        supabase.from("league_player_scores").select("player_id,rating,minutes,goals,assists,shots_on_target,big_chances_missed,completed_passes,tackles_won,penalty_goals,penalties_missed,penalties_conceded,saves,penalties_saved,goals_conceded,yellow_cards,second_yellow_cards,red_cards,own_goals,man_of_the_match,status,fantasy_points,score_ledger").eq("league_id",league.league_id).eq("gameweek",gameweek),
         supabase.from("league_matchups").select("home_score,away_score,status").eq("id",featured.id).single(),
         supabase.rpc("league_standings",{p_league_id:league.league_id}),
       ]);
@@ -150,9 +150,11 @@ export function RealMatchup(){
       const scoredPlayer=(player:Omit<Player,"score"|"rating"|"manOfTheMatch"|"status"|"ledger"|"goals"|"assists"|"yellowCards"|"redCards">,captain:boolean,lineupSet:boolean):Player=>{
         const row=scoreRows.find(score=>score.player_id===player.id);
         if(!row||!lineupSet)return{...player,captain,score:0,rating:null,manOfTheMatch:false,status:"not_started",ledger:[],goals:0,assists:0,yellowCards:0,redCards:0};
-        const stats:PlayerMatchStats={position:player.position as Position,minutes:row.minutes,goals:row.goals,assists:row.assists,shotsOnTarget:row.shots_on_target,completedPasses:row.completed_passes,tacklesWon:row.tackles_won,penaltyGoals:row.penalty_goals,penaltiesMissed:row.penalties_missed,penaltiesConceded:row.penalties_conceded,saves:row.saves,penaltiesSaved:row.penalties_saved,goalsConceded:row.goals_conceded,yellowCards:row.yellow_cards,secondYellowCards:row.second_yellow_cards,redCards:row.red_cards,ownGoals:row.own_goals,captain,status:row.status};
-        const result=calculateScore(stats);
-        return{...player,captain,score:result.total,rating:row.rating,manOfTheMatch:row.man_of_the_match,status:row.status,ledger:result.entries,goals:row.goals,assists:row.assists,yellowCards:row.yellow_cards,redCards:row.red_cards};
+        const baseScore=Number(row.fantasy_points??0);
+        const ledger=Array.isArray(row.score_ledger)?row.score_ledger:[];
+        const captainBonus=captain?baseScore*0.5:0;
+        const scoredLedger=captain?[...ledger,{code:"captain-bonus",label:"Captain +50%",detail:"Captain earns 50% additional fantasy points",points:captainBonus}]:ledger;
+        return{...player,captain,score:baseScore+captainBonus,rating:row.rating,manOfTheMatch:row.man_of_the_match,status:row.status,ledger:scoredLedger,goals:row.goals,assists:row.assists,yellowCards:row.yellow_cards,redCards:row.red_cards};
       };
       const build=(owner:string,score:number|string):TeamView=>{
         const snapshot=snapshotRows.filter(row=>row.user_id===owner&&row.is_starter&&row.players).map(row=>({...row,is_captain:row.is_star_pick}));
