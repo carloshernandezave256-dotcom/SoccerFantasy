@@ -4,7 +4,7 @@ import { calculateScore, isTerminalMatchStatus, resolvePlayerScoreStatus } from 
 describe("custom scoring", () => {
   it("awards one point for each complete group of three shots on target", () => {
     const result = calculateScore({ position: "MID", minutes: 90, shotsOnTarget: 3, manOfTheMatch: true });
-    expect(result.total).toBe(3); // minutes 2 + one complete SOT group
+    expect(result.total).toBe(5); // minutes 2 + one complete SOT group + MOTM 2
     expect(calculateScore({ position: "MID", minutes: 90, shotsOnTarget: 2 }).total).toBe(2);
     expect(calculateScore({ position: "MID", minutes: 90, shotsOnTarget: 6 }).total).toBe(4);
   });
@@ -66,6 +66,12 @@ describe("custom scoring", () => {
     const winner = calculateScore({ position: "MID", minutes: 90, goals: 1, captain: true });
     expect(winner.total).toBe(9); // base 6 multiplied by 1.5
     expect(winner.entries.find((entry) => entry.code === "captain-bonus")?.points).toBe(3);
+  });
+
+  it("awards two points for Man of the Match before the captain multiplier", () => {
+    const result = calculateScore({ position: "FWD", minutes: 1, manOfTheMatch: true, captain: true });
+    expect(result.entries.find((entry) => entry.code === "motm")?.points).toBe(2);
+    expect(result.total).toBe(4.5); // base 3 multiplied by 1.5
   });
 
   it("also multiplies a negative captain score by 1.5", () => {
