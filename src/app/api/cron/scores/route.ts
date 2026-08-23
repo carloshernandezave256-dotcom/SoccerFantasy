@@ -3,6 +3,7 @@ import {apiFootball} from "@/lib/api-football-server";
 import {selectManOfTheMatchId} from "@/lib/match-awards";
 import {completedPassesFromApi} from "@/lib/api-football-stats";
 import {resolvePlayerScoreStatus} from "@/lib/scoring";
+import {fetchAllRestRows} from "@/lib/supabase-rest";
 
 const terminal=new Set(["FT","AET","PEN","PST","CANC","ABD","AWD","WO"]);
 type CachedFixture={fixture_id:number;status:string;kickoff:string};
@@ -169,8 +170,7 @@ export async function GET(request:NextRequest){
       const weekFixturesResponse=await fetch(`${url}/rest/v1/league_headline_fixtures?${fixtureQuery}`,{headers:headers(key),cache:"no-store"});
       const weekFixtures=weekFixturesResponse.ok?await weekFixturesResponse.json() as WeekFixture[]:[];
       const ids=weekFixtures.map(item=>item.fixture_id);if(!ids.length)continue;
-      const statsResponse=await fetch(`${url}/rest/v1/football_fixture_player_stats?fixture_id=in.(${ids.join(",")})&select=*`,{headers:headers(key),cache:"no-store"});
-      const stats=statsResponse.ok?await statsResponse.json() as StatRow[]:[];
+      const stats=await fetchAllRestRows<StatRow>(`${url}/rest/v1/football_fixture_player_stats?fixture_id=in.(${ids.join(",")})&select=*`,headers(key));
       const lineupResponse=await fetch(`${url}/rest/v1/lineup_players?league_id=eq.${leagueId}&select=player_id`,{headers:headers(key),cache:"no-store"});
       const lineup=lineupResponse.ok?await lineupResponse.json() as Array<{player_id:number}>:[];
       const playerIds=[...new Set([...lineup.map(item=>item.player_id),...stats.map(item=>item.player_id)])];
