@@ -3,15 +3,15 @@ import { calculateScore, isTerminalMatchStatus, resolvePlayerScoreStatus } from 
 
 describe("custom scoring", () => {
   it("awards one point for each complete group of three shots on target", () => {
-    const result = calculateScore({ position: "MID", minutes: 90, shotsOnTarget: 3, manOfTheMatch: true });
+    const result = calculateScore({ position: "MID", minutes: 90, shotsOnTarget: 3, manOfTheMatch: true, status: "live" });
     expect(result.total).toBe(5); // minutes 2 + one complete SOT group + MOTM 2
-    expect(calculateScore({ position: "MID", minutes: 90, shotsOnTarget: 2 }).total).toBe(2);
-    expect(calculateScore({ position: "MID", minutes: 90, shotsOnTarget: 6 }).total).toBe(4);
+    expect(calculateScore({ position: "MID", minutes: 90, shotsOnTarget: 2, status: "live" }).total).toBe(2);
+    expect(calculateScore({ position: "MID", minutes: 90, shotsOnTarget: 6, status: "live" }).total).toBe(4);
   });
 
   it("awards position goals and the hat-trick target bonus", () => {
     expect(calculateScore({ position: "FWD", minutes: 90, goals: 3 }).total).toBe(12); // 2 + 9 + 1
-    expect(calculateScore({ position: "MID", minutes: 90, goals: 3 }).total).toBe(17); // 2 + 12 + 3
+    expect(calculateScore({ position: "MID", minutes: 90, goals: 3, status: "live" }).total).toBe(17); // 2 + 12 + 3
   });
 
   it.each([
@@ -27,10 +27,19 @@ describe("custom scoring", () => {
   });
 
   it("uses complete threshold blocks", () => {
-    const result = calculateScore({ position: "DEF", minutes: 59, completedPasses: 29, tacklesWon: 5 });
+    const result = calculateScore({ position: "DEF", minutes: 59, completedPasses: 29, tacklesWon: 5, status: "live" });
     expect(result.total).toBe(4); // minutes 1 + passes 2 + tackles 1
     expect(result.entries.find((entry) => entry.code === "passes")?.detail).toBe("29 completed passes · 1 FP for every 10");
     expect(result.entries.find((entry) => entry.code === "tackles")?.detail).toBe("5 tackles won · 1 FP for every 3");
+  });
+
+  it("does not award or display tackle-won points for midfielders", () => {
+    const midfielder = calculateScore({ position: "MID", minutes: 90, tacklesWon: 8, status: "live" });
+    const defender = calculateScore({ position: "DEF", minutes: 90, tacklesWon: 8, status: "live" });
+
+    expect(midfielder.total).toBe(2); // minutes only; no tackle points
+    expect(midfielder.entries.find((entry) => entry.code === "tackles")).toBeUndefined();
+    expect(defender.entries.find((entry) => entry.code === "tackles")?.points).toBe(2);
   });
 
   it.each(["GK", "DEF", "MID", "FWD"] as const)("awards completed-pass points to %s players", (position) => {
@@ -63,7 +72,7 @@ describe("custom scoring", () => {
   });
 
   it("gives the captain exactly 50 percent additional fantasy points", () => {
-    const winner = calculateScore({ position: "MID", minutes: 90, goals: 1, captain: true });
+    const winner = calculateScore({ position: "MID", minutes: 90, goals: 1, captain: true, status: "live" });
     expect(winner.total).toBe(9); // base 6 multiplied by 1.5
     expect(winner.entries.find((entry) => entry.code === "captain-bonus")?.points).toBe(3);
   });

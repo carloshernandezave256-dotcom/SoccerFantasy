@@ -72,7 +72,9 @@ export function calculateScore(stats: PlayerMatchStats): ScoreResult {
   // Latest Dreamflow clarifications supersede the earlier spreadsheet thresholds.
   add("shots-on-target", "Shots on target", `${countLabel(stats.shotsOnTarget ?? 0, "shot")} on target · 1 FP for every 3`, Math.floor((stats.shotsOnTarget ?? 0) / 3));
   add("passes", "Completed passes", `${countLabel(stats.completedPasses ?? 0, "completed pass", "completed passes")} · 1 FP for every 10`, Math.floor((stats.completedPasses ?? 0) / 10));
-  add("tackles", "Tackles won", `${countLabel(stats.tacklesWon ?? 0, "tackle")} won · 1 FP for every 3`, Math.floor((stats.tacklesWon ?? 0) / 3));
+  if (stats.position !== "MID") {
+    add("tackles", "Tackles won", `${countLabel(stats.tacklesWon ?? 0, "tackle")} won · 1 FP for every 3`, Math.floor((stats.tacklesWon ?? 0) / 3));
+  }
   add("penalty-goals", "Penalty goals", `${countLabel(penaltyGoals, "penalty")} scored · 2 FP each, regardless of position`, penaltyGoals * 2);
   add("penalties-missed", "Penalties missed", `${countLabel(stats.penaltiesMissed ?? 0, "penalty")} missed · −2 FP each`, -(stats.penaltiesMissed ?? 0) * 2);
   add("penalties-conceded", "Penalties conceded", `${countLabel(stats.penaltiesConceded ?? 0, "penalty")} conceded · −2 FP each`, -(stats.penaltiesConceded ?? 0) * 2);
