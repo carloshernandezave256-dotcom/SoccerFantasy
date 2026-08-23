@@ -30,7 +30,6 @@ type Settings = {
   draft_pick_seconds: number;
   trades_enabled: boolean;
   lineup_lock_minutes: number;
-  motm_manual: boolean;
   calendar_competition: string;
   player_pool: string;
 };

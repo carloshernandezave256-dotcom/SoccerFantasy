@@ -16,8 +16,8 @@ type Claim = { id: string; user_id: string; add_player_id: number; drop_player_i
 type ContractOffer = { id:string;user_id:string;add_player_id:number;release_player_id:number;gameweek:number;offer_rank:number;amount:number;status:string;created_at:string;processed_at:string|null;note:string|null };
 type Priority = { rank: number; user_id: string; team_name: string };
 type TransactionWindow={gameweek:number;waiver_process_at:string;roster_lock_at:string;phase:"waivers"|"free_agency"|"locked"};
-type SeasonTotal = { player_id:number;points:number;appearances:number;minutes:number;goals:number;assists:number;shots_on_target:number;completed_passes:number;tackles_won:number;saves:number;clean_sheets:number;yellow_cards:number;red_cards:number;motm:number;latest_gameweek:number|null;latest_status:string|null };
-type PlayerTotals = { points: number; appearances: number; minutes: number; goals: number; assists: number; shotsOnTarget: number; completedPasses: number; tacklesWon: number; saves: number; cleanSheets: number; yellowCards: number; redCards: number; motm: number; gameweeks: { gameweek: number; points: number; status: string }[] };
+type SeasonTotal = { player_id:number;points:number;appearances:number;minutes:number;goals:number;assists:number;shots_on_target:number;completed_passes:number;tackles_won:number;saves:number;clean_sheets:number;yellow_cards:number;red_cards:number;latest_gameweek:number|null;latest_status:string|null };
+type PlayerTotals = { points: number; appearances: number; minutes: number; goals: number; assists: number; shotsOnTarget: number; completedPasses: number; tacklesWon: number; saves: number; cleanSheets: number; yellowCards: number; redCards: number; gameweeks: { gameweek: number; points: number; status: string }[] };
 type WatchRow={player_id:number};
 
 export default function WaiversPage() {
@@ -98,8 +98,8 @@ export default function WaiversPage() {
   const playerMap = useMemo(() => new Map(players.map((player) => [player.id, player])), [players]);
   const teamMap = useMemo(() => new Map(priority.map((item) => [item.user_id, item.team_name])), [priority]);
   const ownerByPlayer = useMemo(() => new Map(picks.map((pick) => [pick.player_id, teamMap.get(pick.user_id) ?? "Owned"])), [picks, teamMap]);
-  const totalsByPlayer = useMemo(() => new Map(seasonTotals.map((row):[number,PlayerTotals] => [row.player_id,{points:Number(row.points),appearances:Number(row.appearances),minutes:Number(row.minutes),goals:Number(row.goals),assists:Number(row.assists),shotsOnTarget:Number(row.shots_on_target),completedPasses:Number(row.completed_passes),tacklesWon:Number(row.tackles_won),saves:Number(row.saves),cleanSheets:Number(row.clean_sheets),yellowCards:Number(row.yellow_cards),redCards:Number(row.red_cards),motm:Number(row.motm),gameweeks:[]} ])),[seasonTotals]);
-  const emptyTotals: PlayerTotals = { points: 0, appearances: 0, minutes: 0, goals: 0, assists: 0, shotsOnTarget: 0, completedPasses: 0, tacklesWon: 0, saves: 0, cleanSheets: 0, yellowCards: 0, redCards: 0, motm: 0, gameweeks: [] };
+  const totalsByPlayer = useMemo(() => new Map(seasonTotals.map((row):[number,PlayerTotals] => [row.player_id,{points:Number(row.points),appearances:Number(row.appearances),minutes:Number(row.minutes),goals:Number(row.goals),assists:Number(row.assists),shotsOnTarget:Number(row.shots_on_target),completedPasses:Number(row.completed_passes),tacklesWon:Number(row.tackles_won),saves:Number(row.saves),cleanSheets:Number(row.clean_sheets),yellowCards:Number(row.yellow_cards),redCards:Number(row.red_cards),gameweeks:[]} ])),[seasonTotals]);
+  const emptyTotals: PlayerTotals = { points: 0, appearances: 0, minutes: 0, goals: 0, assists: 0, shotsOnTarget: 0, completedPasses: 0, tacklesWon: 0, saves: 0, cleanSheets: 0, yellowCards: 0, redCards: 0, gameweeks: [] };
   const marketPlayers = useMemo(() => players.filter((player) => {
     const search = query.trim().toLowerCase();
     const isOwned = ownedIds.has(player.id);

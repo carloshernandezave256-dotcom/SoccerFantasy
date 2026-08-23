@@ -1,6 +1,5 @@
 import {NextRequest,NextResponse} from "next/server";
 import {apiFootball} from "@/lib/api-football-server";
-import {selectManOfTheMatchId} from "@/lib/match-awards";
 import {completedPassesFromApi} from "@/lib/api-football-stats";
 import {resolvePlayerScoreStatus} from "@/lib/scoring";
 import {fetchAllRestRows} from "@/lib/supabase-rest";
@@ -182,8 +181,6 @@ export async function GET(request:NextRequest){
         const playerFixtureStatuses=[...new Set(playerStats.map(item=>fixtureStatusById.get(item.fixture_id)).filter((status):status is string=>Boolean(status)))];
         return {league_id:leagueId,gameweek:window.gameweek,player_id:playerId,rating:ratings.length?Math.max(...ratings):null,minutes:sum(playerStats,"minutes"),goals:sum(playerStats,"goals"),assists:sum(playerStats,"assists"),shots_on_target:sum(playerStats,"shots_on_target"),big_chances_missed:0,completed_passes:sum(playerStats,"completed_passes"),tackles_won:sum(playerStats,"tackles_won"),penalty_goals:sum(playerStats,"penalty_goals"),penalties_missed:sum(playerStats,"penalties_missed"),penalties_conceded:sum(playerStats,"penalties_conceded"),saves:sum(playerStats,"saves"),penalties_saved:sum(playerStats,"penalties_saved"),goals_conceded:sum(playerStats,"goals_conceded"),yellow_cards:sum(playerStats,"yellow_cards"),second_yellow_cards:0,red_cards:sum(playerStats,"red_cards"),own_goals:0,man_of_the_match:false,status:resolvePlayerScoreStatus(playerFixtureStatuses,isFinal),source:"api-football-shared-cache",source_updated_at:now.toISOString(),updated_at:now.toISOString()};
       });
-      const weeklyManOfTheMatchId=isFinal?selectManOfTheMatchId(rows.map(row=>({playerId:row.player_id,rating:Number(row.rating)||0,minutes:row.minutes,goals:row.goals,assists:row.assists,shotsOnTarget:row.shots_on_target}))):null;
-      if(weeklyManOfTheMatchId!==null)rows.find(row=>row.player_id===weeklyManOfTheMatchId)!.man_of_the_match=true;
       if(rows.length){
         const response=await fetch(`${url}/rest/v1/league_player_scores?on_conflict=league_id,gameweek,player_id`,{method:"POST",headers:{...headers(key),Prefer:"resolution=merge-duplicates,return=minimal"},body:JSON.stringify(rows),cache:"no-store"});
         if(!response.ok)throw new Error((await response.text())||`League score update failed for ${leagueId}`);

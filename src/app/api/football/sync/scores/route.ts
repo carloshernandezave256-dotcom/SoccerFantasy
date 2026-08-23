@@ -1,7 +1,6 @@
 import {NextRequest,NextResponse} from "next/server";
 import {apiFootball} from "@/lib/api-football-server";
 import {isDeveloperRequest} from "@/lib/developer-auth";
-import {selectManOfTheMatchId} from "@/lib/match-awards";
 import {completedPassesFromApi} from "@/lib/api-football-stats";
 
 const competitions:Record<string,number>={"Premier League":39,"La Liga":140,"Serie A":135,"Bundesliga":78,"Ligue 1":61};
@@ -91,7 +90,6 @@ export async function POST(request:NextRequest){
         statsByApiId.set(entry.player.id,{rating:rating>0?rating:null,minutes:stat.games.minutes??0,goals:stat.goals.total??0,assists:stat.goals.assists??0,shots_on_target:stat.shots.on??0,big_chances_missed:0,completed_passes:completedPassesFromApi(stat.passes.total,stat.passes.accuracy),tackles_won:stat.tackles.total??0,penalty_goals:stat.penalty.scored??0,penalties_missed:stat.penalty.missed??0,penalties_conceded:stat.penalty.commited??0,saves:stat.goals.saves??0,penalties_saved:stat.penalty.saved??0,goals_conceded:teamGoalsConceded??stat.goals.conceded??0,yellow_cards:stat.cards.yellow??0,second_yellow_cards:0,red_cards:stat.cards.red??0,own_goals:0,man_of_the_match:false});
       }
     }
-    const weeklyManOfTheMatchApiId=allFinal?selectManOfTheMatchId([...statsByApiId.entries()].map(([playerId,stats])=>({playerId,rating:Number(stats.rating)||0,minutes:Number(stats.minutes)||0,goals:Number(stats.goals)||0,assists:Number(stats.assists)||0,shotsOnTarget:Number(stats.shots_on_target)||0}))):null;
 
     const lineupResponse=await fetch(`${supabaseUrl}/rest/v1/lineup_players?league_id=eq.${encodeURIComponent(body.leagueId)}&select=player_id`,{headers:adminHeaders(serviceRoleKey),cache:"no-store"});
     const lineupRows=lineupResponse.ok?await lineupResponse.json() as Array<{player_id:number}>:[];
@@ -103,12 +101,12 @@ export async function POST(request:NextRequest){
     const playedResponse=playedApiIds.length?await fetch(`${supabaseUrl}/rest/v1/players?api_football_id=in.(${playedApiIds.join(",")})&select=id,api_football_id`,{headers:adminHeaders(serviceRoleKey),cache:"no-store"}):null;
     const playedPlayers=playedResponse?.ok?await playedResponse.json() as PlayerRow[]:[];
     const players=[...new Map([...lineupPlayers,...playedPlayers].map(player=>[player.id,player])).values()];
-    const rows=players.map(player=>({league_id:body.leagueId,gameweek,player_id:player.id,rating:null,minutes:0,goals:0,assists:0,shots_on_target:0,big_chances_missed:0,completed_passes:0,tackles_won:0,penalty_goals:0,penalties_missed:0,penalties_conceded:0,saves:0,penalties_saved:0,goals_conceded:0,yellow_cards:0,second_yellow_cards:0,red_cards:0,own_goals:0,status:roundStatus,source:"api-football-live",source_updated_at:new Date().toISOString(),updated_at:new Date().toISOString(),...(player.api_football_id?statsByApiId.get(player.api_football_id)??{}:{}),man_of_the_match:allFinal&&player.api_football_id===weeklyManOfTheMatchApiId}));
+    const rows=players.map(player=>({league_id:body.leagueId,gameweek,player_id:player.id,rating:null,minutes:0,goals:0,assists:0,shots_on_target:0,big_chances_missed:0,completed_passes:0,tackles_won:0,penalty_goals:0,penalties_missed:0,penalties_conceded:0,saves:0,penalties_saved:0,goals_conceded:0,yellow_cards:0,second_yellow_cards:0,red_cards:0,own_goals:0,status:roundStatus,source:"api-football-live",source_updated_at:new Date().toISOString(),updated_at:new Date().toISOString(),...(player.api_football_id?statsByApiId.get(player.api_football_id)??{}:{}),man_of_the_match:false}));
     const upsert=await fetch(`${supabaseUrl}/rest/v1/league_player_scores?on_conflict=league_id,gameweek,player_id`,{method:"POST",headers:{...adminHeaders(serviceRoleKey),Prefer:"resolution=merge-duplicates,return=minimal"},body:JSON.stringify(rows),cache:"no-store"});
     if(!upsert.ok)throw new Error((await upsert.text())||"Score database update failed");
     const refresh=await fetch(`${supabaseUrl}/rest/v1/rpc/refresh_league_matchup_scores`,{method:"POST",headers:adminHeaders(serviceRoleKey),body:JSON.stringify({p_league_id:body.leagueId,p_gameweek:gameweek}),cache:"no-store"});
     if(!refresh.ok)throw new Error((await refresh.text())||"Matchup total refresh failed");
     const matchupsUpdated=Number(await refresh.json())||0;
-    return NextResponse.json({ok:true,competition,season,round,gameweek,status:roundStatus,fixturesStarted:activeFixtures.length,fixturesTotal:roundFixtures.length,seasonFixturesCached:fixtureRows.length,playersWithStats:statsByApiId.size,playersUpdated:rows.length,lineupPlayersUpdated:lineupPlayers.length,matchupsUpdated,requestsUsed:scheduleBodies.length+activeFixtures.length,notes:["Accurate passes come directly from the API accuracy count.","Man of the Match is awarded to the highest API-rated player only after the full gameweek is final.","Big chances missed is not part of fantasy scoring."]});
+    return NextResponse.json({ok:true,competition,season,round,gameweek,status:roundStatus,fixturesStarted:activeFixtures.length,fixturesTotal:roundFixtures.length,seasonFixturesCached:fixtureRows.length,playersWithStats:statsByApiId.size,playersUpdated:rows.length,lineupPlayersUpdated:lineupPlayers.length,matchupsUpdated,requestsUsed:scheduleBodies.length+activeFixtures.length,notes:["Accurate passes come directly from the API accuracy count.","Big chances missed is not part of fantasy scoring."]});
   }catch(error){return NextResponse.json({error:error instanceof Error?error.message:"Live score synchronization failed."},{status:502})}
 }

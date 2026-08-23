@@ -5,7 +5,7 @@ import {supabase} from "@/lib/supabase";
 import {isTerminalMatchStatus} from "@/lib/scoring";
 
 type Player={id:number;full_name:string;position:string;club:string;competition?:string;photo_url?:string|null;injured?:boolean;injury_type?:string|null;injury_reason?:string|null;expected_return?:string|null};
-type ScoreRow={fixture_id:number;gameweek:number;kickoff:string;rating:number|null;minutes:number;goals:number;assists:number;shots_on_target:number;completed_passes:number;tackles_won:number;saves:number;goals_conceded:number;yellow_cards:number;red_cards:number;man_of_the_match:boolean;status:string;home_team:string;away_team:string;home_score:number|null;away_score:number|null;points:number};
+type ScoreRow={fixture_id:number;gameweek:number;kickoff:string;rating:number|null;minutes:number;goals:number;assists:number;shots_on_target:number;completed_passes:number;tackles_won:number;saves:number;goals_conceded:number;yellow_cards:number;red_cards:number;status:string;home_team:string;away_team:string;home_score:number|null;away_score:number|null;points:number};
 type Fixture={fixture_id:number;gameweek:number;kickoff:string;status:string;home_team:string;away_team:string;home_score:number|null;away_score:number|null};
 
 const clubAliases:Record<string,string[]>={"psg":["paris saint germain"],"bayern munich":["bayern munchen","bayern münchen"],"inter milan":["inter"],"ac milan":["milan"],"athletic bilbao":["athletic club"],"real betis":["betis"]};

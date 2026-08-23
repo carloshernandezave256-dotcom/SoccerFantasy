@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import {apiFootballKey} from "@/lib/api-football-server";
-import {selectManOfTheMatchId} from "@/lib/match-awards";
 
 const competitions=[
   {id:39,name:"Premier League"},{id:140,name:"La Liga"},{id:135,name:"Serie A"},{id:78,name:"Bundesliga"},{id:61,name:"Ligue 1"},
@@ -18,7 +17,7 @@ const betaPlayers=[
   {name:"Trent Alexander-Arnold",club:"Liverpool",minutes:77,goals:0,assists:0,shotsOnTarget:0,completedPasses:44,tacklesWon:1,goalsConceded:0},
   {name:"Anthony Gordon",club:"Newcastle",minutes:90,goals:0,assists:0,shotsOnTarget:1,completedPasses:12,tacklesWon:1,goalsConceded:0},
   {name:"Lamine Yamal",club:"Barcelona",minutes:86,goals:0,assists:1,shotsOnTarget:1,completedPasses:24,tacklesWon:1,goalsConceded:1},
-].map((player,index)=>({apiPlayerId:900000+index,competition:betaFixture.competition,fixtureId:betaFixture.id,fixture:betaFixture.match,kickoff:"2024-08-17T12:00:00Z",status:"final",position:null,penaltyGoals:0,penaltiesMissed:0,penaltiesConceded:0,saves:0,penaltiesSaved:0,yellowCards:0,secondYellowCards:0,redCards:0,ownGoals:0,manOfTheMatch:false,...player}));
+].map((player,index)=>({apiPlayerId:900000+index,competition:betaFixture.competition,fixtureId:betaFixture.id,fixture:betaFixture.match,kickoff:"2024-08-17T12:00:00Z",status:"final",position:null,penaltyGoals:0,penaltiesMissed:0,penaltiesConceded:0,saves:0,penaltiesSaved:0,yellowCards:0,secondYellowCards:0,redCards:0,ownGoals:0,...player}));
 
 type ApiPlayer={player:{id:number;name:string};statistics:Array<{team:{id:number;name:string};league:{id:number;name:string};games:{minutes:number|null;position:string|null;rating:string|null};shots:{on:number|null};goals:{total:number|null;assists:number|null;conceded:number|null;saves:number|null};passes:{total:number|null;accuracy:number|string|null};tackles:{total:number|null};cards:{yellow:number|null;red:number|null};penalty:{scored:number|null;missed:number|null;saved:number|null;commited:number|null}}>};
 
@@ -52,15 +51,14 @@ export async function GET(request:NextRequest){
     const playerGroups=await Promise.all(fixtures.map(async fixture=>({fixture,teams:await football(`fixtures/players?fixture=${fixture.fixture.id}`,key)})));
     const players=playerGroups.flatMap(({fixture,teams})=>{
       const fixtureEntries=(teams as Array<{players:ApiPlayer[]}>).flatMap(team=>team.players).flatMap(entry=>entry.statistics.slice(0,1).map(stat=>({entry,stat})));
-      const manOfTheMatchId=selectManOfTheMatchId(fixtureEntries.map(({entry,stat})=>({playerId:entry.player.id,rating:Number(stat.games.rating)||0,minutes:stat.games.minutes??0,goals:stat.goals.total??0,assists:stat.goals.assists??0,shotsOnTarget:stat.shots.on??0})));
       return fixtureEntries.map(({entry,stat})=>{
       const accuracy=Number(String(stat.passes.accuracy??"0").replace("%",""))||0;
       const minutes=stat.games.minutes??0;
-      return {apiPlayerId:entry.player.id,name:entry.player.name,club:stat.team.name,competition:fixture.competition,fixtureId:fixture.fixture.id,fixture:`${fixture.teams.home.name} vs ${fixture.teams.away.name}`,kickoff:fixture.fixture.date,status:["FT","AET","PEN"].includes(fixture.fixture.status.short)?"final":"live",position:stat.games.position,rating:Number(stat.games.rating)||null,minutes,goals:stat.goals.total??0,assists:stat.goals.assists??0,shotsOnTarget:stat.shots.on??0,completedPasses:Math.round((stat.passes.total??0)*accuracy/100),tacklesWon:stat.tackles.total??0,penaltyGoals:stat.penalty.scored??0,penaltiesMissed:stat.penalty.missed??0,penaltiesConceded:stat.penalty.commited??0,saves:stat.goals.saves??0,penaltiesSaved:stat.penalty.saved??0,goalsConceded:stat.goals.conceded??0,yellowCards:stat.cards.yellow??0,secondYellowCards:0,redCards:stat.cards.red??0,ownGoals:0,manOfTheMatch:entry.player.id===manOfTheMatchId};
+      return {apiPlayerId:entry.player.id,name:entry.player.name,club:stat.team.name,competition:fixture.competition,fixtureId:fixture.fixture.id,fixture:`${fixture.teams.home.name} vs ${fixture.teams.away.name}`,kickoff:fixture.fixture.date,status:["FT","AET","PEN"].includes(fixture.fixture.status.short)?"final":"live",position:stat.games.position,rating:Number(stat.games.rating)||null,minutes,goals:stat.goals.total??0,assists:stat.goals.assists??0,shotsOnTarget:stat.shots.on??0,completedPasses:Math.round((stat.passes.total??0)*accuracy/100),tacklesWon:stat.tackles.total??0,penaltyGoals:stat.penalty.scored??0,penaltiesMissed:stat.penalty.missed??0,penaltiesConceded:stat.penalty.commited??0,saves:stat.goals.saves??0,penaltiesSaved:stat.penalty.saved??0,goalsConceded:stat.goals.conceded??0,yellowCards:stat.cards.yellow??0,secondYellowCards:0,redCards:stat.cards.red??0,ownGoals:0};
     });});
-    return NextResponse.json({date,requestsUsed:competitions.length+fixtures.length,fixtures:fixtures.map(f=>({id:f.fixture.id,competition:f.competition,match:`${f.teams.home.name} vs ${f.teams.away.name}`,status:f.fixture.status.short})),players,notes:["Completed passes are estimated from total passes and API accuracy.","Man of the Match is awarded automatically from the highest API match rating.","Big chances missed is not part of fantasy scoring."]});
+    return NextResponse.json({date,requestsUsed:competitions.length+fixtures.length,fixtures:fixtures.map(f=>({id:f.fixture.id,competition:f.competition,match:`${f.teams.home.name} vs ${f.teams.away.name}`,status:f.fixture.status.short})),players,notes:["Completed passes are estimated from total passes and API accuracy.","Big chances missed is not part of fantasy scoring."]});
   }catch(error){
-    if(date==="2024-08-17")return NextResponse.json({date,requestsUsed:competitions.length,fixtures:[betaFixture],players:betaPlayers,isBetaFallback:true,limitations:["API-Football's free tier currently has no overlap between its permitted seasons and permitted date window, so this uses a curated beta dataset for drafted players who played on August 17, 2024.","This dataset validates scoring, score import, and player profiles; it is not an official historical-stat feed.","The curated fallback has no API ratings, so it cannot assign Man of the Match."]});
+    if(date==="2024-08-17")return NextResponse.json({date,requestsUsed:competitions.length,fixtures:[betaFixture],players:betaPlayers,isBetaFallback:true,limitations:["API-Football's free tier currently has no overlap between its permitted seasons and permitted date window, so this uses a curated beta dataset for drafted players who played on August 17, 2024.","This dataset validates scoring, score import, and player profiles; it is not an official historical-stat feed."]});
     return NextResponse.json({error:error instanceof Error?error.message:"API-Football request failed."},{status:502});
   }
 }
