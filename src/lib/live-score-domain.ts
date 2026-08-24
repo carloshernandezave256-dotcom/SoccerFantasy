@@ -97,6 +97,7 @@ export type LeaguePlayerScoreRow = {
   red_cards: number;
   own_goals: number;
   man_of_the_match: false;
+  stats_received: boolean;
   status: "live" | "final";
   source: "api-football-shared-cache";
   source_updated_at: string;
@@ -264,6 +265,7 @@ export function buildLeaguePlayerScoreRows({
       red_cards: sum(playerStats, "red_cards"),
       own_goals: 0,
       man_of_the_match: false,
+      stats_received: playerStats.length > 0,
       status: resolvePlayerScoreStatus(playerFixtureStatuses, gameweekIsFinal),
       source: "api-football-shared-cache",
       source_updated_at: updatedAt,

@@ -35,3 +35,14 @@
   .ledger-sheet-handle{display:block;width:42px;height:4px;margin:0 auto 8px;border-radius:99px;background:var(--line-strong)}
   .ledger-scroll{max-height:calc(84dvh - 72px);overflow-y:auto;overscroll-behavior:contain;padding-bottom:8px}
 }
+
+.player-data-status{display:inline-flex;width:max-content;align-items:center;gap:4px;border:1px solid var(--line);border-radius:999px;padding:2px 6px;background:var(--surface);color:var(--muted);font-size:7px;font-weight:950;letter-spacing:.08em;line-height:1.2}
+.player-data-status.status-live{border-color:#42d97866;background:#173c28;color:#70f49a}
+.player-data-status.status-final{border-color:#75a7ff55;background:#172d4b;color:#9fc0ff}
+.player-data-status.status-did_not_play{background:var(--surface3);color:var(--muted)}
+.player-data-status.status-stats_pending{border-color:#edbc5866;background:#42351d;color:#ffd77a}
+.pitch-player>.player-data-status{margin-top:4px}
+.bench-player-copy>.player-data-status{margin-top:5px}
+.ledger-data-status{display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:start;margin:12px 0;padding:12px;border:1px solid var(--line);border-radius:14px;background:var(--surface)}
+.ledger-data-status>span:last-child{display:grid;gap:3px}.ledger-data-status strong{font-size:11px}.ledger-data-status small{color:var(--muted);font-size:9px;line-height:1.45}
+.ledger-data-status.status-stats_pending{border-color:#edbc5855;background:#342b1b}
