@@ -130,17 +130,20 @@ export function RealMatchup(){
     void(async()=>{
       setLoading(true);
       const ids=[featured.home_user_id,featured.away_user_id];
-      const[lineupResult,snapshotResult,picksResult,scoreResult,matchupResult,standingsResult]=await Promise.all([
+      const[lineupResult,snapshotResult,picksResult,matchupResult,standingsResult]=await Promise.all([
         supabase.from("lineup_players").select("user_id,is_starter,is_captain,players(id,full_name,position,club,photo_url)").eq("league_id",league.league_id).in("user_id",ids),
         supabase.from("lineup_gameweek_players").select("user_id,is_starter,is_star_pick,players(id,full_name,position,club,photo_url)").eq("league_id",league.league_id).eq("gameweek",gameweek).in("user_id",ids),
         supabase.from("draft_picks").select("user_id,pick_number,players(id,full_name,position,club,photo_url)").eq("league_id",league.league_id).in("user_id",ids).order("pick_number"),
-        supabase.from("league_player_scores").select("player_id,rating,minutes,goals,assists,shots_on_target,big_chances_missed,completed_passes,tackles_won,penalty_goals,penalties_missed,penalties_conceded,saves,penalties_saved,goals_conceded,yellow_cards,second_yellow_cards,red_cards,own_goals,status,fantasy_points,score_ledger").eq("league_id",league.league_id).eq("gameweek",gameweek),
         supabase.from("league_matchups").select("home_score,away_score,status").eq("id",featured.id).single(),
         supabase.rpc("league_standings",{p_league_id:league.league_id}),
       ]);
       const lineupRows=(lineupResult.data??[]) as unknown as {user_id:string;is_starter:boolean;is_captain:boolean;players:Omit<Player,"score"|"rating"|"status"|"ledger"|"goals"|"assists"|"yellowCards"|"redCards">|null}[];
       const snapshotRows=(snapshotResult.data??[]) as unknown as {user_id:string;is_starter:boolean;is_star_pick:boolean;players:Omit<Player,"score"|"rating"|"status"|"ledger"|"goals"|"assists"|"yellowCards"|"redCards">|null}[];
       const pickRows=(picksResult.data??[]) as unknown as {user_id:string;pick_number:number;players:Omit<Player,"score"|"rating"|"status"|"ledger"|"goals"|"assists"|"yellowCards"|"redCards">|null}[];
+      const relevantPlayerIds=[...new Set([...lineupRows,...snapshotRows,...pickRows].flatMap(row=>row.players?[row.players.id]:[]))];
+      const scoreResult=relevantPlayerIds.length
+        ?await supabase.from("league_player_scores").select("player_id,rating,minutes,goals,assists,shots_on_target,big_chances_missed,completed_passes,tackles_won,penalty_goals,penalties_missed,penalties_conceded,saves,penalties_saved,goals_conceded,yellow_cards,second_yellow_cards,red_cards,own_goals,status,fantasy_points,score_ledger").eq("league_id",league.league_id).eq("gameweek",gameweek).in("player_id",relevantPlayerIds)
+        :{data:[]};
       const scoreRows=(scoreResult.data??[]) as ScoreRow[];
       const liveMatchup=matchupResult.data as {home_score:number|string;away_score:number|string;status:Matchup["status"]}|null;
       if(liveMatchup&&(Number(liveMatchup.home_score)!==Number(featured.home_score)||Number(liveMatchup.away_score)!==Number(featured.away_score)||liveMatchup.status!==featured.status)){
