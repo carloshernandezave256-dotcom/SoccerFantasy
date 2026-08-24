@@ -2,9 +2,10 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useLanguage } from "@/lib/i18n";
+import { NavIcon } from "./nav-icon";
 
 const items = [
-  ["⌂", "nav.home", "Home", "/"], ["⚔", "nav.matchup", "Matchup", "/matchup"], ["◉", "nav.team", "My Team", "/team"], ["⌕", "nav.players", "Players", "/players"], ["≡", "nav.league", "League", "/league"],
+  ["home", "nav.home", "Home", "/"], ["matchup", "nav.matchup", "Matchup", "/matchup"], ["team", "nav.team", "My Team", "/team"], ["players", "nav.players", "Players", "/players"], ["league", "nav.league", "League", "/league"],
 ] as const;
 
 export function BottomNav({ leagueId }: { leagueId?: string }) {
@@ -28,7 +29,7 @@ export function BottomNav({ leagueId }: { leagueId?: string }) {
           const active = isActive(href);
           return (
             <Link className={active ? "active" : ""} key={label} aria-current={active ? "page" : undefined} href={destination}>
-              <span aria-hidden="true">{icon}</span><b>{t(key, label)}</b>
+              <span><NavIcon name={icon}/></span><b>{t(key, label)}</b>
             </Link>
           );
         })}

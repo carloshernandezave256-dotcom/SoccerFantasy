@@ -230,6 +230,7 @@ code,
 
 .topbar,
 .sub-header { min-width: 0; }
+.sub-header.root-tab-header > div { margin-left: 0; }
 
 .topbar > div,
 .sub-header > div,
@@ -716,6 +717,7 @@ textarea,
   padding: 4px 2px;
   line-height: 1.15;
 }
+.bottom-nav .nav-items > a span{display:grid;place-items:center}.bottom-nav .nav-items > a svg{display:block;width:21px;height:21px}
 
 .bottom-nav .nav-items b {
   font-size: inherit;

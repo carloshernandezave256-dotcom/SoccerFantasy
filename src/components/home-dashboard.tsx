@@ -742,41 +742,6 @@ export function HomeDashboard() {
               </Link>
             </div>
           </section>
-          <section className="panel home-table-card">
-            <div className="section-row">
-              <div>
-                <p className="eyebrow">{t("home.standings", "STANDINGS")}</p>
-                <h2>{t("home.leagueTable", "League table")}</h2>
-              </div>
-              <span className="muted-chip">
-                {standings.length} {t("home.teams", "teams")}
-              </span>
-            </div>
-            <div className="home-table-head">
-              <span>#</span>
-              <span>Club</span>
-              <span>W-D-L</span>
-              <span>Pts</span>
-            </div>
-            {standings.map((row) => (
-              <div
-                className={`home-table-row ${row.user_id === userId ? "mine" : ""}`}
-                key={row.user_id}
-              >
-                <span>{row.rank}</span>
-                <strong>{row.team_name}</strong>
-                <span>
-                  {row.wins}-{row.draws}-{row.losses}
-                </span>
-                <b>{row.points}</b>
-              </div>
-            ))}
-            {!standings.length ? (
-              <p className="empty-state">
-                Standings begin after the first matchup.
-              </p>
-            ) : null}
-          </section>
           <section className="panel home-big-games">
             <div className="section-row">
               <div>
@@ -878,6 +843,41 @@ export function HomeDashboard() {
                 </article>
               ) : null}
             </div>
+          </section>
+          <section className="panel home-table-card">
+            <div className="section-row">
+              <div>
+                <p className="eyebrow">{t("home.standings", "STANDINGS")}</p>
+                <h2>{t("home.leagueTable", "League table")}</h2>
+              </div>
+              <span className="muted-chip">
+                {standings.length} {t("home.teams", "teams")}
+              </span>
+            </div>
+            <div className="home-table-head">
+              <span>#</span>
+              <span>Club</span>
+              <span>W-D-L</span>
+              <span>Pts</span>
+            </div>
+            {standings.map((row) => (
+              <div
+                className={`home-table-row ${row.user_id === userId ? "mine" : ""}`}
+                key={row.user_id}
+              >
+                <span>{row.rank}</span>
+                <strong>{row.team_name}</strong>
+                <span>
+                  {row.wins}-{row.draws}-{row.losses}
+                </span>
+                <b>{row.points}</b>
+              </div>
+            ))}
+            {!standings.length ? (
+              <p className="empty-state">
+                Standings begin after the first matchup.
+              </p>
+            ) : null}
           </section>
           {draft?.status !== "complete" && picks.length ? (
             <section className="panel home-activity">

@@ -30,10 +30,12 @@ function EventBadges({player}:{player:Player}){
 }
 
 function PitchPlayer({player,onSelect}:{player:Player;onSelect:(player:Player)=>void}){
+  const words=player.full_name.trim().split(/\s+/);
+  const displayName=player.full_name.length>13&&words.length>1?`${words[0][0]}. ${words.slice(1).join(" ")}`:player.full_name;
   return <button className="pitch-player" onClick={()=>onSelect(player)} aria-label={`Open ${player.full_name} scoring breakdown`}>
     <span className="pitch-player-photo"><PlayerHeadshot name={player.full_name} position={player.position} photoUrl={player.photo_url}/><b className={player.score<0?"negative":"positive"}>{player.score}</b><EventBadges player={player}/></span>
-    <strong>{player.full_name}</strong>
-    <small>{player.position} · {player.club}</small>
+    <strong title={player.full_name}>{displayName}</strong>
+    <small>{player.position}</small>
   </button>;
 }
 
@@ -49,6 +51,8 @@ export function RealMatchup(){
   const[loading,setLoading]=useState(true);
   const[message,setMessage]=useState("");
   const[refreshing,setRefreshing]=useState(false);
+  const[lastUpdated,setLastUpdated]=useState<Date|null>(null);
+  const[now,setNow]=useState(()=>Date.now());
   const[lineupVersion,setLineupVersion]=useState(0);
   const[selectedMatchupId,setSelectedMatchupId]=useState<string|null>(null);
   const refreshRequest=useRef(0);
@@ -91,6 +95,20 @@ export function RealMatchup(){
   },[]);
 
   useEffect(()=>{void load()},[load]);
+
+  useEffect(()=>{
+    const timer=window.setInterval(()=>setNow(Date.now()),30000);
+    return()=>window.clearInterval(timer);
+  },[]);
+
+  useEffect(()=>{
+    if(!selected)return;
+    const close=(event:KeyboardEvent)=>{if(event.key==="Escape")setSelected(null)};
+    const previous=document.body.style.overflow;
+    document.body.style.overflow="hidden";
+    window.addEventListener("keydown",close);
+    return()=>{document.body.style.overflow=previous;window.removeEventListener("keydown",close)};
+  },[selected]);
 
   useEffect(()=>{
     if(!league)return;
@@ -172,10 +190,13 @@ export function RealMatchup(){
         setTeams(nextTeams);
         setSelected(current=>current?nextTeams.flatMap(team=>team.players).find(player=>player.id===current.id)??current:null);
         setStandings((standingsResult.data??[]) as Standing[]);
+        setLastUpdated(new Date());
         setLoading(false);setRefreshing(false);
       }
     })();
   },[featured,league,managers,gameweek,lineupVersion]);
+
+  const freshness=lastUpdated?(()=>{const seconds=Math.max(0,Math.floor((now-lastUpdated.getTime())/1000));if(seconds<15)return"Updated just now";if(seconds<60)return`Updated ${seconds}s ago`;const minutes=Math.floor(seconds/60);return`Updated ${minutes}m ago`})():"Waiting for first score sync";
 
   return <PageShell eyebrow={league?.league_name??"LEAGUE MATCHUPS"} title="Head to head">
     <div className="gameweek-picker"><button disabled={gameweek===1} onClick={()=>{setSelectedMatchupId(null);setGameweek(week=>week-1)}}>←</button><label>Gameweek<select value={gameweek} onChange={event=>{setSelectedMatchupId(null);setGameweek(Number(event.target.value))}}>{Array.from({length:maxWeek},(_,index)=>index+1).map(week=><option key={week}>{week}</option>)}</select></label><button disabled={gameweek===maxWeek} onClick={()=>{setSelectedMatchupId(null);setGameweek(week=>week+1)}}>→</button></div>
@@ -187,11 +208,12 @@ export function RealMatchup(){
         <div className="versus"><div><strong>{teams[0].score}</strong><span>{teams[0].name}</span></div><div className="versus-mark">VS</div><div><strong>{teams[1].score}</strong><span>{teams[1].name}</span></div></div>
         <div className="progress"><span style={{width:teams[0].score+teams[1].score>0?`${teams[0].score/(teams[0].score+teams[1].score)*100}%`:"50%"}}/></div>
         <div className="match-status"><span className="live-dot"/> {refreshing?"Updating scores…":featured.status==="scheduled"?"Scores begin when live match data is connected":featured.status==="live"?"Scoring in progress":"Matchup complete"}</div>
+        <p className="score-freshness" aria-live="polite">{refreshing?"Synchronizing latest stored data…":featured.status==="final"?`${freshness} · final data checked`:freshness}</p>
       </section>
       <section className="panel matchup-pitch-card"><div className="lineup-pitch shared-matchup-pitch"><span className="pitch-markings" aria-hidden="true"/>{teams[0]?<div className="pitch-half home-half">{homePitchRows.map(position=>{const players=teams[0].players.filter(player=>player.position===position);return <div className={`pitch-row ${position.toLowerCase()}`} key={`home-${position}`} style={{gridTemplateColumns:`repeat(${Math.max(players.length,1)}, minmax(0, 1fr))`}}>{players.map(player=><PitchPlayer player={player} onSelect={setSelected} key={player.id}/>)}</div>})}</div>:null}{teams[1]?<div className="pitch-half away-half">{awayPitchRows.map(position=>{const players=teams[1].players.filter(player=>player.position===position);return <div className={`pitch-row ${position.toLowerCase()}`} key={`away-${position}`} style={{gridTemplateColumns:`repeat(${Math.max(players.length,1)}, minmax(0, 1fr))`}}>{players.map(player=><PitchPlayer player={player} onSelect={setSelected} key={player.id}/>)}</div>})}</div>:null}</div>{teams.some(team=>team.players.length===0)?<p className="empty-state">A starting XI has not been saved for this matchup yet.</p>:null}</section>
       <section className="panel fixture-list"><div className="section-row"><div><h2>Gameweek {gameweek} fixtures</h2><small className="lineup-state">Open any matchup to view both Starting XIs and scoring ledgers.</small></div><span className="muted-chip">{weekFixtures.length}</span></div>{weekFixtures.map(matchup=><button className={`fixture-row fixture-button${featured.id===matchup.id?" active":""}`} key={matchup.id} onClick={()=>{if(featured.id===matchup.id)return;setTeams([]);setSelectedMatchupId(matchup.id);setSelected(null);window.scrollTo({top:0,behavior:"smooth"})}} aria-label={`Open ${managers.find(manager=>manager.user_id===matchup.home_user_id)?.team_name??"home team"} versus ${managers.find(manager=>manager.user_id===matchup.away_user_id)?.team_name??"away team"}`} aria-current={featured.id===matchup.id?"true":undefined}><span>{managers.find(manager=>manager.user_id===matchup.home_user_id)?.team_name}</span><b>{Number(matchup.home_score)}–{Number(matchup.away_score)}</b><span>{managers.find(manager=>manager.user_id===matchup.away_user_id)?.team_name}</span><i aria-hidden="true">›</i></button>)}</section>
       <section className="panel standings-result"><div className="section-row"><h2>League table</h2><span className="muted-chip">LIVE TABLE</span></div><div className="standings-head"><span>#</span><span>Team</span><span>P</span><span>W-D-L</span><span>Pts</span><span>FP</span></div>{standings.map(row=><div className="standing-row" key={row.user_id}><span>{row.rank}</span><strong>{row.team_name}</strong><span>{row.played}</span><span>{row.wins}-{row.draws}-{row.losses}</span><b>{row.points}</b><span>{Number(row.fantasy_points)}</span></div>)}</section>
     </>:null}
-    {selected?<div className="confirm-overlay ledger-overlay" role="presentation" onClick={()=>setSelected(null)}><section className="confirm-card player-ledger" role="dialog" aria-modal="true" onClick={event=>event.stopPropagation()}><button className="ledger-close" onClick={()=>setSelected(null)}>×</button><span className={`position ${selected.position.toLowerCase()}`}>{selected.position}</span><p className="eyebrow">SCORING BREAKDOWN</p><h2>{selected.full_name}</h2><p>{selected.club}{selected.captain?" · Captain":""}</p>{selected.rating!==null?<div className="match-award-summary"><span><small>API MATCH RATING</small><strong>{selected.rating.toFixed(1)}</strong></span></div>:null}<div className="ledger-total"><span>Fantasy points</span><strong>{selected.score}</strong></div>{selected.ledger.length?<><div className="ledger">{selected.ledger.map(entry=><div key={entry.code}><span><strong>{entry.label}</strong><small>{entry.detail}</small></span><b className={entry.points<0?"negative":"positive"}>{entry.points>0?"+":""}{entry.points}</b></div>)}</div><div className="ledger-reconcile"><span>Ledger total</span><strong>{selected.score} pts</strong></div></>:<p className="empty-state">No match statistics have been recorded for this player yet. Their itemized ledger will populate automatically when scoring begins.</p>}</section></div>:null}
+    {selected?<div className="confirm-overlay ledger-overlay" role="presentation" onClick={()=>setSelected(null)}><section className="confirm-card player-ledger" role="dialog" aria-modal="true" aria-labelledby="ledger-player-name" onClick={event=>event.stopPropagation()}><div className="ledger-sheet-handle" aria-hidden="true"/><header className="ledger-header"><span className={`position ${selected.position.toLowerCase()}`}>{selected.position}</span><button className="ledger-close" onClick={()=>setSelected(null)} aria-label="Close scoring breakdown" autoFocus>×</button></header><div className="ledger-scroll"><p className="eyebrow">SCORING BREAKDOWN</p><h2 id="ledger-player-name">{selected.full_name}</h2><p>{selected.club}{selected.captain?" · Captain":""}</p>{selected.rating!==null?<div className="match-award-summary"><span><small>API MATCH RATING</small><strong>{selected.rating.toFixed(1)}</strong></span></div>:null}<div className="ledger-total"><span>Fantasy points</span><strong>{selected.score}</strong></div>{selected.ledger.length?<><div className="ledger">{selected.ledger.map(entry=><div key={entry.code}><span><strong>{entry.label}</strong><small>{entry.detail}</small></span><b className={entry.points<0?"negative":"positive"}>{entry.points>0?"+":""}{entry.points}</b></div>)}</div><div className="ledger-reconcile"><span>Ledger total</span><strong>{selected.score} pts</strong></div></>:<div className="ledger-empty"><strong>{selected.status==="not_started"?"Match statistics have not arrived yet":selected.status==="live"?"Live statistics are still syncing":"Final statistics are still reconciling"}</strong><p>{selected.status==="not_started"?"Scoring will begin automatically after the player appears and the provider sends match data.":selected.status==="live"?"This player will update automatically when the next stored-data refresh completes.":"We will keep checking the completed fixture for its final player statistics."}</p></div>}</div></section></div>:null}
   </PageShell>;
 }
