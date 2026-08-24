@@ -37,7 +37,7 @@ function PitchPlayer({player,onSelect}:{player:Player;onSelect:(player:Player)=>
   return <button className="pitch-player" onClick={()=>onSelect(player)} aria-label={`Open ${player.full_name} scoring breakdown`}>
     <span className="pitch-player-photo"><PlayerHeadshot name={player.full_name} position={player.position} photoUrl={player.photo_url}/><b className={player.score<0?"negative":"positive"}>{player.score}</b><EventBadges player={player}/></span>
     <strong title={player.full_name}>{displayName}</strong>
-    <small>{player.position}</small><PlayerStatus status={player.dataStatus}/>
+    <small>{player.position}</small>
   </button>;
 }
 
@@ -46,7 +46,7 @@ function BenchPlayer({player,onSelect}:{player:Player;onSelect:(player:Player)=>
   const displayName=player.full_name.length>18&&words.length>1?`${words[0][0]}. ${words.slice(1).join(" ")}`:player.full_name;
   return <button className="bench-player" onClick={()=>onSelect(player)} aria-label={`Open ${player.full_name} bench scoring card`}>
     <span className="bench-player-photo"><PlayerHeadshot name={player.full_name} position={player.position} photoUrl={player.photo_url}/><EventBadges player={player}/></span>
-    <span className="bench-player-copy"><strong title={player.full_name}>{displayName}</strong><small>{player.position} · {player.club}</small><PlayerStatus status={player.dataStatus}/></span>
+    <span className="bench-player-copy"><strong title={player.full_name}>{displayName}</strong><small>{player.position} · {player.club}</small></span>
     <b className={player.score<0?"negative":"positive"}>{player.score} pts</b>
   </button>;
 }
