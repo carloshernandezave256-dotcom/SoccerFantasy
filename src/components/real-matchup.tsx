@@ -6,12 +6,13 @@ import { supabase } from "@/lib/supabase";
 import { type LedgerEntry } from "@/lib/scoring";
 import { resolveActiveLeague } from "@/lib/active-league";
 import { PlayerHeadshot } from "./player-headshot";
+import { partitionMatchupLineup, selectMatchupLineup } from "@/lib/matchup-lineup";
 
 type League={league_id:string;league_name:string;team_name:string;game_format:string};
 type Manager={draft_slot:number;user_id:string;team_name:string};
 type Matchup={id:string;gameweek:number;home_user_id:string;away_user_id:string;home_score:number|string;away_score:number|string;status:"scheduled"|"live"|"final"};
-type Player={id:number;full_name:string;position:string;club:string;photo_url?:string|null;captain?:boolean;score:number;rating:number|null;status:"not_started"|"live"|"final";ledger:LedgerEntry[];goals:number;assists:number;yellowCards:number;redCards:number};
-type TeamView={userId:string;name:string;score:number;players:Player[];lineupSet:boolean};
+type Player={id:number;full_name:string;position:string;club:string;photo_url?:string|null;captain?:boolean;isBench?:boolean;score:number;rating:number|null;status:"not_started"|"live"|"final";ledger:LedgerEntry[];goals:number;assists:number;yellowCards:number;redCards:number};
+type TeamView={userId:string;name:string;score:number;players:Player[];bench:Player[];lineupSet:boolean};
 type ScoreRow={player_id:number;rating:number|null;minutes:number;goals:number;assists:number;shots_on_target:number;big_chances_missed:number;completed_passes:number;tackles_won:number;penalty_goals:number;penalties_missed:number;penalties_conceded:number;saves:number;penalties_saved:number;goals_conceded:number;yellow_cards:number;second_yellow_cards:number;red_cards:number;own_goals:number;status:"not_started"|"live"|"final";fantasy_points:number|string;score_ledger:LedgerEntry[]};
 type Standing={rank:number;user_id:string;team_name:string;played:number;wins:number;draws:number;losses:number;points:number;fantasy_points:number|string};
 
@@ -36,6 +37,16 @@ function PitchPlayer({player,onSelect}:{player:Player;onSelect:(player:Player)=>
     <span className="pitch-player-photo"><PlayerHeadshot name={player.full_name} position={player.position} photoUrl={player.photo_url}/><b className={player.score<0?"negative":"positive"}>{player.score}</b><EventBadges player={player}/></span>
     <strong title={player.full_name}>{displayName}</strong>
     <small>{player.position}</small>
+  </button>;
+}
+
+function BenchPlayer({player,onSelect}:{player:Player;onSelect:(player:Player)=>void}){
+  const words=player.full_name.trim().split(/\s+/);
+  const displayName=player.full_name.length>18&&words.length>1?`${words[0][0]}. ${words.slice(1).join(" ")}`:player.full_name;
+  return <button className="bench-player" onClick={()=>onSelect(player)} aria-label={`Open ${player.full_name} bench scoring card`}>
+    <span className="bench-player-photo"><PlayerHeadshot name={player.full_name} position={player.position} photoUrl={player.photo_url}/><EventBadges player={player}/></span>
+    <span className="bench-player-copy"><strong title={player.full_name}>{displayName}</strong><small>{player.position} · {player.club}</small></span>
+    <b className={player.score<0?"negative":"positive"}>{player.score} pts</b>
   </button>;
 }
 
@@ -178,17 +189,20 @@ export function RealMatchup(){
         return{...player,captain,score:captainScore,rating:row.rating,status:row.status,ledger:scoredLedger,goals:row.goals,assists:row.assists,yellowCards:row.yellow_cards,redCards:row.red_cards};
       };
       const build=(owner:string,score:number|string):TeamView=>{
-        const snapshot=snapshotRows.filter(row=>row.user_id===owner&&row.is_starter&&row.players).map(row=>({...row,is_captain:row.is_star_pick}));
-        const current=lineupRows.filter(row=>row.user_id===owner&&row.is_starter&&row.players);
+        const snapshot=snapshotRows.filter(row=>row.user_id===owner&&row.players).map(row=>({...row,is_captain:row.is_star_pick}));
+        const current=lineupRows.filter(row=>row.user_id===owner&&row.players);
         const matchupStatus=liveMatchup?.status??featured.status;
-        const saved=matchupStatus==="scheduled"?(current.length?current:snapshot):(snapshot.length?snapshot:current);
-        const source=saved.length?saved.map(row=>scoredPlayer(row.players!,row.is_captain,true)):pickRows.filter(row=>row.user_id===owner&&row.players).slice(0,11).map(row=>scoredPlayer(row.players!,false,false));
-        return{userId:owner,name:managers.find(manager=>manager.user_id===owner)?.team_name??"Manager",score:Number(score),players:source.sort((a,b)=>(positionOrder[a.position]??9)-(positionOrder[b.position]??9)),lineupSet:saved.length>0};
+        const saved=selectMatchupLineup(matchupStatus,current,snapshot);
+        const partitioned=partitionMatchupLineup(saved);
+        const ownerPicks=pickRows.filter(row=>row.user_id===owner&&row.players);
+        const starterSource=saved.length?partitioned.starters.map(row=>scoredPlayer(row.players!,row.is_captain,true)):ownerPicks.slice(0,11).map(row=>scoredPlayer(row.players!,false,false));
+        const benchSource=saved.length?partitioned.bench.map(row=>({...scoredPlayer(row.players!,false,true),isBench:true})):ownerPicks.slice(11).map(row=>({...scoredPlayer(row.players!,false,false),isBench:true}));
+        return{userId:owner,name:managers.find(manager=>manager.user_id===owner)?.team_name??"Manager",score:Number(score),players:starterSource.sort((a,b)=>(positionOrder[a.position]??9)-(positionOrder[b.position]??9)),bench:benchSource.sort((a,b)=>(positionOrder[a.position]??9)-(positionOrder[b.position]??9)),lineupSet:saved.length>0};
       };
       if(request===refreshRequest.current){
         const nextTeams=[build(featured.home_user_id,liveMatchup?.home_score??featured.home_score),build(featured.away_user_id,liveMatchup?.away_score??featured.away_score)];
         setTeams(nextTeams);
-        setSelected(current=>current?nextTeams.flatMap(team=>team.players).find(player=>player.id===current.id)??current:null);
+        setSelected(current=>current?nextTeams.flatMap(team=>[...team.players,...team.bench]).find(player=>player.id===current.id)??current:null);
         setStandings((standingsResult.data??[]) as Standing[]);
         setLastUpdated(new Date());
         setLoading(false);setRefreshing(false);
@@ -211,9 +225,22 @@ export function RealMatchup(){
         <p className="score-freshness" aria-live="polite">{refreshing?"Synchronizing latest stored data…":featured.status==="final"?`${freshness} · final data checked`:freshness}</p>
       </section>
       <section className="panel matchup-pitch-card"><div className="lineup-pitch shared-matchup-pitch"><span className="pitch-markings" aria-hidden="true"/>{teams[0]?<div className="pitch-half home-half">{homePitchRows.map(position=>{const players=teams[0].players.filter(player=>player.position===position);return <div className={`pitch-row ${position.toLowerCase()}`} key={`home-${position}`} style={{gridTemplateColumns:`repeat(${Math.max(players.length,1)}, minmax(0, 1fr))`}}>{players.map(player=><PitchPlayer player={player} onSelect={setSelected} key={player.id}/>)}</div>})}</div>:null}{teams[1]?<div className="pitch-half away-half">{awayPitchRows.map(position=>{const players=teams[1].players.filter(player=>player.position===position);return <div className={`pitch-row ${position.toLowerCase()}`} key={`away-${position}`} style={{gridTemplateColumns:`repeat(${Math.max(players.length,1)}, minmax(0, 1fr))`}}>{players.map(player=><PitchPlayer player={player} onSelect={setSelected} key={player.id}/>)}</div>})}</div>:null}</div>{teams.some(team=>team.players.length===0)?<p className="empty-state">A starting XI has not been saved for this matchup yet.</p>:null}</section>
-      <section className="panel fixture-list"><div className="section-row"><div><h2>Gameweek {gameweek} fixtures</h2><small className="lineup-state">Open any matchup to view both Starting XIs and scoring ledgers.</small></div><span className="muted-chip">{weekFixtures.length}</span></div>{weekFixtures.map(matchup=><button className={`fixture-row fixture-button${featured.id===matchup.id?" active":""}`} key={matchup.id} onClick={()=>{if(featured.id===matchup.id)return;setTeams([]);setSelectedMatchupId(matchup.id);setSelected(null);window.scrollTo({top:0,behavior:"smooth"})}} aria-label={`Open ${managers.find(manager=>manager.user_id===matchup.home_user_id)?.team_name??"home team"} versus ${managers.find(manager=>manager.user_id===matchup.away_user_id)?.team_name??"away team"}`} aria-current={featured.id===matchup.id?"true":undefined}><span>{managers.find(manager=>manager.user_id===matchup.home_user_id)?.team_name}</span><b>{Number(matchup.home_score)}–{Number(matchup.away_score)}</b><span>{managers.find(manager=>manager.user_id===matchup.away_user_id)?.team_name}</span><i aria-hidden="true">›</i></button>)}</section>
+      <section className="panel matchup-bench-card"><div className="section-row"><div><p className="eyebrow">SQUAD DEPTH</p><h2>Bench performance</h2><small className="lineup-state">Points shown here are not included in the matchup total.</small></div><span className="muted-chip">BENCH</span></div><div className="bench-matchup-grid">{teams.map(team=><article className="team-bench" key={team.userId}><header><strong>{team.name}</strong><span>{team.bench.reduce((total,player)=>total+player.score,0)} bench pts</span></header><div className="bench-player-list">{team.bench.length?team.bench.map(player=><BenchPlayer player={player} onSelect={setSelected} key={player.id}/>):<p className="empty-state">No bench has been saved for this lineup.</p>}</div></article>)}</div></section>
+      <section className="panel fixture-list"><div className="section-row"><div><h2>Gameweek {gameweek} fixtures</h2><small className="lineup-state">Open any matchup to view both Starting XIs, benches and scoring cards.</small></div><span className="muted-chip">{weekFixtures.length}</span></div>{weekFixtures.map(matchup=><button className={`fixture-row fixture-button${featured.id===matchup.id?" active":""}`} key={matchup.id} onClick={()=>{if(featured.id===matchup.id)return;setTeams([]);setSelectedMatchupId(matchup.id);setSelected(null);window.scrollTo({top:0,behavior:"smooth"})}} aria-label={`Open ${managers.find(manager=>manager.user_id===matchup.home_user_id)?.team_name??"home team"} versus ${managers.find(manager=>manager.user_id===matchup.away_user_id)?.team_name??"away team"}`} aria-current={featured.id===matchup.id?"true":undefined}><span>{managers.find(manager=>manager.user_id===matchup.home_user_id)?.team_name}</span><b>{Number(matchup.home_score)}–{Number(matchup.away_score)}</b><span>{managers.find(manager=>manager.user_id===matchup.away_user_id)?.team_name}</span><i aria-hidden="true">›</i></button>)}</section>
       <section className="panel standings-result"><div className="section-row"><h2>League table</h2><span className="muted-chip">LIVE TABLE</span></div><div className="standings-head"><span>#</span><span>Team</span><span>P</span><span>W-D-L</span><span>Pts</span><span>FP</span></div>{standings.map(row=><div className="standing-row" key={row.user_id}><span>{row.rank}</span><strong>{row.team_name}</strong><span>{row.played}</span><span>{row.wins}-{row.draws}-{row.losses}</span><b>{row.points}</b><span>{Number(row.fantasy_points)}</span></div>)}</section>
     </>:null}
-    {selected?<div className="confirm-overlay ledger-overlay" role="presentation" onClick={()=>setSelected(null)}><section className="confirm-card player-ledger" role="dialog" aria-modal="true" aria-labelledby="ledger-player-name" onClick={event=>event.stopPropagation()}><div className="ledger-sheet-handle" aria-hidden="true"/><header className="ledger-header"><span className={`position ${selected.position.toLowerCase()}`}>{selected.position}</span><button className="ledger-close" onClick={()=>setSelected(null)} aria-label="Close scoring breakdown" autoFocus>×</button></header><div className="ledger-scroll"><p className="eyebrow">SCORING BREAKDOWN</p><h2 id="ledger-player-name">{selected.full_name}</h2><p>{selected.club}{selected.captain?" · Captain":""}</p>{selected.rating!==null?<div className="match-award-summary"><span><small>API MATCH RATING</small><strong>{selected.rating.toFixed(1)}</strong></span></div>:null}<div className="ledger-total"><span>Fantasy points</span><strong>{selected.score}</strong></div>{selected.ledger.length?<><div className="ledger">{selected.ledger.map(entry=><div key={entry.code}><span><strong>{entry.label}</strong><small>{entry.detail}</small></span><b className={entry.points<0?"negative":"positive"}>{entry.points>0?"+":""}{entry.points}</b></div>)}</div><div className="ledger-reconcile"><span>Ledger total</span><strong>{selected.score} pts</strong></div></>:<div className="ledger-empty"><strong>{selected.status==="not_started"?"Match statistics have not arrived yet":selected.status==="live"?"Live statistics are still syncing":"Final statistics are still reconciling"}</strong><p>{selected.status==="not_started"?"Scoring will begin automatically after the player appears and the provider sends match data.":selected.status==="live"?"This player will update automatically when the next stored-data refresh completes.":"We will keep checking the completed fixture for its final player statistics."}</p></div>}</div></section></div>:null}
+    {selected?<div className="confirm-overlay ledger-overlay" role="presentation" onClick={()=>setSelected(null)}>
+      <section className="confirm-card player-ledger" role="dialog" aria-modal="true" aria-labelledby="ledger-player-name" onClick={event=>event.stopPropagation()}>
+        <div className="ledger-sheet-handle" aria-hidden="true"/>
+        <header className="ledger-header"><span className={`position ${selected.position.toLowerCase()}`}>{selected.position}</span>{selected.isBench?<span className="bench-ledger-label">BENCH · NOT COUNTED</span>:null}<button className="ledger-close" onClick={()=>setSelected(null)} aria-label="Close scoring breakdown" autoFocus>×</button></header>
+        <div className="ledger-scroll">
+          <p className="eyebrow">SCORING BREAKDOWN</p><h2 id="ledger-player-name">{selected.full_name}</h2><p>{selected.club}{selected.captain?" · Captain":""}</p>
+          {selected.rating!==null?<div className="match-award-summary"><span><small>API MATCH RATING</small><strong>{selected.rating.toFixed(1)}</strong></span></div>:null}
+          <div className="ledger-total"><span>{selected.isBench?"Bench fantasy points":"Fantasy points"}</span><strong>{selected.score}</strong></div>
+          {selected.isBench?<p className="bench-points-note">These points show the player’s performance but are excluded from the matchup total.</p>:null}
+          {selected.ledger.length?<><div className="ledger">{selected.ledger.map(entry=><div key={entry.code}><span><strong>{entry.label}</strong><small>{entry.detail}</small></span><b className={entry.points<0?"negative":"positive"}>{entry.points>0?"+":""}{entry.points}</b></div>)}</div><div className="ledger-reconcile"><span>Ledger total</span><strong>{selected.score} pts</strong></div></>:<div className="ledger-empty"><strong>{selected.status==="not_started"?"Match statistics have not arrived yet":selected.status==="live"?"Live statistics are still syncing":"Final statistics are still reconciling"}</strong><p>{selected.status==="not_started"?"Scoring will begin automatically after the player appears and the provider sends match data.":selected.status==="live"?"This player will update automatically when the next stored-data refresh completes.":"We will keep checking the completed fixture for its final player statistics."}</p></div>}
+        </div>
+      </section>
+    </div>:null}
   </PageShell>;
 }
