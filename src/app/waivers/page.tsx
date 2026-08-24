@@ -8,6 +8,7 @@ import { loadActivePlayerPool } from "@/lib/active-player-pool";
 import { resolveActiveLeague } from "@/lib/active-league";
 import { PlayerHeadshot } from "@/components/player-headshot";
 import { PlayerStatsDialog } from "@/components/player-stats-dialog";
+import { loadPlayerSeasonTotals, type PlayerSeasonTotal } from "@/lib/player-season-totals";
 
 type League = { league_id: string; league_name: string; team_name: string; is_commissioner: boolean; game_format?: string; player_pool?: string };
 type Player = { id: number; full_name: string; position: string; club: string; competition: string; draft_rank?: number; photo_url?:string|null; injured?:boolean; injury_type?:string|null; injury_reason?:string|null; expected_return?:string|null };
@@ -16,7 +17,6 @@ type Claim = { id: string; user_id: string; add_player_id: number; drop_player_i
 type ContractOffer = { id:string;user_id:string;add_player_id:number;release_player_id:number;gameweek:number;offer_rank:number;amount:number;status:string;created_at:string;processed_at:string|null;note:string|null };
 type Priority = { rank: number; user_id: string; team_name: string };
 type TransactionWindow={gameweek:number;waiver_process_at:string;roster_lock_at:string;phase:"waivers"|"free_agency"|"locked"};
-type SeasonTotal = { player_id:number;points:number;appearances:number;minutes:number;goals:number;assists:number;shots_on_target:number;completed_passes:number;tackles_won:number;saves:number;clean_sheets:number;yellow_cards:number;red_cards:number;latest_gameweek:number|null;latest_status:string|null };
 type PlayerTotals = { points: number; appearances: number; minutes: number; goals: number; assists: number; shotsOnTarget: number; completedPasses: number; tacklesWon: number; saves: number; cleanSheets: number; yellowCards: number; redCards: number; gameweeks: { gameweek: number; points: number; status: string }[] };
 type WatchRow={player_id:number};
 
@@ -28,7 +28,7 @@ export default function WaiversPage() {
   const [contractOffers,setContractOffers]=useState<ContractOffer[]>([]);
   const [contractBudget,setContractBudget]=useState(0);
   const [priority, setPriority] = useState<Priority[]>([]);
-  const [seasonTotals, setSeasonTotals] = useState<SeasonTotal[]>([]);
+  const [seasonTotals, setSeasonTotals] = useState<PlayerSeasonTotal[]>([]);
   const [watchlist,setWatchlist]=useState<Set<number>>(new Set());
   const [userId, setUserId] = useState("");
   const [query, setQuery] = useState("");
@@ -52,7 +52,7 @@ export default function WaiversPage() {
       supabase.from("draft_picks").select("user_id,player_id,players(id,full_name,position,club,competition,draft_rank,photo_url,injured,injury_type,injury_reason,expected_return)").eq("league_id", active.league_id),
       supabase.from("waiver_claims").select("id,user_id,add_player_id,drop_player_id,gameweek,claim_rank,status,created_at,processed_at,note").eq("league_id", active.league_id).order("created_at", { ascending: false }),
       supabase.rpc("waiver_priority", { p_league_id: active.league_id }),
-      supabase.rpc("player_season_totals"),
+      loadPlayerSeasonTotals(),
       supabase.rpc("transaction_window",{p_league_id:active.league_id}),
       supabase.from("auction_contract_offers").select("id,user_id,add_player_id,release_player_id,gameweek,offer_rank,amount,status,created_at,processed_at,note").eq("league_id",active.league_id).order("created_at",{ascending:false}),
       supabase.from("auction_budgets").select("remaining_budget").eq("league_id",active.league_id).eq("user_id",currentUser).maybeSingle(),
@@ -64,7 +64,7 @@ export default function WaiversPage() {
     setPicks((pickResult.data ?? []) as unknown as Pick[]);
     setClaims((claimResult.data ?? []) as Claim[]);
     setPriority((priorityResult.data ?? []) as Priority[]);
-    setSeasonTotals((scoreResult.data ?? []) as SeasonTotal[]);
+    setSeasonTotals(scoreResult.data ?? []);
     setWindowState(((windowResult.data??[])[0] as TransactionWindow)??null);
     setContractOffers((offerResult.data??[]) as ContractOffer[]);
     setContractBudget(Number(budgetResult.data?.remaining_budget??0));
@@ -91,6 +91,38 @@ export default function WaiversPage() {
     void start();
     return () => window.removeEventListener("hashchange", syncHash);
   }, []);
+
+  useEffect(() => {
+    if (!league) return;
+    let refreshTimer: number | undefined;
+    const refreshScores = () => {
+      window.clearTimeout(refreshTimer);
+      refreshTimer = window.setTimeout(() => {
+        void loadPlayerSeasonTotals().then((result) => {
+          if (!result.error) setSeasonTotals(result.data);
+        });
+      }, 400);
+    };
+    const channel = supabase
+      .channel(`market-scores-${league.league_id}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "league_player_scores", filter: `league_id=eq.${league.league_id}` }, refreshScores)
+      .subscribe();
+    const heartbeat = window.setInterval(() => {
+      if (document.visibilityState === "visible") refreshScores();
+    }, 15000);
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === "visible") refreshScores();
+    };
+    window.addEventListener("pageshow", refreshScores);
+    document.addEventListener("visibilitychange", refreshWhenVisible);
+    return () => {
+      window.clearTimeout(refreshTimer);
+      window.clearInterval(heartbeat);
+      window.removeEventListener("pageshow", refreshScores);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
+      void supabase.removeChannel(channel);
+    };
+  }, [league]);
 
   const ownedIds = useMemo(() => new Set(picks.map((pick) => pick.player_id)), [picks]);
   const isAuction=league?.game_format==="auction";

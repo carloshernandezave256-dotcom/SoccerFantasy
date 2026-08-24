@@ -8,6 +8,7 @@ import { PlayerStatsDialog } from "./player-stats-dialog";
 import { resolveActiveLeague } from "@/lib/active-league";
 import { supabase } from "@/lib/supabase";
 import { useLanguage } from "@/lib/i18n";
+import { loadPlayerSeasonTotals } from "@/lib/player-season-totals";
 
 type League = {
   league_id: string;
@@ -227,7 +228,7 @@ export function HomeDashboard() {
           )
           .eq("league_id", active.league_id)
           .order("gameweek", { ascending: false }),
-        supabase.rpc("player_season_totals"),
+        loadPlayerSeasonTotals(),
         supabase
           .from("league_headline_fixtures")
           .select(
