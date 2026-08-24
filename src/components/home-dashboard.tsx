@@ -128,6 +128,16 @@ function fixtureDisplayPriority(status: string) {
   if (!fixtureHasStarted(status)) return 1;
   return 2;
 }
+function pulseStatus(status: string) {
+  const normalized = status.toLowerCase().replaceAll("_", " ");
+  if (normalized.includes("pending"))
+    return { label: "STATS PENDING", tone: "pending" };
+  if (["final", "ft", "aet", "pen"].includes(normalized))
+    return { label: "FT", tone: "final" };
+  if (["not started", "scheduled", "ns", "tbd"].includes(normalized))
+    return { label: "UPCOMING", tone: "scheduled" };
+  return { label: "LIVE", tone: "live" };
+}
 
 function managerAtPick(order: Manager[], pickNumber: number) {
   if (!order.length) return undefined;
@@ -483,21 +493,7 @@ export function HomeDashboard() {
         href: `/trades?league=${league.league_id}`,
         label: "Review trades",
       };
-    if (matchup?.status === "live") return null;
-    if (matchup)
-      return {
-        eyebrow: `GAMEWEEK ${matchup.gameweek}`,
-        title:
-          matchup.status === "final"
-            ? "Your result is ready."
-            : `Next up: ${opponent}`,
-        copy:
-          matchup.status === "scheduled"
-            ? "Your saved Starting XI will score when the matchweek begins."
-            : "Open the matchup for live player totals and scoring breakdowns.",
-        href: `/matchup?league=${league.league_id}`,
-        label: "Open matchup",
-      };
+    if (matchup) return null;
     return {
       eyebrow: "LEAGUE READY",
       title: "Your season command center.",
@@ -516,12 +512,17 @@ export function HomeDashboard() {
     lineupCount,
     lineupReady,
     matchup,
-    opponent,
     rosterCount,
     totalPicks,
     unreadTrades,
   ]);
-  const featuredWeek = Math.max(0, ...headlineFixtures.map((item) => item.gameweek)),
+  const standingsPreview =
+      standings.length <= 5
+      ? standings
+      : myStanding && myStanding.rank > 5
+        ? [...standings.slice(0, 4), myStanding]
+        : standings.slice(0, 5),
+    featuredWeek = Math.max(0, ...headlineFixtures.map((item) => item.gameweek)),
     todaysGames = [...headlineFixtures]
       .sort(
         (a, b) =>
@@ -531,15 +532,28 @@ export function HomeDashboard() {
             (headlineWeight(a.home_team) + headlineWeight(a.away_team)) ||
           new Date(a.kickoff).getTime() - new Date(b.kickoff).getTime(),
       )
-      .slice(0, 4);
+      .slice(0, 3);
 
   return (
     <main className="app-shell home-dashboard">
       <header className="topbar home-topbar">
         <div>
-          <p className="eyebrow">{league?.league_name ?? "XI FANTASY"}</p>
+          <p className="eyebrow">MY FANTASY XI</p>
           <h1>{loading ? "Loading dashboard…" : `Welcome, ${name}`}</h1>
-          {league ? <small>{league.team_name}</small> : null}
+          {league ? (
+            <Link
+              className="home-league-switcher"
+              href={`/league?league=${league.league_id}`}
+            >
+              <span>
+                <strong>{league.league_name}</strong>
+                <small>
+                  {league.team_name} · {league.game_format}
+                </small>
+              </span>
+              <b>Switch</b>
+            </Link>
+          ) : null}
         </div>
         <AccountMenu />
       </header>
@@ -560,48 +574,6 @@ export function HomeDashboard() {
           <p>Once you join, Home becomes your season command center.</p>
           <Link className="primary-button" href="/league">
             Open leagues
-          </Link>
-        </section>
-      ) : null}
-      {league && action ? (
-        <section
-          className={`match-card home-command-card ${isMyTurn ? "my-turn" : ""}`}
-        >
-          <div className="home-command-head">
-            <div>
-              <p className="eyebrow">{action.eyebrow}</p>
-              <h2>{action.title}</h2>
-            </div>
-            {draft?.status === "live" ? (
-              <span className="live-pill">
-                <span />
-                LIVE
-              </span>
-            ) : matchup ? (
-              <span className={`home-status ${matchup.status}`}>
-                {matchup.status}
-              </span>
-            ) : null}
-          </div>
-          <p>{action.copy}</p>
-          {draft?.status === "live" ? (
-            <>
-              <div className="home-clock">
-                <strong>
-                  {String(Math.floor(seconds / 60)).padStart(2, "0")}:
-                  {String(seconds % 60).padStart(2, "0")}
-                </strong>
-                <small>
-                  Pick {draft.current_pick} of {totalPicks}
-                </small>
-              </div>
-              <div className="progress">
-                <span style={{ width: `${progress}%` }} />
-              </div>
-            </>
-          ) : null}
-          <Link className="primary-button home-primary-link" href={action.href}>
-            {action.label} →
           </Link>
         </section>
       ) : null}
@@ -642,11 +614,7 @@ export function HomeDashboard() {
           >
             View matchup and player scores <span>→</span>
           </Link>
-        </section>
-      ) : null}
-      {league ? (
-        <>
-          <section className="home-season-strip">
+          <div className="home-season-strip home-season-strip-embedded">
             <div>
               <span>RANK</span>
               <strong>{myStanding ? `#${myStanding.rank}` : "—"}</strong>
@@ -665,7 +633,71 @@ export function HomeDashboard() {
                 {lineupReady ? "READY" : `${lineupCount}/11`}
               </strong>
             </div>
-          </section>
+          </div>
+        </section>
+      ) : null}
+      {league && !matchup ? (
+        <section className="home-season-strip">
+          <div>
+            <span>RANK</span>
+            <strong>{myStanding ? `#${myStanding.rank}` : "—"}</strong>
+          </div>
+          <div>
+            <span>RECORD</span>
+            <strong>
+              {myStanding
+                ? `${myStanding.wins}-${myStanding.draws}-${myStanding.losses}`
+                : "0-0-0"}
+            </strong>
+          </div>
+          <div>
+            <span>LINEUP</span>
+            <strong className={lineupReady ? "ready" : "attention"}>
+              {lineupReady ? "READY" : `${lineupCount}/11`}
+            </strong>
+          </div>
+        </section>
+      ) : null}
+      {league && action ? (
+        <section
+          className={`match-card home-command-card ${isMyTurn ? "my-turn" : ""}`}
+        >
+          <div className="home-command-head">
+            <div>
+              <p className="eyebrow">{action.eyebrow}</p>
+              <h2>{action.title}</h2>
+            </div>
+            {draft?.status === "live" ? (
+              <span className="live-pill">
+                <span />LIVE
+              </span>
+            ) : null}
+          </div>
+          <p>{action.copy}</p>
+          {draft?.status === "live" ? (
+            <>
+              <div className="home-clock">
+                <strong>
+                  {String(Math.floor(seconds / 60)).padStart(2, "0")}:
+                  {String(seconds % 60).padStart(2, "0")}
+                </strong>
+                <small>Pick {draft.current_pick} of {totalPicks}</small>
+              </div>
+              <div className="progress">
+                <span style={{ width: `${progress}%` }} />
+              </div>
+            </>
+          ) : null}
+          <Link
+            className="primary-button home-primary-link"
+            href={action.href}
+          >
+            {action.label} →
+          </Link>
+        </section>
+      ) : null}
+      {league ? (
+        <>
           <section className="home-section">
             <div className="section-row">
               <div>
@@ -742,6 +774,7 @@ export function HomeDashboard() {
               </Link>
             </div>
           </section>
+          <div className="home-live-grid">
           <section className="panel home-big-games">
             <div className="section-row">
               <div>
@@ -819,7 +852,8 @@ export function HomeDashboard() {
                   <span>{index + 1}</span>
                   <div>
                     <strong>{player.name}</strong>
-                    <small>{player.club}</small>
+                    <small>{player.club} · {player.competition}</small>
+                    <em className={`pulse-status ${pulseStatus(player.status).tone}`}>{pulseStatus(player.status).label}</em>
                     <p>
                       {player.goals || player.assists
                         ? `${player.goals ? `${player.goals} goal${player.goals === 1 ? "" : "s"}` : ""}${player.goals && player.assists ? " · " : ""}${player.assists ? `${player.assists} assist${player.assists === 1 ? "" : "s"}` : ""}`
@@ -844,6 +878,7 @@ export function HomeDashboard() {
               ) : null}
             </div>
           </section>
+          </div>
           <section className="panel home-table-card">
             <div className="section-row">
               <div>
@@ -860,7 +895,7 @@ export function HomeDashboard() {
               <span>W-D-L</span>
               <span>Pts</span>
             </div>
-            {standings.map((row) => (
+            {standingsPreview.map((row) => (
               <div
                 className={`home-table-row ${row.user_id === userId ? "mine" : ""}`}
                 key={row.user_id}
@@ -878,6 +913,7 @@ export function HomeDashboard() {
                 Standings begin after the first matchup.
               </p>
             ) : null}
+            {standings.length > standingsPreview.length ? <Link className="home-card-link" href={`/league?league=${league.league_id}`}>View full table <span>→</span></Link> : null}
           </section>
           {draft?.status !== "complete" && picks.length ? (
             <section className="panel home-activity">
