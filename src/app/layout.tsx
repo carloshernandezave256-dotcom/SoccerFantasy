@@ -20,6 +20,7 @@ import { LegalDisclosureGate } from "@/components/legal-disclosure-gate";
 import { BetaAccessGate } from "@/components/beta-access-gate";
 import { SessionGuard } from "@/components/session-guard";
 import { LanguageProvider } from "@/lib/i18n";
+import { LeagueChat } from "@/components/league-chat";
 
 export const metadata: Metadata = {
   title: "My Fantasy XI | Build Your Football World",
@@ -40,6 +41,7 @@ export default function RootLayout({
       <body>
         <LanguageProvider>
           <SessionGuard>{children}</SessionGuard>
+          <LeagueChat />
           <LegalDisclosureGate />
           <BetaAccessGate />
         </LanguageProvider>

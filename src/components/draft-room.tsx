@@ -6,7 +6,6 @@ import { PageShell } from "./page-shell";
 import { supabase } from "@/lib/supabase";
 import { loadActivePlayerPool } from "@/lib/active-player-pool";
 import { PlayerHeadshot } from "./player-headshot";
-import { DraftRoomChat } from "./draft-room-chat";
 
 type Player = { id:number; full_name:string; position:string; club:string; competition:string; draft_rank:number|null; photo_url?:string|null };
 type Draft = { id:string; status:"waiting"|"live"|"paused"|"complete"; current_pick:number; pick_deadline:string|null; pick_seconds:number };
@@ -267,6 +266,5 @@ export function DraftRoom({leagueId}:{leagueId:string}){
     </>}
 
     <section className="panel"><div className="section-row"><h2>Recent picks</h2><span className="muted-chip">{picks.length}</span></div>{picks.slice(0,8).map(pick=><div className="pick-row recent-pick-row" key={pick.id}><b>#{pick.pick_number}</b>{pick.players?<PlayerHeadshot name={pick.players.full_name} position={pick.players.position} photoUrl={pick.players.photo_url}/>:<span className="position">—</span>}<span>{pick.players?.full_name??`Player ${pick.player_id}`}</span><small>{order.find(manager=>manager.user_id===pick.user_id)?.team_name}{pick.auto_picked?" · AUTO":""}</small></div>)}</section>
-    <DraftRoomChat leagueId={leagueId} currentUserId={userId} managers={order} roomName="Draft"/>
   </PageShell>;
 }

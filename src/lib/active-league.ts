@@ -1,7 +1,11 @@
 export const ACTIVE_LEAGUE_KEY="xi-fantasy-active-league";
 
 export function setActiveLeagueId(leagueId:string){
-  if(typeof window!=="undefined")window.localStorage.setItem(ACTIVE_LEAGUE_KEY,leagueId);
+  if(typeof window!=="undefined"){
+    const previous=window.localStorage.getItem(ACTIVE_LEAGUE_KEY);
+    window.localStorage.setItem(ACTIVE_LEAGUE_KEY,leagueId);
+    if(previous!==leagueId)window.dispatchEvent(new Event("xi-active-league-change"));
+  }
 }
 
 export function clearActiveLeagueId(){

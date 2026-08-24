@@ -21,7 +21,7 @@ export function DraftRoomChat({
   leagueId: string;
   currentUserId: string | null;
   managers: Manager[];
-  roomName: "Draft" | "Auction";
+  roomName: "Draft" | "Auction" | "League";
 }) {
   const { t } = useLanguage();
   const [open, setOpen] = useState(false);
@@ -36,8 +36,11 @@ export function DraftRoomChat({
 
   useEffect(() => {
     openRef.current = open;
-    if (open) setUnread(0);
-  }, [open]);
+    if (open) {
+      setUnread(0);
+      window.localStorage.setItem(`xi-chat-seen:${leagueId}`, new Date().toISOString());
+    }
+  }, [open, leagueId]);
 
   useEffect(() => {
     currentUserRef.current = currentUserId;
@@ -54,7 +57,17 @@ export function DraftRoomChat({
       .then(({ data, error: loadError }) => {
         if (!active) return;
         if (loadError) setError("Chat is unavailable until its database update is applied.");
-        else setMessages(((data ?? []) as ChatMessage[]).reverse());
+        else {
+          const loaded = ((data ?? []) as ChatMessage[]).reverse();
+          setMessages(loaded);
+          const lastSeen = window.localStorage.getItem(`xi-chat-seen:${leagueId}`);
+          if (!openRef.current) {
+            setUnread(loaded.filter((message) =>
+              message.user_id !== currentUserRef.current &&
+              (!lastSeen || message.created_at > lastSeen)
+            ).length);
+          }
+        }
       });
 
     const channel = supabase
@@ -120,11 +133,11 @@ export function DraftRoomChat({
   return (
     <div className={`draft-chat ${open ? "open" : ""}`}>
       {open ? (
-        <section className="draft-chat-panel" role="dialog" aria-label={roomName === "Draft" ? t("chat.roomDraft", "Draft room chat") : t("chat.roomAuction", "Auction room chat")}>
+        <section className="draft-chat-panel" role="dialog" aria-label={roomName === "Draft" ? t("chat.roomDraft", "Draft room chat") : roomName === "Auction" ? t("chat.roomAuction", "Auction room chat") : t("chat.roomLeague", "League chat")}>
           <header>
             <span>
               <small>{t("chat.live", "LIVE CHAT")}</small>
-              <strong>{roomName === "Draft" ? t("chat.roomDraft", "Draft room") : t("chat.roomAuction", "Auction room")}</strong>
+              <strong>{roomName === "Draft" ? t("chat.roomDraft", "Draft room") : roomName === "Auction" ? t("chat.roomAuction", "Auction room") : t("chat.roomLeague", "League chat")}</strong>
             </span>
             <button type="button" onClick={() => setOpen(false)} aria-label={t("chat.close", "Close chat")}>
               ×
@@ -175,7 +188,7 @@ export function DraftRoomChat({
           type="button"
           className="draft-chat-launcher"
           onClick={() => setOpen(true)}
-          aria-label={`${roomName === "Draft" ? t("chat.openDraft", "Open draft room chat") : t("chat.openAuction", "Open auction room chat")}${unread ? `, ${unread} ${t("chat.unread", "unread messages")}` : ""}`}
+          aria-label={`${roomName === "Draft" ? t("chat.openDraft", "Open draft room chat") : roomName === "Auction" ? t("chat.openAuction", "Open auction room chat") : t("chat.openLeague", "Open league chat")}${unread ? `, ${unread} ${t("chat.unread", "unread messages")}` : ""}`}
         >
           <span aria-hidden="true">✉</span>
           <strong>{t("chat.label", "Chat")}</strong>

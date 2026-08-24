@@ -6,7 +6,6 @@ import { PageShell } from "./page-shell";
 import { PlayerHeadshot } from "./player-headshot";
 import { supabase } from "@/lib/supabase";
 import { loadActivePlayerPool } from "@/lib/active-player-pool";
-import { DraftRoomChat } from "./draft-room-chat";
 
 type League = {
   league_id: string;
@@ -663,12 +662,6 @@ export function AuctionRoom({ leagueId }: { leagueId: string }) {
           </section>
         </>
       )}
-      <DraftRoomChat
-        leagueId={leagueId}
-        currentUserId={userId || null}
-        managers={managers}
-        roomName="Auction"
-      />
     </PageShell>
   );
 }
