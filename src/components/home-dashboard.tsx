@@ -194,8 +194,8 @@ export function HomeDashboard() {
         (leagueData ?? []) as League[],
         new URLSearchParams(window.location.search).get("league"),
       ) ?? null;
-    setLeague(active);
     if (!active) {
+      setLeague(null);
       setLoading(false);
       return;
     }
@@ -308,6 +308,7 @@ export function HomeDashboard() {
         myMatches[0] ??
         null,
     );
+    setLeague(active);
     setLoading(false);
   }, []);
   useEffect(() => {
@@ -964,4 +965,3 @@ export function HomeDashboard() {
     </main>
   );
 }
-
