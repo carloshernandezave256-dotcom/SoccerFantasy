@@ -17,8 +17,9 @@ type SearchCandidate={id:number;name:string;raw:unknown};
 export const maxDuration=300;
 
 function normalize(value:string){
-  return value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]/g,"");
+  return value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9 ]/g," ").replace(/\s+/g," ").trim();
 }
+function tokens(value:string){return normalize(value).split(" ").filter(Boolean)}
 
 function isConfirmedInjury(player:InjuryPlayer){
   const value=`${player.injury_type??""} ${player.injury_reason??""}`.toLowerCase();
@@ -26,9 +27,9 @@ function isConfirmedInjury(player:InjuryPlayer){
   return /injur|illness|health|hernia|strain|sprain|fracture|broken|achilles|hamstring|thigh|groin|knee|ankle|foot|calf|muscle|shoulder|back|hip|rib|arm|finger|wrist|leg/.test(value);
 }
 
-function freshEnough(value:string|null){
-  if(!value)return false;
-  const checked=new Date(value).getTime();
+function freshEnough(player:InjuryPlayer){
+  if(!player.fotmob_id||!player.fotmob_return_checked_at)return false;
+  const checked=new Date(player.fotmob_return_checked_at).getTime();
   return Number.isFinite(checked)&&Date.now()-checked<12*60*60*1000;
 }
 
@@ -62,23 +63,41 @@ function searchCandidates(value:unknown){
   return [...new Map(candidates.map(candidate=>[candidate.id,candidate])).values()];
 }
 
-async function findFotmobId(player:InjuryPlayer){
-  const query=encodeURIComponent(player.full_name);
+function scoreCandidate(player:InjuryPlayer,candidate:SearchCandidate){
+  const wanted=tokens(player.full_name),candidateTokens=tokens(candidate.name),club=normalize(player.club),raw=normalize(JSON.stringify(candidate.raw));
+  const wantedJoined=wanted.join(""),candidateJoined=candidateTokens.join("");
+  const surname=wanted[wanted.length-1]??"",candidateSurname=candidateTokens[candidateTokens.length-1]??"";
+  const first=wanted[0]??"",candidateFirst=candidateTokens[0]??"";
+  let score=0;
+  if(candidateJoined===wantedJoined)score+=160;
+  else if(candidateJoined.includes(wantedJoined)||wantedJoined.includes(candidateJoined))score+=95;
+  if(surname&&candidateSurname===surname)score+=90;
+  else if(surname&&candidateTokens.includes(surname))score+=65;
+  if(first.length===1&&candidateFirst.startsWith(first))score+=35;
+  else if(first.length>1&&candidateFirst===first)score+=45;
+  if(club&&raw.includes(club))score+=70;
+  return score;
+}
+
+async function searchFotmob(term:string){
+  const query=encodeURIComponent(term);
   let payload:unknown;
-  try{payload=await fotmobJson(`search/suggest?hits=12&lang=en&term=${query}`)}
+  try{payload=await fotmobJson(`search/suggest?hits=20&lang=en&term=${query}`)}
   catch{payload=await fotmobJson(`searchData?term=${query}`)}
-  const candidates=searchCandidates(payload);
+  return searchCandidates(payload);
+}
+
+async function findFotmobId(player:InjuryPlayer){
+  const nameTokens=tokens(player.full_name),surname=nameTokens[nameTokens.length-1]??player.full_name;
+  const terms=[player.full_name,surname,`${surname} ${player.club}`];
+  const all:SearchCandidate[]=[];
+  for(const term of [...new Set(terms.filter(Boolean))]){
+    try{all.push(...await searchFotmob(term))}catch{}
+  }
+  const candidates=[...new Map(all.map(candidate=>[candidate.id,candidate])).values()];
   if(!candidates.length)return null;
-  const wanted=normalize(player.full_name),club=normalize(player.club);
-  return candidates.map(candidate=>{
-    const candidateName=normalize(candidate.name);
-    const raw=normalize(JSON.stringify(candidate.raw));
-    let score=0;
-    if(candidateName===wanted)score+=100;
-    else if(candidateName.includes(wanted)||wanted.includes(candidateName))score+=60;
-    if(club&&raw.includes(club))score+=35;
-    return {...candidate,score};
-  }).sort((a,b)=>b.score-a.score)[0]?.id??null;
+  const ranked=candidates.map(candidate=>({...candidate,score:scoreCandidate(player,candidate)})).sort((a,b)=>b.score-a.score);
+  return ranked[0]&&ranked[0].score>=120?ranked[0].id:null;
 }
 
 function expectedReturnFromPayload(value:unknown){
@@ -109,18 +128,18 @@ function expectedReturnFromPayload(value:unknown){
 }
 
 async function enrichPlayer(player:InjuryPlayer,supabaseUrl:string,adminHeaders:Record<string,string>){
-  if(freshEnough(player.fotmob_return_checked_at))return {cached:true,matched:Boolean(player.fotmob_id),dated:Boolean(player.fotmob_expected_return)};
+  if(freshEnough(player))return {cached:true,matched:true,dated:Boolean(player.fotmob_expected_return)};
   let fotmobId=player.fotmob_id;
   if(!fotmobId)fotmobId=await findFotmobId(player);
-  let returnLabel:string|null=null;
+  let returnLabel:string|null=player.fotmob_expected_return??null;
   if(fotmobId){
     try{returnLabel=expectedReturnFromPayload(await fotmobJson(`playerData?id=${fotmobId}&includeMarketValues=false`))}
-    catch{returnLabel=null}
+    catch{returnLabel=player.fotmob_expected_return??null}
   }
   const response=await fetch(`${supabaseUrl}/rest/v1/players?id=eq.${player.id}`,{
     method:"PATCH",
     headers:{...adminHeaders,Prefer:"return=minimal"},
-    body:JSON.stringify({fotmob_id:fotmobId,fotmob_expected_return:returnLabel,fotmob_return_checked_at:new Date().toISOString()}),
+    body:JSON.stringify({fotmob_id:fotmobId,fotmob_expected_return:returnLabel,expected_return:returnLabel??null,fotmob_return_checked_at:new Date().toISOString()}),
     cache:"no-store",
   });
   if(!response.ok)throw new Error((await response.text())||"Could not save FotMob return date");
