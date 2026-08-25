@@ -57,6 +57,7 @@ export async function refreshAffectedLeagueScores(
 
     await store.upsertLeagueScores(rows);
     await store.refreshMatchupScores(leagueId, window.gameweek);
+    await store.settleFinalGameweek(leagueId, window.gameweek);
     leagueRowsUpdated += rows.length;
     leagueGameweeksUpdated += 1;
   }

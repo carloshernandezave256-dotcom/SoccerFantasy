@@ -244,4 +244,15 @@ export class LiveScoreStore {
       `Could not refresh matchup totals for ${leagueId}.`,
     );
   }
+
+  async settleFinalGameweek(leagueId: string, gameweek: number) {
+    const response = await this.write(
+      "rpc/settle_final_gameweek",
+      "POST",
+      { p_league_id: leagueId, p_gameweek: gameweek },
+      `Could not settle final gameweek ${gameweek} for ${leagueId}.`,
+      "return=representation",
+    );
+    return Number(await response.json()) || 0;
+  }
 }
