@@ -19,6 +19,7 @@ describe("refreshAffectedLeagueScores", () => {
       ],
       fixtureStats: async () => [],
       lineupPlayerIds: async () => [100],
+      poolPlayerIds: async () => [100, 101],
       upsertLeagueScores: async () => { calls.push("scores"); },
       refreshMatchupScores: async () => { calls.push("refresh"); },
       settleFinalGameweek: async () => { calls.push("settle"); return 1; },
@@ -31,6 +32,6 @@ describe("refreshAffectedLeagueScores", () => {
     );
 
     expect(calls).toEqual(["scores", "refresh", "settle"]);
-    expect(result).toEqual({ leagueRowsUpdated: 1, leagueGameweeksUpdated: 1 });
+    expect(result).toEqual({ leagueRowsUpdated: 2, leagueGameweeksUpdated: 1 });
   });
 });

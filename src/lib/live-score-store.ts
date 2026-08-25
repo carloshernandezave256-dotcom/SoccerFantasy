@@ -13,6 +13,14 @@ export type LeagueFixture = { league_id: string; fixture_id: number };
 export type LeagueConfig = { calendar_competition: string; player_pool: string };
 export type TransactionWindow = { gameweek: number; roster_lock_at: string };
 
+const TOP_FIVE_COMPETITIONS = [
+  "Premier League",
+  "La Liga",
+  "Serie A",
+  "Bundesliga",
+  "Ligue 1",
+] as const;
+
 export class LiveScoreStore {
   constructor(
     private readonly baseUrl: string,
@@ -225,15 +233,33 @@ export class LiveScoreStore {
     return rows.map((row) => row.player_id);
   }
 
+  async poolPlayerIds(playerPool: string) {
+    const competitions = playerPool === "All Top Five"
+      ? TOP_FIVE_COMPETITIONS
+      : [playerPool];
+    const query = new URLSearchParams({
+      active: "eq.true",
+      competition: `in.(${competitions.join(",")})`,
+      select: "id",
+    });
+    const rows = await fetchAllRestRows<{ id: number }>(
+      `${this.baseUrl}/rest/v1/players?${query}`,
+      this.headers(),
+    );
+    return rows.map((row) => row.id);
+  }
+
   async upsertLeagueScores(rows: LeaguePlayerScoreRow[]) {
     if (!rows.length) return;
-    await this.write(
-      "league_player_scores?on_conflict=league_id,gameweek,player_id",
-      "POST",
-      rows,
-      `League score update failed for ${rows[0].league_id}.`,
-      "resolution=merge-duplicates,return=minimal",
-    );
+    for (let start = 0; start < rows.length; start += 500) {
+      await this.write(
+        "league_player_scores?on_conflict=league_id,gameweek,player_id",
+        "POST",
+        rows.slice(start, start + 500),
+        `League score update failed for ${rows[0].league_id}.`,
+        "resolution=merge-duplicates,return=minimal",
+      );
+    }
   }
 
   async refreshMatchupScores(leagueId: string, gameweek: number) {

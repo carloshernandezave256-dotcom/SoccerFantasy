@@ -35,12 +35,14 @@ export async function refreshAffectedLeagueScores(
     const fixtureIdsForWeek = weekFixtures.map((fixture) => fixture.fixture_id);
     if (!fixtureIdsForWeek.length) continue;
 
-    const [fixtureStats, lineupPlayerIds] = await Promise.all([
+    const [fixtureStats, lineupPlayerIds, poolPlayerIds] = await Promise.all([
       store.fixtureStats(fixtureIdsForWeek),
       store.lineupPlayerIds(leagueId),
+      store.poolPlayerIds(league.player_pool),
     ]);
     const playerIds = [
       ...new Set([
+        ...poolPlayerIds,
         ...lineupPlayerIds,
         ...fixtureStats.map((stat) => stat.player_id),
       ]),
