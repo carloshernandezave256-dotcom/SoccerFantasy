@@ -46,7 +46,6 @@ export function TeamManager(){
   const[starters,setStarters]=useState<Set<number>>(new Set());
   const[starterOrder,setStarterOrder]=useState<number[]>([]);
   const[captain,setCaptain]=useState<number|null>(null);
-  const[arrangeMode,setArrangeMode]=useState(false);
   const[selectedStarter,setSelectedStarter]=useState<number|null>(null);
   const[editing,setEditing]=useState(false);
   const[dirty,setDirty]=useState(false);
@@ -108,7 +107,7 @@ export function TeamManager(){
     savedStarterIdsRef.current=new Set(savedStarterIds);
     setCaptain(savedLineupIsValid&&savedCaptain!==null&&starterIds.has(savedCaptain)?savedCaptain:null);
     loadedRosterKeyRef.current=rosterKey;
-    if(switchingRoster){setEditing(!currentLock?.locked&&(!savedLineupIsValid||savedCaptain===null));setDirty(false);setArrangeMode(false);setSelectedStarter(null)}
+    if(switchingRoster){setEditing(!currentLock?.locked&&(!savedLineupIsValid||savedCaptain===null));setDirty(false);setSelectedStarter(null)}
     setLoading(false);
   },[]);
 
@@ -185,17 +184,14 @@ export function TeamManager(){
 
   function tapStarter(id:number){
     if(!isMine||!editing||lineupLocked)return;
-    if(arrangeMode){
-      if(selectedStarter===null){setSelectedStarter(id);setMessage(`${roster.find(player=>player.id===id)?.full_name} selected. Tap another ${roster.find(player=>player.id===id)?.position} to rearrange the row.`);return}
-      if(selectedStarter===id){setSelectedStarter(null);setMessage("Pitch arrangement selection cleared.");return}
+    if(selectedStarter!==null&&selectedStarter!==id){
       const selectedPosition=roster.find(player=>player.id===selectedStarter)?.position;
       const targetPosition=roster.find(player=>player.id===id)?.position;
-      if(!selectedPosition||selectedPosition!==targetPosition){setMessage(`Choose another ${selectedPosition??"player in the same position row"}. Players cannot move into a different position row.`);return}
-      reorderStarter(selectedStarter,id);setSelectedStarter(null);return;
+      if(selectedPosition&&selectedPosition===targetPosition){reorderStarter(selectedStarter,id);setSelectedStarter(null);return}
     }
     if(selectedStarter===id){setSelectedStarter(null);setMessage("Starter selection cleared.");return}
     setSelectedStarter(id);
-    setMessage(`${roster.find(player=>player.id===id)?.full_name} selected. Choose an eligible replacement from the bench.`);
+    setMessage(`${roster.find(player=>player.id===id)?.full_name} selected. Tap another ${roster.find(player=>player.id===id)?.position} to reorder, or choose an eligible bench replacement.`);
   }
 
   function replaceStarterWithBench(benchId:number){
@@ -243,7 +239,7 @@ export function TeamManager(){
   function resetTo433(){
     const next=defaultStartingEleven(roster),order=centerHaaland(roster.filter(player=>next.has(player.id)).map(player=>player.id),roster);
     if(next.size!==11||!formationIsValid(roster,next)){setMessage("A valid 4-3-3 cannot be created while your squad has too few available players. Replace unavailable players manually when possible.");return}
-    setStarters(next);setStarterOrder(order);if(captain!==null&&!next.has(captain))setCaptain(null);setEditing(true);setSelectedStarter(null);setArrangeMode(false);setDirty(true);setMessage("Reset to the default 4-3-3. Save to keep this lineup.");
+    setStarters(next);setStarterOrder(order);if(captain!==null&&!next.has(captain))setCaptain(null);setEditing(true);setSelectedStarter(null);setDirty(true);setMessage("Reset to the default 4-3-3. Save to keep this lineup.");
   }
 
   async function undoChanges(){
@@ -259,7 +255,7 @@ export function TeamManager(){
     const start=[...starterOrder.filter(id=>starters.has(id)),...[...starters].filter(id=>!starterOrder.includes(id))];
     const bench=roster.filter(player=>!starters.has(player.id)).slice(0,7).map(player=>player.id);
     const{error}=await supabase.rpc("save_lineup",{p_league_id:league,p_starters:start,p_bench:bench,p_captain:captain});
-    if(error)setMessage(error.message);else{savedStarterIdsRef.current=new Set(start);setMessage("Lineup and Captain saved.");setDirty(false);setUndoOrder(null);setEditing(false);setArrangeMode(false);setSelectedStarter(null)}
+    if(error)setMessage(error.message);else{savedStarterIdsRef.current=new Set(start);setMessage("Lineup and Captain saved.");setDirty(false);setUndoOrder(null);setEditing(false);setSelectedStarter(null)}
   }
 
   return <PageShell leagueId={league} eyebrow={viewedManager?.team_name??leagues.find(item=>item.league_id===league)?.team_name??"MY CLUB"} title={isMine?"My Team":"Team Viewer"}>
@@ -289,9 +285,10 @@ export function TeamManager(){
           <span className={(counts.FWD??0)>=1&&(counts.FWD??0)<=4?"complete":"needed"}>FWD {counts.FWD??0}/1–4</span>
         </div>
       </section>
+      {isMine&&!editing?<button className="primary-button full-button edit-lineup-button" disabled={lineupLocked} onClick={()=>{setEditing(true);setSelectedStarter(null);setMessage("Tap a starter, then tap another same-position starter to reorder or choose an eligible bench replacement.")}}>{lineupLocked?"Lineup locked":valid?"Edit lineup":"Complete lineup"}</button>:null}
       {isMine&&lineupLocked?<section className="panel lineup-lock-banner"><strong>Gameweek {lineupLock?.gameweek} lineup locked</strong><p>Your starting XI, bench order, player arrangement, and Captain reopen together after every fixture in this gameweek is final.</p></section>:null}
       {isMine&&editing&&unavailableStarters.length?<section className="panel lineup-availability-alert"><strong>Replace unavailable starters</strong><p>{unavailableStarters.map(player=>player.full_name).join(", ")} cannot be saved in the Starting XI. Select an available bench player, then replace the starter.</p></section>:null}
-      {isMine&&editing?<><section className="lineup-save-dock"><span className={dirty?"dirty":valid?"ready":"attention"}><b>{dirty?"UNSAVED CHANGES":valid?"LINEUP READY":"ACTION NEEDED"}</b><small>{captain===null?"Choose a Captain to finish":dirty?"Save your changes":"Your XI and Captain are complete"}</small></span><button type="button" className="primary-button" disabled={!valid} onClick={save}>{captain===null?"Choose Captain":"Save lineup"}</button></section><section className="team-captain-control"><div><small>CAPTAIN</small><strong>{captainPlayer?.full_name??"Choose your Captain"}</strong><p>Captain earns +50% fantasy points.</p></div><select className="league-select captain-select" aria-label="Choose Captain" value={captain??""} onChange={event=>{const next=Number(event.target.value);if(!next)return;const previous=captain;setCaptain(next);setSelectedStarter(null);setDirty(true);void persistCaptain(next,previous)}}><option value="">Choose Captain</option>{starterOrder.filter(id=>starters.has(id)).flatMap(id=>{const player=roster.find(item=>item.id===id);return player?[<option key={player.id} value={player.id}>{player.full_name}</option>]:[]})}</select></section>{message?<p className="team-instruction">{message}</p>:null}<SavedTeamPitch roster={roster} starters={starters} starterOrder={starterOrder} captain={captain} showPackCards={showPackCards} editing allowDrag={false} selectedStarter={selectedStarter} compatibleBenchIds={compatibleBenchIds} onInfo={id=>setInfoPlayer(roster.find(player=>player.id===id)??null)} onStarter={tapStarter} onReorder={(id,targetId)=>{setSelectedStarter(null);reorderStarter(id,targetId)}} onBench={replaceStarterWithBench}/><div className="lineup-edit-actions"><button type="button" className={`secondary-button ${arrangeMode?"active":""}`} onClick={()=>{setArrangeMode(active=>!active);setSelectedStarter(null);setMessage(arrangeMode?"Tap a starter, then choose a bench replacement.":"Select two players in the same position row to swap them.")}}>{arrangeMode?"Finish reordering":"Reorder players"}</button><button type="button" className="secondary-button" onClick={resetTo433}>Reset 4-3-3</button><button type="button" className="secondary-button" disabled={!dirty&&!undoOrder} onClick={()=>void undoChanges()}>Undo</button></div></>:<><SavedTeamPitch roster={roster} starters={starters} starterOrder={starterOrder} captain={captain} showPackCards={showPackCards} onInfo={id=>setInfoPlayer(roster.find(player=>player.id===id)??null)} onBench={id=>setInfoPlayer(roster.find(player=>player.id===id)??null)}/>{isMine?<button className="primary-button full-button edit-lineup-button" disabled={lineupLocked} onClick={()=>{setEditing(true);setArrangeMode(false);setSelectedStarter(null);setMessage("Tap a starter first, then choose an eligible replacement from the bench.")}}>{lineupLocked?"Lineup locked":valid?"Edit lineup":"Complete lineup"}</button>:<div className="view-only-banner">Viewing {viewedManager?.team_name} · Read only</div>}</>}
+      {isMine&&editing?<><section className="lineup-save-dock"><span className={dirty?"dirty":valid?"ready":"attention"}><b>{dirty?"UNSAVED CHANGES":valid?"LINEUP READY":"ACTION NEEDED"}</b><small>{captain===null?"Choose a Captain to finish":dirty?"Save your changes":"Your XI and Captain are complete"}</small></span><button type="button" className="primary-button" disabled={!valid} onClick={save}>{captain===null?"Choose Captain":"Save lineup"}</button></section><section className="team-captain-control"><div><small>CAPTAIN</small><strong>{captainPlayer?.full_name??"Choose your Captain"}</strong><p>Captain earns +50% fantasy points.</p></div><select className="league-select captain-select" aria-label="Choose Captain" value={captain??""} onChange={event=>{const next=Number(event.target.value);if(!next)return;const previous=captain;setCaptain(next);setSelectedStarter(null);setDirty(true);void persistCaptain(next,previous)}}><option value="">Choose Captain</option>{starterOrder.filter(id=>starters.has(id)).flatMap(id=>{const player=roster.find(item=>item.id===id);return player?[<option key={player.id} value={player.id}>{player.full_name}</option>]:[]})}</select></section>{message?<p className="team-instruction">{message}</p>:null}<SavedTeamPitch roster={roster} starters={starters} starterOrder={starterOrder} captain={captain} showPackCards={showPackCards} editing allowDrag={false} selectedStarter={selectedStarter} compatibleBenchIds={compatibleBenchIds} onInfo={id=>setInfoPlayer(roster.find(player=>player.id===id)??null)} onStarter={tapStarter} onReorder={(id,targetId)=>{setSelectedStarter(null);reorderStarter(id,targetId)}} onBench={replaceStarterWithBench}/><div className="lineup-edit-actions"><button type="button" className="secondary-button" onClick={resetTo433}>Reset 4-3-3</button><button type="button" className="secondary-button" disabled={!dirty&&!undoOrder} onClick={()=>void undoChanges()}>Undo</button></div></>:<><SavedTeamPitch roster={roster} starters={starters} starterOrder={starterOrder} captain={captain} showPackCards={showPackCards} onInfo={id=>setInfoPlayer(roster.find(player=>player.id===id)??null)} onBench={id=>setInfoPlayer(roster.find(player=>player.id===id)??null)}/>{!isMine?<div className="view-only-banner">Viewing {viewedManager?.team_name} · Read only</div>:null}</>}
     </>}
     {message&&isMine?<p className="form-message">{message}</p>:null}
     {infoPlayer?<PlayerStatsDialog leagueId={league} player={infoPlayer} onClose={()=>setInfoPlayer(null)}/>:null}
