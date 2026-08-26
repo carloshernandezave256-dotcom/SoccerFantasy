@@ -914,7 +914,7 @@ export function HomeDashboard() {
                 Standings begin after the first matchup.
               </p>
             ) : null}
-            {standings.length > standingsPreview.length ? <Link className="home-card-link" href={`/league?league=${league.league_id}`}>View full table <span>→</span></Link> : null}
+            {standings.length > standingsPreview.length ? <Link className="home-card-link" href={`/league?league=${league.league_id}#standings`}>View full table <span>→</span></Link> : null}
           </section>
           {draft?.status !== "complete" && picks.length ? (
             <section className="panel home-activity">

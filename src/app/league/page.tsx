@@ -23,6 +23,17 @@ type League = {
   auction_style: "nomination" | "mystery" | null;
 };
 type Manager = { draft_slot: number; user_id: string; team_name: string };
+type Standing = {
+  rank: number;
+  user_id: string;
+  team_name: string;
+  played: number;
+  wins: number;
+  draws: number;
+  losses: number;
+  points: number;
+  fantasy_points: number;
+};
 type Draft = { status: "waiting" | "live" | "paused" | "complete" } | null;
 type Settings = {
   league_name: string;
@@ -48,6 +59,7 @@ type LeagueSnapshot = {
   leagues: League[];
   activeId: string;
   managers: Manager[];
+  standings?: Standing[];
   draft: Draft;
   settings: Settings | null;
   transactionWindow: TransactionWindow | null;
@@ -129,6 +141,7 @@ export default function LeaguePage() {
   const [leagues, setLeagues] = useState<League[]>([]);
   const [activeId, setActiveId] = useState("");
   const [managers, setManagers] = useState<Manager[]>([]);
+  const [standings, setStandings] = useState<Standing[]>([]);
   const [draft, setDraft] = useState<Draft>(null);
   const [settings, setSettings] = useState<Settings | null>(null);
   const [settingsBusy, setSettingsBusy] = useState(false);
@@ -166,6 +179,7 @@ export default function LeaguePage() {
     setLeagues(snapshot.leagues);
     setActiveId(snapshot.activeId);
     setManagers(snapshot.managers);
+    setStandings(snapshot.standings ?? []);
     setDraft(snapshot.draft);
     setSettings(snapshot.settings);
     setTransactionWindow(snapshot.transactionWindow);
@@ -173,9 +187,10 @@ export default function LeaguePage() {
   }
 
   async function loadDetails(id: string) {
-    const [orderResult, draftResult, settingsResult, windowResult] =
+    const [orderResult, standingsResult, draftResult, settingsResult, windowResult] =
       await Promise.all([
         supabase.rpc("draft_order", { p_league_id: id }),
+        supabase.rpc("league_standings", { p_league_id: id }),
         supabase
           .from("drafts")
           .select("status")
@@ -187,6 +202,9 @@ export default function LeaguePage() {
     const nextManagers = orderResult.error
       ? []
       : ((orderResult.data ?? []) as Manager[]);
+    const nextStandings = standingsResult.error
+      ? []
+      : ((standingsResult.data ?? []) as Standing[]);
     const nextDraft = (draftResult.data as Draft) ?? null;
     const nextSettings = settingsResult.error
       ? null
@@ -212,14 +230,17 @@ export default function LeaguePage() {
         : ((fixtureResult.data as ScheduleFixture) ?? null);
     }
     if (orderResult.error) setMessage(orderResult.error.message);
+    if (standingsResult.error) setMessage(standingsResult.error.message);
     if (settingsResult.error) setMessage(settingsResult.error.message);
     setManagers(nextManagers);
+    setStandings(nextStandings);
     setDraft(nextDraft);
     setSettings(nextSettings);
     setTransactionWindow(nextWindow);
     setScheduleFixture(nextScheduleFixture);
     return {
       managers: nextManagers,
+      standings: nextStandings,
       draft: nextDraft,
       settings: nextSettings,
       transactionWindow: nextWindow,
@@ -295,6 +316,7 @@ export default function LeaguePage() {
       );
     } else {
       setManagers([]);
+      setStandings([]);
       setDraft(null);
       window.sessionStorage.removeItem(`${LEAGUE_SNAPSHOT_KEY}:${user.id}`);
     }
@@ -312,6 +334,14 @@ export default function LeaguePage() {
     }
     void load(requested);
   }, []);
+
+  useEffect(() => {
+    if (!initialLoading && window.location.hash === "#standings") {
+      window.requestAnimationFrame(() =>
+        document.getElementById("standings")?.scrollIntoView({ behavior: "smooth" }),
+      );
+    }
+  }, [initialLoading, standings.length]);
 
   function openMembership() {
     setTab("create");
@@ -473,6 +503,7 @@ export default function LeaguePage() {
         setLeagues([]);
         setActiveId("");
         setManagers([]);
+        setStandings([]);
         setDraft(null);
         setSettings(null);
         setTransactionWindow(null);
@@ -491,6 +522,21 @@ export default function LeaguePage() {
   }
 
   const joiningLocked = Boolean(draft) || settings?.joining_open === false;
+  const standingsLeader = standings[0] ?? null;
+  const fantasyLeader = standings.reduce<Standing | null>(
+    (best, row) =>
+      !best || Number(row.fantasy_points) > Number(best.fantasy_points)
+        ? row
+        : best,
+    null,
+  );
+  const leagueFantasyPoints = standings.reduce(
+    (total, row) => total + Number(row.fantasy_points),
+    0,
+  );
+  const averageFantasyPoints = standings.length
+    ? Math.floor(leagueFantasyPoints / standings.length)
+    : 0;
   return (
     <PageShell
       eyebrow="PRIVATE COMPETITION"
@@ -551,126 +597,100 @@ export default function LeaguePage() {
               className={leagueView === "data" ? "active" : ""}
               onClick={() => setLeagueView("data")}
             >
-              League Data
+              Standings & Stats
             </button>
             <button
               className={leagueView === "settings" ? "active" : ""}
               onClick={() => setLeagueView("settings")}
             >
-              Settings
+              League Settings
             </button>
           </section>
           {leagueView === "data" ? (
+            <>
+              <section className="panel league-stats-card">
+                <div className="section-row">
+                  <div>
+                    <p className="eyebrow">SEASON SNAPSHOT</p>
+                    <h2>League stats</h2>
+                  </div>
+                  <span className="muted-chip">LIVE</span>
+                </div>
+                <div className="league-stats-grid">
+                  <span>
+                    <small>TABLE LEADER</small>
+                    <strong>{standingsLeader?.team_name ?? "—"}</strong>
+                    <em>{standingsLeader ? `${standingsLeader.points} pts` : "No results"}</em>
+                  </span>
+                  <span>
+                    <small>TOP FANTASY SCORE</small>
+                    <strong>{fantasyLeader?.team_name ?? "—"}</strong>
+                    <em>{fantasyLeader ? `${Number(fantasyLeader.fantasy_points)} FP` : "No scores"}</em>
+                  </span>
+                  <span>
+                    <small>LEAGUE FANTASY POINTS</small>
+                    <strong>{leagueFantasyPoints}</strong>
+                    <em>Total FP</em>
+                  </span>
+                  <span>
+                    <small>AVERAGE PER TEAM</small>
+                    <strong>{averageFantasyPoints}</strong>
+                    <em>Fantasy points</em>
+                  </span>
+                </div>
+              </section>
+              <section className="panel standings-result" id="standings">
+                <div className="section-row">
+                  <div>
+                    <p className="eyebrow">LEAGUE TABLE</p>
+                    <h2>Full standings</h2>
+                  </div>
+                  <span className="muted-chip">{standings.length} TEAMS</span>
+                </div>
+                <div className="standings-head"><span>#</span><span>Team</span><span>P</span><span>W-D-L</span><span>Pts</span><span>FP</span></div>
+                {standings.map((row) => <div className="standing-row" key={row.user_id}><span>{row.rank}</span><strong>{row.team_name}</strong><span>{row.played}</span><span>{row.wins}-{row.draws}-{row.losses}</span><b>{row.points}</b><span>{Number(row.fantasy_points)}</span></div>)}
+                {!standings.length ? <p className="empty-state">Standings begin after the first completed matchup.</p> : null}
+              </section>
+            </>
+          ) : (
             <>
               <section className="panel league-overview">
                 <div className="section-row">
                   <div>
                     <p className="eyebrow">COMPETITION STATUS</p>
-                    <h2>
-                      {active.game_format === "pack"
-                        ? "Pack League"
-                        : active.game_format === "auction"
-                          ? "Auction League"
-                          : "Draft League"}
-                    </h2>
+                    <h2>{leagueFormatLabel(active.game_format)}</h2>
                   </div>
                   {active.game_format === "pack" ? (
-                    <Link
-                      className="league-primary-link"
-                      href={`/packs?league=${active.league_id}`}
-                    >
-                      Open pack club →
-                    </Link>
-                  ) : active.game_format === "auction" &&
-                    draft?.status !== "complete" ? (
-                    <Link
-                      className="league-primary-link"
-                      href={`/auction?league=${active.league_id}`}
-                    >
-                      Open auction room →
-                    </Link>
+                    <Link className="league-primary-link" href={`/packs?league=${active.league_id}`}>Open pack club →</Link>
+                  ) : active.game_format === "auction" && draft?.status !== "complete" ? (
+                    <Link className="league-primary-link" href={`/auction?league=${active.league_id}`}>Open auction room →</Link>
                   ) : draft?.status !== "complete" ? (
-                    <Link
-                      className="league-primary-link"
-                      href={`/draft?league=${active.league_id}`}
-                    >
-                      Open draft room →
-                    </Link>
+                    <Link className="league-primary-link" href={`/draft?league=${active.league_id}`}>Open draft room →</Link>
                   ) : null}
                 </div>
                 <div className="league-data-grid">
-                  <span>
-                    <small>MANAGERS</small>
-                    <strong>
-                      {active.manager_count}/{active.league_size}
-                    </strong>
-                  </span>
-                  <span>
-                    <small>FORMAT</small>
-                    <strong>
-                      {active.game_format === "pack"
-                        ? "Duplicates"
-                        : active.game_format === "auction"
-                          ? "$2B Auction"
-                          : "Snake Draft"}
-                    </strong>
-                  </span>
-                  <span>
-                    <small>STATUS</small>
-                    <strong>{draft?.status ?? "Waiting"}</strong>
-                  </span>
+                  <span><small>MANAGERS</small><strong>{active.manager_count}/{active.league_size}</strong></span>
+                  <span><small>FORMAT</small><strong>{active.game_format === "pack" ? "Duplicates" : active.game_format === "auction" ? "$2B Auction" : "Snake Draft"}</strong></span>
+                  <span><small>STATUS</small><strong>{draft?.status ?? "Waiting"}</strong></span>
                 </div>
               </section>
               {settings ? (
                 <section className="panel league-member-note">
                   <p className="eyebrow">PLAYER POOL · SEASON LOCKED</p>
                   <h2>{settings.player_pool}</h2>
-                  <p>
-                    {settings.player_pool === "All Top Five"
-                      ? `${settings.calendar_competition} defines this league’s scoring windows and bye weeks. Players from all five supported leagues are eligible.`
-                      : `Only ${settings.player_pool} players are eligible. Its official matchweeks automatically define the fantasy calendar.`}
-                  </p>
+                  <p>{settings.player_pool === "All Top Five" ? `${settings.calendar_competition} defines this league’s scoring windows and bye weeks. Players from all five supported leagues are eligible.` : `Only ${settings.player_pool} players are eligible. Its official matchweeks automatically define the fantasy calendar.`}</p>
                 </section>
               ) : null}
               {transactionWindow && active.game_format !== "pack" ? (
                 <section className="panel league-overview">
-                  <div className="section-row">
-                    <div>
-                      <p className="eyebrow">CURRENT TRANSACTION WINDOW</p>
-                      <h2>Gameweek {transactionWindow.gameweek}</h2>
-                    </div>
-                    <span className="muted-chip">
-                      {transactionWindow.phase.replace("_", " ")}
-                    </span>
-                  </div>
-                  <p className="league-data-copy">
-                    Rosters lock{" "}
-                    {new Date(
-                      transactionWindow.roster_lock_at,
-                    ).toLocaleString()}
-                    .
-                  </p>
+                  <div className="section-row"><div><p className="eyebrow">CURRENT TRANSACTION WINDOW</p><h2>Gameweek {transactionWindow.gameweek}</h2></div><span className="muted-chip">{transactionWindow.phase.replace("_", " ")}</span></div>
+                  <p className="league-data-copy">Rosters lock {new Date(transactionWindow.roster_lock_at).toLocaleString()}.</p>
                 </section>
               ) : null}
               <section className="panel league-manager-list">
-                <div className="section-row">
-                  <div>
-                    <p className="eyebrow">LEAGUE TABLE</p>
-                    <h2>Managers</h2>
-                  </div>
-                  <span className="muted-chip">{managers.length}</span>
-                </div>
-                {managers.map((manager) => (
-                  <article key={manager.user_id}>
-                    <span>{manager.draft_slot}</span>
-                    <strong>{manager.team_name}</strong>
-                    {manager.draft_slot === 1 ? <small>COMMISH</small> : null}
-                  </article>
-                ))}
+                <div className="section-row"><div><p className="eyebrow">LEAGUE MEMBERS</p><h2>Managers</h2></div><span className="muted-chip">{managers.length}</span></div>
+                {managers.map((manager) => <article key={manager.user_id}><span>{manager.draft_slot}</span><strong>{manager.team_name}</strong>{manager.draft_slot === 1 ? <small>COMMISH</small> : null}</article>)}
               </section>
-            </>
-          ) : (
-            <>
               {!active.is_commissioner ? (
                 <section className="panel league-settings-notice">
                   <p className="eyebrow">READ ONLY</p>
