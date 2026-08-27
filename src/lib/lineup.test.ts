@@ -25,6 +25,11 @@ describe.each(formats)("shared %s lineup rules", (format) => {
     expect(formationIsValid(roster, new Set(roster.map((player) => player.id)))).toBe(false);
   });
 
+  it("rejects 5-1-4", () => {
+    const roster = rosterFor(5, 1, 4);
+    expect(formationIsValid(roster, new Set(roster.map((player) => player.id)))).toBe(false);
+  });
+
   it("requires the saved captain to be in the valid starting XI", () => {
     const roster = rosterFor(4, 3, 3);
     const starters = new Set(roster.map((player) => player.id));
