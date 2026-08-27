@@ -1,5 +1,6 @@
 import {NextRequest,NextResponse} from "next/server";
 import {isDeveloperRequest} from "@/lib/developer-auth";
+import {fotmobReturnUpdate} from "@/lib/fotmob-return-update";
 
 type InjuryPlayer={
   id:number;
@@ -139,7 +140,7 @@ async function enrichPlayer(player:InjuryPlayer,supabaseUrl:string,adminHeaders:
   const response=await fetch(`${supabaseUrl}/rest/v1/players?id=eq.${player.id}`,{
     method:"PATCH",
     headers:{...adminHeaders,Prefer:"return=minimal"},
-    body:JSON.stringify({fotmob_id:fotmobId,fotmob_expected_return:returnLabel,expected_return:returnLabel??null,fotmob_return_checked_at:new Date().toISOString()}),
+    body:JSON.stringify(fotmobReturnUpdate(fotmobId,returnLabel,new Date().toISOString())),
     cache:"no-store",
   });
   if(!response.ok)throw new Error((await response.text())||"Could not save FotMob return date");
