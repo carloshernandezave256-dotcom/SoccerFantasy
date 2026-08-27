@@ -23,4 +23,24 @@ describe("matchup lineup selection", () => {
       bench: [{ id: 2, is_starter: false }, { id: 3, is_starter: false }],
     });
   });
+
+  it("preserves the saved pitch and bench arrangement", () => {
+    expect(partitionMatchupLineup([
+      { id: "right", is_starter: true, pitch_order: 3 },
+      { id: "bench-two", is_starter: false, bench_order: 2 },
+      { id: "left", is_starter: true, pitch_order: 1 },
+      { id: "center", is_starter: true, pitch_order: 2 },
+      { id: "bench-one", is_starter: false, bench_order: 1 },
+    ])).toEqual({
+      starters: [
+        { id: "left", is_starter: true, pitch_order: 1 },
+        { id: "center", is_starter: true, pitch_order: 2 },
+        { id: "right", is_starter: true, pitch_order: 3 },
+      ],
+      bench: [
+        { id: "bench-one", is_starter: false, bench_order: 1 },
+        { id: "bench-two", is_starter: false, bench_order: 2 },
+      ],
+    });
+  });
 });
