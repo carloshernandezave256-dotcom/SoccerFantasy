@@ -34,7 +34,7 @@ begin
   from public.players p
   left join incoming i on i.api_id = p.api_football_id
   left join public.player_stardom_overrides o on o.api_football_id = p.api_football_id
-  where p.active or i.api_id is not null;
+  where p.active or i.api_id is not null or o.star_priority is not null;
 
   update public.players
   set draft_rank = null
@@ -74,7 +74,7 @@ begin
   into v_ranked_ids
   from public.players p
   left join public.player_stardom_overrides o on o.api_football_id = p.api_football_id
-  where p.active;
+  where p.active or o.star_priority is not null;
 
   update public.players
   set draft_rank = null
@@ -85,7 +85,7 @@ begin
     from unnest(coalesce(v_ranked_ids, array[]::bigint[])) with ordinality as r(id, ordinality)
   )
   update public.players p
-  set draft_rank = r.new_rank
+  set active = true, draft_rank = r.new_rank
   from ranked r
   where p.id = r.id;
 end
