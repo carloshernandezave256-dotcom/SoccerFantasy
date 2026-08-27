@@ -27,18 +27,17 @@ begin
       o.star_priority nulls last,
       case when p.active then 0 else 1 end,
       p.draft_rank nulls last,
-      i.api_order nulls last,
+      i.api_order,
       p.id
   )
   into v_ranked_ids
-  from public.players p
-  left join incoming i on i.api_id = p.api_football_id
-  left join public.player_stardom_overrides o on o.api_football_id = p.api_football_id
-  where p.active or i.api_id is not null or o.star_priority is not null;
+  from incoming i
+  join public.players p on p.api_football_id = i.api_id
+  left join public.player_stardom_overrides o on o.api_football_id = p.api_football_id;
 
   update public.players
-  set draft_rank = null
-  where active and draft_rank is not null;
+  set active = false, draft_rank = null
+  where active or draft_rank is not null;
 
   with ranked as (
     select id, ordinality::integer as new_rank
@@ -59,34 +58,3 @@ $function$;
 
 revoke all on function public.finalize_api_football_draft_pool(jsonb) from public, anon, authenticated;
 grant execute on function public.finalize_api_football_draft_pool(jsonb) to service_role;
-
-do $restore$
-declare
-  v_ranked_ids bigint[];
-begin
-  select array_agg(
-    p.id order by
-      case when o.star_priority is not null then 0 else 1 end,
-      o.star_priority nulls last,
-      p.draft_rank nulls last,
-      p.id
-  )
-  into v_ranked_ids
-  from public.players p
-  left join public.player_stardom_overrides o on o.api_football_id = p.api_football_id
-  where p.active or o.star_priority is not null;
-
-  update public.players
-  set draft_rank = null
-  where active and draft_rank is not null;
-
-  with ranked as (
-    select id, ordinality::integer as new_rank
-    from unnest(coalesce(v_ranked_ids, array[]::bigint[])) with ordinality as r(id, ordinality)
-  )
-  update public.players p
-  set active = true, draft_rank = r.new_rank
-  from ranked r
-  where p.id = r.id;
-end
-$restore$;
