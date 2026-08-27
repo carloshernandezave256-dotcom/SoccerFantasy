@@ -17,7 +17,7 @@ export function formationIsValid(roster: LineupPlayer[], ids: Set<number>) {
     ids.size === 11 &&
     counts.GK === 1 &&
     (counts.DEF ?? 0) >= 3 &&
-    (counts.MID ?? 0) >= 1 &&
+    (counts.MID ?? 0) >= 2 &&
     (counts.FWD ?? 0) >= 1 &&
     (counts.FWD ?? 0) <= 4
   );
