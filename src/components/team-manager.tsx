@@ -201,7 +201,7 @@ export function TeamManager(){
     const outgoing=roster.find(player=>player.id===selectedStarter);
     if(incoming?.injured){setMessage(`${incoming.full_name} is currently injured, suspended, or unavailable and cannot enter the Starting XI.`);return}
     const next=new Set(starters);next.delete(selectedStarter);next.add(benchId);
-    if(!formationIsValid(roster,next)){setMessage("That switch would create an invalid formation. Keep 1 GK, at least 3 DEF, and no more than 4 FWD.");return}
+    if(!formationIsValid(roster,next)){setMessage("That switch would create an invalid formation. Keep 1 GK, at least 3 DEF, at least 2 MID, and no more than 4 FWD.");return}
     setStarters(next);
     setStarterOrder(order=>order.map(playerId=>playerId===selectedStarter?benchId:playerId));
     setDirty(true);
@@ -281,7 +281,7 @@ export function TeamManager(){
         <div className="formation-counts" aria-label="Formation requirements">
           <span className={(counts.GK??0)===1?"complete":"needed"}>GK {counts.GK??0}/1</span>
           <span className={(counts.DEF??0)>=3?"complete":"needed"}>DEF {counts.DEF??0}/3+</span>
-          <span className={(counts.MID??0)>=1?"complete":"needed"}>MID {counts.MID??0}/1+</span>
+          <span className={(counts.MID??0)>=2?"complete":"needed"}>MID {counts.MID??0}/2+</span>
           <span className={(counts.FWD??0)>=1&&(counts.FWD??0)<=4?"complete":"needed"}>FWD {counts.FWD??0}/1–4</span>
         </div>
       </section>
