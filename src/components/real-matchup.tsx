@@ -200,15 +200,15 @@ export function RealMatchup(){
       setLoading(true);
       const ids=[featured.home_user_id,featured.away_user_id];
       const[lineupResult,snapshotResult,picksResult,matchupResult,standingsResult,fixturesResult]=await Promise.all([
-        supabase.from("lineup_players").select("user_id,is_starter,is_captain,players(id,full_name,position,club,competition,photo_url,injured,injury_type,injury_reason,expected_return,fotmob_expected_return)").eq("league_id",league.league_id).in("user_id",ids),
-        supabase.from("lineup_gameweek_players").select("user_id,is_starter,is_star_pick,players(id,full_name,position,club,competition,photo_url,injured,injury_type,injury_reason,expected_return,fotmob_expected_return)").eq("league_id",league.league_id).eq("gameweek",gameweek).in("user_id",ids),
+        supabase.from("lineup_players").select("user_id,is_starter,is_captain,pitch_order,bench_order,players(id,full_name,position,club,competition,photo_url,injured,injury_type,injury_reason,expected_return,fotmob_expected_return)").eq("league_id",league.league_id).in("user_id",ids),
+        supabase.from("lineup_gameweek_players").select("user_id,is_starter,is_star_pick,pitch_order,players(id,full_name,position,club,competition,photo_url,injured,injury_type,injury_reason,expected_return,fotmob_expected_return)").eq("league_id",league.league_id).eq("gameweek",gameweek).in("user_id",ids),
         supabase.from("draft_picks").select("user_id,pick_number,players(id,full_name,position,club,competition,photo_url,injured,injury_type,injury_reason,expected_return,fotmob_expected_return)").eq("league_id",league.league_id).in("user_id",ids).order("pick_number"),
         supabase.from("league_matchups").select("home_score,away_score,status").eq("id",featured.id).single(),
         supabase.rpc("league_standings",{p_league_id:league.league_id}),
         supabase.from("league_headline_fixtures").select("status,kickoff,home_team,away_team").eq("league_id",league.league_id).eq("gameweek",gameweek),
       ]);
-      const lineupRows=(lineupResult.data??[]) as unknown as {user_id:string;is_starter:boolean;is_captain:boolean;players:PlayerSource|null}[];
-      const snapshotRows=(snapshotResult.data??[]) as unknown as {user_id:string;is_starter:boolean;is_star_pick:boolean;players:PlayerSource|null}[];
+      const lineupRows=(lineupResult.data??[]) as unknown as {user_id:string;is_starter:boolean;is_captain:boolean;pitch_order:number|null;bench_order:number|null;players:PlayerSource|null}[];
+      const snapshotRows=(snapshotResult.data??[]) as unknown as {user_id:string;is_starter:boolean;is_star_pick:boolean;pitch_order:number|null;bench_order?:number|null;players:PlayerSource|null}[];
       const pickRows=(picksResult.data??[]) as unknown as {user_id:string;pick_number:number;players:PlayerSource|null}[];
       const relevantPlayerIds=[...new Set([...lineupRows,...snapshotRows,...pickRows].flatMap(row=>row.players?[row.players.id]:[]))];
       const scoreResult=relevantPlayerIds.length
@@ -234,7 +234,7 @@ export function RealMatchup(){
         return{...player,captain,score:captainScore,baseScore,rating:row.rating,minutes:row.minutes,status:row.status,dataStatus,ledger:scoredLedger,goals:row.goals,assists:row.assists,yellowCards:row.yellow_cards,redCards:row.red_cards,fixture,stats:row};
       };
       const build=(owner:string,score:number|string):TeamView=>{
-        const snapshot=snapshotRows.filter(row=>row.user_id===owner&&row.players).map(row=>({...row,is_captain:row.is_star_pick}));
+        const snapshot=snapshotRows.filter(row=>row.user_id===owner&&row.players).map(row=>({...row,bench_order:null,is_captain:row.is_star_pick}));
         const current=lineupRows.filter(row=>row.user_id===owner&&row.players);
         const matchupStatus=liveMatchup?.status??featured.status;
         const saved=selectMatchupLineup(matchupStatus,current,snapshot);
@@ -242,7 +242,7 @@ export function RealMatchup(){
         const ownerPicks=pickRows.filter(row=>row.user_id===owner&&row.players);
         const starterSource=saved.length?partitioned.starters.map(row=>scoredPlayer(row.players!,row.is_captain,true)):ownerPicks.slice(0,11).map(row=>scoredPlayer(row.players!,false,false));
         const benchSource=saved.length?partitioned.bench.map(row=>({...scoredPlayer(row.players!,false,true),isBench:true})):ownerPicks.slice(11).map(row=>({...scoredPlayer(row.players!,false,false),isBench:true}));
-        return{userId:owner,name:managers.find(manager=>manager.user_id===owner)?.team_name??"Manager",score:Number(score),players:starterSource.sort((a,b)=>(positionOrder[a.position]??9)-(positionOrder[b.position]??9)),bench:benchSource.sort((a,b)=>(positionOrder[a.position]??9)-(positionOrder[b.position]??9)),lineupSet:saved.length>0};
+        return{userId:owner,name:managers.find(manager=>manager.user_id===owner)?.team_name??"Manager",score:Number(score),players:starterSource.sort((a,b)=>(positionOrder[a.position]??9)-(positionOrder[b.position]??9)),bench:benchSource,lineupSet:saved.length>0};
       };
       if(request===refreshRequest.current){
         const nextTeams=[build(featured.home_user_id,liveMatchup?.home_score??featured.home_score),build(featured.away_user_id,liveMatchup?.away_score??featured.away_score)];
