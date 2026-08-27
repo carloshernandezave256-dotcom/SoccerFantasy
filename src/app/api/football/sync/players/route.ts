@@ -1,6 +1,7 @@
 import {NextRequest,NextResponse} from "next/server";
 import {apiFootball,playerHeadshot} from "@/lib/api-football-server";
 import {isDeveloperRequest} from "@/lib/developer-auth";
+import {fotmobConfirmsActive} from "@/lib/fotmob-return-update";
 
 const competitions=[{id:39,name:"Premier League"},{id:140,name:"La Liga"},{id:135,name:"Serie A"},{id:78,name:"Bundesliga"},{id:61,name:"Ligue 1"}];
 type ApiStat={team:{id:number;name:string};games:{position:string|null;appearences?:number|null;minutes?:number|null;rating?:string|null}};
@@ -13,7 +14,7 @@ type InjuryEntry={player:{id:number;name:string;type?:string|null;reason?:string
 type InjuriesPage={response:InjuryEntry[]};
 type SidelinedEntry={type?:string|null;start?:string|null;end?:string|null};
 type SidelinedPage={response:SidelinedEntry[]};
-type ExistingInjury={api_football_id:number;injured:boolean;injury_type:string|null;injury_reason:string|null;expected_return:string|null;sidelined_checked_at:string|null};
+type ExistingInjury={api_football_id:number;injured:boolean;injury_type:string|null;injury_reason:string|null;expected_return:string|null;sidelined_checked_at:string|null;fotmob_expected_return:string|null};
 
 export const maxDuration=300;
 
@@ -87,7 +88,7 @@ export async function POST(request:NextRequest){
 
     try{
       const injuryBody=await apiFootball<InjuriesPage>(`injuries?league=${competition.id}&season=${season}`);requestsUsed++;
-      const existingResponse=await fetch(`${supabaseUrl}/rest/v1/players?competition=eq.${encodeURIComponent(competition.name)}&select=api_football_id,injured,injury_type,injury_reason,expected_return,sidelined_checked_at`,{headers:adminHeaders,cache:"no-store"});
+      const existingResponse=await fetch(`${supabaseUrl}/rest/v1/players?competition=eq.${encodeURIComponent(competition.name)}&select=api_football_id,injured,injury_type,injury_reason,expected_return,sidelined_checked_at,fotmob_expected_return`,{headers:adminHeaders,cache:"no-store"});
       if(!existingResponse.ok)throw new Error((await existingResponse.text())||"Could not load cached injury statuses");
       const existingRows=await existingResponse.json() as ExistingInjury[];
       const existingById=new Map(existingRows.filter(row=>row.api_football_id).map(row=>[row.api_football_id,row]));
@@ -98,6 +99,7 @@ export async function POST(request:NextRequest){
         const injuryType=injury.player.type??"Injury";
         const injuryReason=injury.player.reason??null;
         const existing=existingById.get(injury.player.id);
+        if(fotmobConfirmsActive(existing?.fotmob_expected_return))continue;
         const refreshSidelined=shouldRefreshSidelined(existing,injuryType,injuryReason);
         let returnDate=existing?.expected_return??null;
         let checkedAt=existing?.sidelined_checked_at??null;
