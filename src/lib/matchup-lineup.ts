@@ -9,9 +9,9 @@ export function selectMatchupLineup<T>(
   return snapshot.length ? snapshot : current;
 }
 
-export function partitionMatchupLineup<T extends { is_starter: boolean }>(rows: T[]) {
+export function partitionMatchupLineup<T extends { is_starter: boolean; pitch_order?: number | null; bench_order?: number | null }>(rows: T[]) {
   return {
-    starters: rows.filter((row) => row.is_starter),
-    bench: rows.filter((row) => !row.is_starter),
+    starters: rows.filter((row) => row.is_starter).sort((a,b)=>(a.pitch_order??Number.MAX_SAFE_INTEGER)-(b.pitch_order??Number.MAX_SAFE_INTEGER)),
+    bench: rows.filter((row) => !row.is_starter).sort((a,b)=>(a.bench_order??Number.MAX_SAFE_INTEGER)-(b.bench_order??Number.MAX_SAFE_INTEGER)),
   };
 }
