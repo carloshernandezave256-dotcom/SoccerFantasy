@@ -6,7 +6,7 @@ describe("refreshAffectedLeagueScores", () => {
   it("settles only after the final score rows and matchup totals are stored", async () => {
     const calls: string[] = [];
     const store = {
-      affectedLeagueIds: async () => ["league-1"],
+      affectedLeagueGameweeks: async () => [{ leagueId: "league-1", gameweek: 1 }],
       leagueContext: async () => ({
         league: { calendar_competition: "La Liga", player_pool: "La Liga" },
         window: { gameweek: 1, roster_lock_at: "2026-08-23T00:00:00.000Z" },
