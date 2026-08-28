@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ApiFootballTest } from "@/components/api-football-test";
+import { FinalizedGameweekControls } from "@/components/finalized-gameweek-controls";
 import { PageShell } from "@/components/page-shell";
 import { resolveActiveLeague } from "@/lib/active-league";
 import { supabase } from "@/lib/supabase";
@@ -85,6 +86,7 @@ export default function DeveloperPage() {
             ) : null}
           </section>
           <ApiFootballTest leagueId={leagueId} />
+          <FinalizedGameweekControls leagueId={leagueId} />
           <section className="panel settings-form">
             <div className="section-row"><div><p className="eyebrow">ALTERNATIVE DATA TEST</p><h2>Provider Lab</h2></div><span className="muted-chip">READ ONLY</span></div>
             <p>Run FotMob match payloads through the real My Fantasy XI calculator without updating production scores or player records.</p>
