@@ -14,6 +14,7 @@ type ApiPlayer={player:{id:number};statistics:Array<{games:{minutes:number|null;
 type PlayersPage={response:Array<{team:{id:number};players:ApiPlayer[]}>};
 type LeagueRow={calendar_competition:string;player_pool:string};
 type PlayerRow={id:number;api_football_id:number|null};
+type TransactionWindowRow={gameweek:number};
 
 export const maxDuration=300;
 
@@ -44,6 +45,10 @@ export async function POST(request:NextRequest){
   const playerPool=leagueRows[0]?.player_pool;
   const competitionId=competition?competitions[competition]:undefined;
   if(!competitionId)return NextResponse.json({error:"This league does not have a supported Fantasy Calendar."},{status:400});
+  const windowResponse=await fetch(`${supabaseUrl}/rest/v1/league_transaction_windows?league_id=eq.${encodeURIComponent(body.leagueId)}&select=gameweek&order=gameweek.desc&limit=1`,{headers:adminHeaders(serviceRoleKey),cache:"no-store"});
+  const windowRows=windowResponse.ok?await windowResponse.json() as TransactionWindowRow[]:[];
+  const gameweek=windowRows[0]?.gameweek;
+  if(!gameweek)return NextResponse.json({error:"This league does not have an active fantasy gameweek."},{status:409});
 
   const now=new Date();
   const season=now.getUTCMonth()<=5?now.getUTCFullYear()-1:now.getUTCFullYear();
@@ -63,11 +68,13 @@ export async function POST(request:NextRequest){
       if(!calendarRefresh.ok)throw new Error((await calendarRefresh.text())||"Automatic gameweek activation failed");
     }
 
-    const started=fixtureBody.response.filter(item=>!unstartedStatuses.has(item.fixture.status.short)&&new Date(item.fixture.date)<=now);
-    const anchor=[...started].sort((a,b)=>Math.abs(now.getTime()-new Date(a.fixture.date).getTime())-Math.abs(now.getTime()-new Date(b.fixture.date).getTime()))[0];
-    if(!anchor)return NextResponse.json({ok:true,competition,season,status:"upcoming",fixturesStarted:0,fixturesTotal:fixtureBody.response.length,seasonFixturesCached:fixtureRows.length,playersUpdated:0,requestsUsed:scheduleBodies.length,message:`${competition} has not started yet. Upcoming fixtures are now available on player profiles.`});
-    const round=anchor.league.round;
-    const calendarRoundFixtures=fixtureBody.response.filter(item=>item.league.round===round);
+    // The app's fantasy gameweek follows the configured calendar competition.
+    // For this league that means Fantasy GW1 = EPL GW1 + La Liga GW2 and
+    // Fantasy GW2 = EPL GW2 + La Liga GW3. A delayed La Liga GW1 fixture is
+    // retained in real-match history but can never select or reopen a matchup.
+    const calendarRoundFixtures=fixtureBody.response.filter(item=>parseGameweek(item.league.round)===gameweek);
+    const round=calendarRoundFixtures[0]?.league.round??`Regular Season - ${gameweek}`;
+    if(!calendarRoundFixtures.length)return NextResponse.json({ok:true,competition,season,round,gameweek,status:"upcoming",fixturesStarted:0,fixturesTotal:0,seasonFixturesCached:fixtureRows.length,playersUpdated:0,requestsUsed:scheduleBodies.length,message:`${competition} fantasy gameweek ${gameweek} has no scheduled fixtures yet. Real-match history was still refreshed.`});
     const scoringWindow=fantasyWeekWindow(calendarRoundFixtures.map(item=>({kickoff:item.fixture.date})));
     if(!scoringWindow)throw new Error("The active Fantasy Calendar round has no valid kickoffs.");
     const roundFixtures=scheduleBodies
@@ -76,8 +83,6 @@ export async function POST(request:NextRequest){
     const activeFixtures=roundFixtures.filter(item=>!unstartedStatuses.has(item.fixture.status.short)&&new Date(item.fixture.date)<=now);
     const allFinal=roundFixtures.length>0&&roundFixtures.every(item=>finalStatuses.has(item.fixture.status.short));
     const roundStatus=allFinal?"final":"live";
-    const gameweek=parseGameweek(round);
-
     const fixturePlayers=await Promise.all(activeFixtures.map(async fixture=>({fixture,body:await apiFootball<PlayersPage>(`fixtures/players?fixture=${fixture.fixture.id}`)})));
     const statsByApiId=new Map<number,Record<string,number|boolean|null>>();
     for(const {fixture,body:playerBody} of fixturePlayers){
