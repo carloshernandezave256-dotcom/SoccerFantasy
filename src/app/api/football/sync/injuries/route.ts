@@ -2,6 +2,7 @@ import {NextRequest,NextResponse} from "next/server";
 import {apiFootball} from "@/lib/api-football-server";
 import {isDeveloperRequest} from "@/lib/developer-auth";
 import {fotmobConfirmsActive} from "@/lib/fotmob-return-update";
+import {isApiFootballUnavailable} from "@/lib/player-unavailability";
 
 const competitions=[
   {id:39,name:"Premier League"},
@@ -70,7 +71,7 @@ export async function POST(request:NextRequest){
       });
       if(!clearResponse.ok)throw new Error((await clearResponse.text())||"Could not clear stale injury statuses");
 
-      const currentByPlayer=[...new Map(injuryBody.response.map(entry=>[entry.player.id,entry])).values()];
+      const currentByPlayer=[...new Map(injuryBody.response.filter(entry=>isApiFootballUnavailable(entry.player.type,entry.player.reason)).map(entry=>[entry.player.id,entry])).values()];
       for(const injury of currentByPlayer){
         const injuryType=injury.player.type??"Injury";
         const injuryReason=injury.player.reason??null;
