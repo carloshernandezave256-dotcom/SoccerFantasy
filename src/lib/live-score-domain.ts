@@ -1,5 +1,5 @@
 import { completedPassesFromApi } from "./api-football-stats";
-import { resolvePlayerScoreStatus } from "./scoring";
+import { resolvePlayerScoreStatus, type LedgerEntry } from "./scoring";
 
 export const TERMINAL_FIXTURE_STATUSES = new Set([
   "FT",
@@ -99,9 +99,12 @@ export type LeaguePlayerScoreRow = {
   man_of_the_match: false;
   stats_received: boolean;
   status: "live" | "final";
-  source: "api-football-shared-cache";
+  source: "api-football-fixture-sum";
   source_updated_at: string;
   updated_at: string;
+  fantasy_points: number;
+  score_ledger: LedgerEntry[];
+  calculator_version: "fixture-sum-v1";
 };
 
 export function reconcileFixtureStatus(
@@ -211,6 +214,12 @@ function sum(rows: FixturePlayerStatRow[], field: string) {
   return rows.reduce((total, row) => total + Number(row[field] ?? 0), 0);
 }
 
+function combinedLedger(rows: FixturePlayerStatRow[]) {
+  return rows.flatMap((row) =>
+    Array.isArray(row.score_ledger) ? row.score_ledger as LedgerEntry[] : []
+  );
+}
+
 export function buildLeaguePlayerScoreRows({
   leagueId,
   gameweek,
@@ -267,9 +276,12 @@ export function buildLeaguePlayerScoreRows({
       man_of_the_match: false,
       stats_received: playerStats.length > 0,
       status: resolvePlayerScoreStatus(playerFixtureStatuses, gameweekIsFinal),
-      source: "api-football-shared-cache",
+      source: "api-football-fixture-sum",
       source_updated_at: updatedAt,
       updated_at: updatedAt,
+      fantasy_points: sum(playerStats, "fantasy_points"),
+      score_ledger: combinedLedger(playerStats),
+      calculator_version: "fixture-sum-v1",
     };
   });
 }

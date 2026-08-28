@@ -7,7 +7,7 @@ describe("fantasy week kickoff window",()=>{
     {kickoff:"2026-08-31T19:00:00.000Z"},
   ]);
 
-  it("includes an opening-round match before the calendar league's first kickoff",()=>{
+  it("includes matches earlier on the calendar league's opening day",()=>{
     expect(window).not.toBeNull();
     expect(fixtureInsideFantasyWeek(
       {kickoff:"2026-08-28T18:30:00.000Z"},
@@ -15,11 +15,11 @@ describe("fantasy week kickoff window",()=>{
     )).toBe(true);
   });
 
-  it("includes other Top Five games from the same fantasy week",()=>{
+  it("does not leak delayed matches from the prior fantasy week",()=>{
     expect(fixtureInsideFantasyWeek(
       {kickoff:"2026-08-27T18:30:00.000Z"},
       window!,
-    )).toBe(true);
+    )).toBe(false);
   });
 
   it("excludes games from the following weekend during a calendar-league bye",()=>{

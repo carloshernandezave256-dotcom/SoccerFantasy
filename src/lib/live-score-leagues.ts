@@ -1,4 +1,5 @@
 import { buildLeaguePlayerScoreRows } from "./live-score-domain";
+import { fantasyWeekWindow } from "./fantasy-week-window";
 import { LiveScoreStore } from "./live-score-store";
 
 export type LeagueRefreshSummary = {
@@ -11,12 +12,12 @@ export async function refreshAffectedLeagueScores(
   fixtureIds: number[],
   now: Date,
 ): Promise<LeagueRefreshSummary> {
-  const affectedGameweeks = await store.affectedLeagueGameweeks(fixtureIds);
+  const leagueIds = await store.affectedLeagueIds(fixtureIds);
   let leagueRowsUpdated = 0;
   let leagueGameweeksUpdated = 0;
 
-  for (const { leagueId, gameweek } of affectedGameweeks) {
-    const { league, window } = await store.leagueContext(leagueId, gameweek);
+  for (const leagueId of leagueIds) {
+    const { league, window } = await store.leagueContext(leagueId);
     if (!league || !window || new Date(window.roster_lock_at) > now) continue;
 
     const calendarFixtures = await store.calendarFixtures(
@@ -26,10 +27,13 @@ export async function refreshAffectedLeagueScores(
     );
     if (!calendarFixtures.length || new Date(calendarFixtures[0].kickoff) > now) continue;
 
+    const scoringWindow=fantasyWeekWindow(calendarFixtures);
+    if(!scoringWindow)continue;
     const weekFixtures = await store.weekFixtures(
       leagueId,
       league.player_pool,
-      gameweek,
+      scoringWindow.startsAt,
+      scoringWindow.endsAt,
     );
     const fixtureIdsForWeek = weekFixtures.map((fixture) => fixture.fixture_id);
     if (!fixtureIdsForWeek.length) continue;
@@ -48,7 +52,7 @@ export async function refreshAffectedLeagueScores(
     ];
     const rows = buildLeaguePlayerScoreRows({
       leagueId,
-      gameweek,
+      gameweek: window.gameweek,
       playerIds,
       fixtureStats,
       weekFixtures,
@@ -57,8 +61,8 @@ export async function refreshAffectedLeagueScores(
     if (!rows.length) continue;
 
     await store.upsertLeagueScores(rows);
-    await store.refreshMatchupScores(leagueId, gameweek);
-    await store.settleFinalGameweek(leagueId, gameweek);
+    await store.refreshMatchupScores(leagueId, window.gameweek);
+    await store.settleFinalGameweek(leagueId, window.gameweek);
     leagueRowsUpdated += rows.length;
     leagueGameweeksUpdated += 1;
   }

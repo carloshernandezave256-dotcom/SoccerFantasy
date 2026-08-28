@@ -9,7 +9,7 @@ import type {
 } from "./live-score-domain";
 
 export type PlayerMapping = { id: number; api_football_id: number | null };
-export type LeagueFixture = { league_id: string; fixture_id: number; gameweek: number };
+export type LeagueFixture = { league_id: string; fixture_id: number };
 export type LeagueConfig = { calendar_competition: string; player_pool: string };
 export type TransactionWindow = { gameweek: number; roster_lock_at: string };
 
@@ -164,26 +164,23 @@ export class LiveScoreStore {
     );
   }
 
-  async affectedLeagueGameweeks(fixtureIds: number[]) {
+  async affectedLeagueIds(fixtureIds: number[]) {
     const rows = await this.read<LeagueFixture[]>(
-      `league_headline_fixtures?fixture_id=in.(${fixtureIds.join(",")})&select=league_id,fixture_id,gameweek`,
+      `league_headline_fixtures?fixture_id=in.(${fixtureIds.join(",")})&select=league_id,fixture_id`,
       "Could not find leagues affected by the fixture update.",
     );
-    return [...new Map(rows.map((row) => [`${row.league_id}:${row.gameweek}`, {
-      leagueId: row.league_id,
-      gameweek: row.gameweek,
-    }])).values()];
+    return [...new Set(rows.map((row) => row.league_id))];
   }
 
-  async leagueContext(leagueId: string, gameweek: number) {
+  async leagueContext(leagueId: string) {
     const [leagues, windows] = await Promise.all([
       this.read<LeagueConfig[]>(
         `leagues?id=eq.${leagueId}&select=calendar_competition,player_pool`,
         `Could not read league ${leagueId}.`,
       ),
       this.read<TransactionWindow[]>(
-        `league_transaction_windows?league_id=eq.${leagueId}&gameweek=eq.${gameweek}&select=gameweek,roster_lock_at&limit=1`,
-        `Could not read transaction window ${gameweek} for ${leagueId}.`,
+        `league_transaction_windows?league_id=eq.${leagueId}&select=gameweek,roster_lock_at&order=gameweek.desc&limit=1`,
+        `Could not read the active transaction window for ${leagueId}.`,
       ),
     ]);
     return { league: leagues[0] ?? null, window: windows[0] ?? null };
@@ -206,11 +203,12 @@ export class LiveScoreStore {
   async weekFixtures(
     leagueId: string,
     playerPool: string,
-    gameweek: number,
+    firstKickoff: string,
+    lastKickoff: string,
   ) {
     const query = new URLSearchParams({
       league_id: `eq.${leagueId}`,
-      gameweek: `eq.${gameweek}`,
+      and: `(kickoff.gte.${firstKickoff},kickoff.lte.${lastKickoff})`,
       select: "fixture_id,status,kickoff",
     });
     if (playerPool !== "All Top Five") query.set("competition", `eq.${playerPool}`);
