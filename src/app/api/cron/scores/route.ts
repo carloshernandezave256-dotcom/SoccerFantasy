@@ -106,6 +106,17 @@ export async function GET(request: NextRequest) {
 
     await store.insertObservations(normalized.observations);
     await store.upsertFixtureStats(normalized.rows, ranAt);
+    const kickoffByFixtureId = new Map(
+      snapshot.fixtures.map((fixture) => [fixture.fixture.id, fixture.fixture.date]),
+    );
+    const injuriesCleared = await store.reconcilePlayerAvailability(
+      normalized.rows.flatMap((row) => {
+        const kickoff = kickoffByFixtureId.get(row.fixture_id);
+        return Number(row.minutes) > 0 && kickoff
+          ? [{ player_id: row.player_id, kickoff }]
+          : [];
+      }),
+    );
     if (!normalized.rows.length) {
       console.warn("[cron/scores] provider returned no mapped player statistics", {
         fixtureIds,
@@ -125,6 +136,7 @@ export async function GET(request: NextRequest) {
       providerPlayers: apiIds.length,
       mappedPlayers: normalized.rows.length,
       unmappedPlayers,
+      injuriesCleared,
       ...leagueSummary,
     });
 
@@ -137,6 +149,7 @@ export async function GET(request: NextRequest) {
       sharedPlayerRowsUpdated: normalized.rows.length,
       fantasyLeagueGameweeksUpdated: leagueSummary.leagueGameweeksUpdated,
       leaguePlayerRowsUpdated: leagueSummary.leagueRowsUpdated,
+      injuriesCleared,
     });
   } catch (error) {
     console.error("[cron/scores] pipeline failed", {

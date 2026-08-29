@@ -3,6 +3,7 @@ import {apiFootball} from "@/lib/api-football-server";
 import {isDeveloperRequest} from "@/lib/developer-auth";
 import {fotmobConfirmsActive} from "@/lib/fotmob-return-update";
 import {isApiFootballUnavailable} from "@/lib/player-unavailability";
+import {appearanceDisprovesInjury,injuryObservedAt} from "@/lib/injury-observation";
 
 const competitions=[
   {id:39,name:"Premier League"},
@@ -16,7 +17,7 @@ type InjuryEntry={player:{id:number;name:string;type?:string|null;reason?:string
 type InjuriesPage={response:InjuryEntry[]};
 type SidelinedEntry={type?:string|null;start?:string|null;end?:string|null};
 type SidelinedPage={response:SidelinedEntry[]};
-type ExistingInjury={api_football_id:number;injured:boolean;injury_type:string|null;injury_reason:string|null;expected_return:string|null;sidelined_checked_at:string|null;fotmob_expected_return:string|null};
+type ExistingInjury={api_football_id:number;injured:boolean;injury_type:string|null;injury_reason:string|null;expected_return:string|null;sidelined_checked_at:string|null;fotmob_expected_return:string|null;injury_updated_at:string|null;availability_last_appearance_at:string|null};
 
 export const maxDuration=300;
 
@@ -57,26 +58,30 @@ export async function POST(request:NextRequest){
   for(const competition of competitions){
     try{
       const injuryBody=await apiFootball<InjuriesPage>(`injuries?league=${competition.id}&season=${season}`);requestsUsed++;
-      const existingResponse=await fetch(`${supabaseUrl}/rest/v1/players?competition=eq.${encodeURIComponent(competition.name)}&select=api_football_id,injured,injury_type,injury_reason,expected_return,sidelined_checked_at,fotmob_expected_return`,{headers:adminHeaders,cache:"no-store"});
+      const existingResponse=await fetch(`${supabaseUrl}/rest/v1/players?competition=eq.${encodeURIComponent(competition.name)}&select=api_football_id,injured,injury_type,injury_reason,expected_return,sidelined_checked_at,fotmob_expected_return,injury_updated_at,availability_last_appearance_at`,{headers:adminHeaders,cache:"no-store"});
       if(!existingResponse.ok)throw new Error((await existingResponse.text())||"Could not load cached injury statuses");
       const existingRows=await existingResponse.json() as ExistingInjury[];
       const existingById=new Map(existingRows.filter(row=>row.api_football_id).map(row=>[row.api_football_id,row]));
-      playersCleared+=existingRows.filter(row=>row.injured).length;
+      const currentByPlayer=[...new Map(injuryBody.response.filter(entry=>isApiFootballUnavailable(entry.player.type,entry.player.reason)).map(entry=>[entry.player.id,entry])).values()];
+      const currentIds=new Set(currentByPlayer.map(entry=>entry.player.id));
+      const observedAt=new Date().toISOString();
+      playersCleared+=existingRows.filter(row=>row.injured&&!currentIds.has(row.api_football_id)).length;
+      const excludedIds=currentIds.size?`&api_football_id=not.in.(${[...currentIds].join(",")})`:"";
 
-      const clearResponse=await fetch(`${supabaseUrl}/rest/v1/players?competition=eq.${encodeURIComponent(competition.name)}`,{
+      const clearResponse=await fetch(`${supabaseUrl}/rest/v1/players?competition=eq.${encodeURIComponent(competition.name)}&or=(injured.eq.true,injury_type.not.is.null)${excludedIds}`,{
         method:"PATCH",
         headers:{...adminHeaders,Prefer:"return=minimal"},
-        body:JSON.stringify({injured:false,injury_type:null,injury_reason:null,expected_return:null,injury_updated_at:new Date().toISOString(),sidelined_checked_at:null}),
+        body:JSON.stringify({injured:false,injury_type:null,injury_reason:null,expected_return:null,injury_updated_at:observedAt,sidelined_checked_at:null}),
         cache:"no-store",
       });
       if(!clearResponse.ok)throw new Error((await clearResponse.text())||"Could not clear stale injury statuses");
 
-      const currentByPlayer=[...new Map(injuryBody.response.filter(entry=>isApiFootballUnavailable(entry.player.type,entry.player.reason)).map(entry=>[entry.player.id,entry])).values()];
       for(const injury of currentByPlayer){
         const injuryType=injury.player.type??"Injury";
         const injuryReason=injury.player.reason??null;
         const existing=existingById.get(injury.player.id);
         if(fotmobConfirmsActive(existing?.fotmob_expected_return))continue;
+        if(appearanceDisprovesInjury(existing,injuryType,injuryReason))continue;
         const refreshSidelined=shouldRefreshSidelined(existing,injuryType,injuryReason);
         let returnDate=existing?.expected_return??null;
         let checkedAt=existing?.sidelined_checked_at??null;
@@ -94,7 +99,7 @@ export async function POST(request:NextRequest){
         const injuryResponse=await fetch(`${supabaseUrl}/rest/v1/players?api_football_id=eq.${injury.player.id}`,{
           method:"PATCH",
           headers:{...adminHeaders,Prefer:"return=minimal"},
-          body:JSON.stringify({injured:true,injury_type:injuryType,injury_reason:injuryReason,expected_return:returnDate,injury_updated_at:new Date().toISOString(),sidelined_checked_at:checkedAt}),
+          body:JSON.stringify({injured:true,injury_type:injuryType,injury_reason:injuryReason,expected_return:returnDate,injury_updated_at:injuryObservedAt(existing,injuryType,injuryReason,observedAt),sidelined_checked_at:checkedAt}),
           cache:"no-store",
         });
         if(!injuryResponse.ok)throw new Error((await injuryResponse.text())||"Could not save player injury status");

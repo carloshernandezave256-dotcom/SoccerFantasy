@@ -12,6 +12,7 @@ export type PlayerMapping = { id: number; api_football_id: number | null };
 export type LeagueFixture = { league_id: string; fixture_id: number };
 export type LeagueConfig = { calendar_competition: string; player_pool: string };
 export type TransactionWindow = { gameweek: number; roster_lock_at: string };
+export type PlayerAppearance = { player_id: number; kickoff: string };
 
 const TOP_FIVE_COMPETITIONS = [
   "Premier League",
@@ -162,6 +163,18 @@ export class LiveScoreStore {
       { stats_synced_at: syncedAt },
       "Could not mark fixture statistics as synchronized.",
     );
+  }
+
+  async reconcilePlayerAvailability(appearances: PlayerAppearance[]) {
+    if (!appearances.length) return 0;
+    const response = await this.write(
+      "rpc/reconcile_player_availability_from_appearances",
+      "POST",
+      { p_appearances: appearances },
+      "Could not reconcile player availability from appearance data.",
+      "return=representation",
+    );
+    return Number(await response.json()) || 0;
   }
 
   async affectedLeagueIds(fixtureIds: number[]) {
