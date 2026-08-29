@@ -3,12 +3,14 @@ import {
   partitionProviderFixtures,
   type CachedFixture,
   type ProviderFixture,
+  type ProviderFixtureEvent,
   type ProviderPlayerPage,
   type ProviderTeamPlayers,
 } from "./live-score-domain";
 
 type FixturePage = { response: ProviderFixture[] };
 type PlayerPage = { response: ProviderTeamPlayers[] };
+type EventPage = { response: ProviderFixtureEvent[] };
 
 export type ProviderSnapshot = {
   fixtures: ProviderFixture[];
@@ -17,6 +19,37 @@ export type ProviderSnapshot = {
   playerPages: ProviderPlayerPage[];
   requestsUsed: number;
 };
+
+export type ProviderOwnGoalSnapshot = {
+  byFixtureAndApiPlayer: Map<number, Map<number, number>>;
+  fixtureIdsSynced: number[];
+  requestsUsed: number;
+};
+
+export async function fetchProviderOwnGoals(fixtureIds: number[]): Promise<ProviderOwnGoalSnapshot> {
+  const pages = await Promise.all(
+    fixtureIds.map(async (fixtureId) => ({
+      fixtureId,
+      body: await apiFootball<EventPage>(`fixtures/events?fixture=${fixtureId}`),
+    })),
+  );
+  const byFixtureAndApiPlayer = new Map<number, Map<number, number>>();
+  for (const { fixtureId, body } of pages) {
+    const ownGoals = new Map<number, number>();
+    for (const event of body.response) {
+      const apiPlayerId = event.player.id;
+      if (apiPlayerId && event.type.toLowerCase() === "goal" && event.detail.toLowerCase() === "own goal") {
+        ownGoals.set(apiPlayerId, (ownGoals.get(apiPlayerId) ?? 0) + 1);
+      }
+    }
+    byFixtureAndApiPlayer.set(fixtureId, ownGoals);
+  }
+  return {
+    byFixtureAndApiPlayer,
+    fixtureIdsSynced: pages.map((page) => page.fixtureId),
+    requestsUsed: pages.length,
+  };
+}
 
 export async function fetchProviderSnapshot(candidates: CachedFixture[]): Promise<ProviderSnapshot> {
   const livePage = await apiFootball<FixturePage>("fixtures?live=all");

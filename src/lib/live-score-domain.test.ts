@@ -48,7 +48,7 @@ describe("live score fixture status reconciliation", () => {
   it("plans an individual lookup whenever a candidate disappears from live fixtures", () => {
     const candidates = [
       { fixture_id: 1570344, status: "FT", kickoff: "2026-08-23T15:00:00Z" },
-      { fixture_id: 1570348, status: "2H", kickoff: "2026-08-23T15:30:00Z" },
+      { fixture_id: 1570348, status: "2H", kickoff: "2026-08-23T15:30:00Z", events_synced_at: null },
     ];
     const result = partitionProviderFixtures(candidates, [
       { ...fixture("2H"), fixture: { ...fixture("2H").fixture, id: 1570348 } },
@@ -74,6 +74,17 @@ describe("live score player normalization", () => {
     expect(result.rows).toHaveLength(0);
     expect(result.observations[0].unmapped_players[0]).toMatchObject({ api_football_id: 753, minutes: 24 });
   });
+
+  it("adds own goals from the fixture event ledger", () => {
+    const ownGoals = new Map([[1570344, new Map([[753, 1]])]]);
+    const result = normalizeProviderPlayerPages(
+      [playerPage(90)],
+      new Map([[753, 1272]]),
+      "2026-08-23T17:14:00Z",
+      ownGoals,
+    );
+    expect(result.rows[0]).toMatchObject({ player_id: 1272, own_goals: 1 });
+  });
 });
 
 describe("league score aggregation", () => {
@@ -83,7 +94,7 @@ describe("league score aggregation", () => {
       gameweek: 2,
       playerIds: [1272, 9999],
       fixtureStats: [
-        { fixture_id: 1570344, player_id: 1272, minutes: 24, completed_passes: 20, rating: 6.9 },
+        { fixture_id: 1570344, player_id: 1272, minutes: 24, completed_passes: 20, rating: 6.9, own_goals: 1 },
       ],
       weekFixtures: [
         { fixture_id: 1570344, status: "FT", kickoff: "2026-08-23T15:00:00Z", competition: "Premier League", gameweek: 2 },
@@ -91,7 +102,7 @@ describe("league score aggregation", () => {
       ],
       updatedAt: "2026-08-23T17:14:00Z",
     });
-    expect(rows[0]).toMatchObject({ player_id: 1272, minutes: 24, completed_passes: 20, status: "final" });
+    expect(rows[0]).toMatchObject({ player_id: 1272, minutes: 24, completed_passes: 20, own_goals: 1, status: "final" });
     expect(rows[1]).toMatchObject({ player_id: 9999, minutes: 0, status: "live" });
   });
 });

@@ -4,7 +4,7 @@ import type { CachedFixture, ProviderFixture } from "./live-score-domain";
 const { apiFootball } = vi.hoisted(() => ({ apiFootball: vi.fn() }));
 vi.mock("./api-football-server", () => ({ apiFootball }));
 
-import { fetchProviderSnapshot } from "./live-score-provider";
+import { fetchProviderOwnGoals, fetchProviderSnapshot } from "./live-score-provider";
 
 const completedFixture: ProviderFixture = {
   fixture: { id: 1570344, date: "2026-08-23T15:00:00Z", status: { short: "FT" } },
@@ -20,6 +20,7 @@ describe("provider snapshot fetching", () => {
       fixture_id: 1570344,
       status: "2H",
       kickoff: "2026-08-23T15:00:00Z",
+      events_synced_at: null,
     }];
     apiFootball
       .mockResolvedValueOnce({ response: [] })
@@ -36,5 +37,18 @@ describe("provider snapshot fetching", () => {
     expect(snapshot.recoveredFixtures).toEqual([completedFixture]);
     expect(snapshot.playerPages).toEqual([{ fixture: completedFixture, teams: [] }]);
     expect(snapshot.requestsUsed).toBe(3);
+  });
+
+  it("counts own-goal events by fixture and player", async () => {
+    apiFootball.mockResolvedValueOnce({ response: [
+      { player: { id: 1622, name: "G. Donnarumma" }, type: "Goal", detail: "Own Goal" },
+      { player: { id: 1622, name: "G. Donnarumma" }, type: "Card", detail: "Yellow Card" },
+    ] });
+
+    const snapshot = await fetchProviderOwnGoals([1557381]);
+
+    expect(apiFootball).toHaveBeenCalledWith("fixtures/events?fixture=1557381");
+    expect(snapshot.byFixtureAndApiPlayer.get(1557381)?.get(1622)).toBe(1);
+    expect(snapshot.requestsUsed).toBe(1);
   });
 });

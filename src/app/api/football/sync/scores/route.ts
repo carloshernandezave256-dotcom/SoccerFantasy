@@ -12,6 +12,8 @@ type Fixture={fixture:{id:number;date:string;status:{short:string}};league:{roun
 type FixturePage={response:Fixture[]};
 type ApiPlayer={player:{id:number};statistics:Array<{games:{minutes:number|null;rating:string|null};shots:{on:number|null};goals:{total:number|null;assists:number|null;conceded:number|null;saves:number|null};passes:{total:number|null;accuracy:number|string|null};tackles:{total:number|null};cards:{yellow:number|null;red:number|null};penalty:{scored:number|null;missed:number|null;saved:number|null;commited:number|null}}>};
 type PlayersPage={response:Array<{team:{id:number};players:ApiPlayer[]}>};
+type FixtureEvent={player:{id:number|null};type:string;detail:string};
+type EventsPage={response:FixtureEvent[]};
 type LeagueRow={calendar_competition:string;player_pool:string};
 type PlayerRow={id:number;api_football_id:number|null};
 type TransactionWindowRow={gameweek:number};
@@ -91,6 +93,16 @@ export async function POST(request:NextRequest){
     const allFinal=roundFixtures.length>0&&roundFixtures.every(item=>finalStatuses.has(item.fixture.status.short));
     const roundStatus=allFinal?"final":"live";
     const fixturePlayers=await Promise.all(activeFixtures.map(async fixture=>({fixture,body:await apiFootball<PlayersPage>(`fixtures/players?fixture=${fixture.fixture.id}`)})));
+    const finalEventFixtures=activeFixtures.filter(fixture=>finalStatuses.has(fixture.fixture.status.short));
+    const eventPages=await Promise.all(finalEventFixtures.map(async fixture=>({fixtureId:fixture.fixture.id,body:await apiFootball<EventsPage>(`fixtures/events?fixture=${fixture.fixture.id}`)})));
+    const ownGoalsByFixtureAndApiPlayer=new Map<number,Map<number,number>>();
+    for(const {fixtureId,body:eventBody} of eventPages){
+      const ownGoals=new Map<number,number>();
+      for(const event of eventBody.response){
+        if(event.player.id&&event.type.toLowerCase()==="goal"&&event.detail.toLowerCase()==="own goal")ownGoals.set(event.player.id,(ownGoals.get(event.player.id)??0)+1);
+      }
+      ownGoalsByFixtureAndApiPlayer.set(fixtureId,ownGoals);
+    }
     const statsByApiId=new Map<number,Record<string,number|boolean|null>>();
     const appearanceKickoffByApiId=new Map<number,string>();
     for(const {fixture,body:playerBody} of fixturePlayers){
@@ -98,7 +110,7 @@ export async function POST(request:NextRequest){
       for(const {entry,stat,teamId} of fixtureEntries){
         const rating=Number(stat.games.rating)||0;
         const teamGoalsConceded=teamId===fixture.teams.home.id?fixture.goals.away:teamId===fixture.teams.away.id?fixture.goals.home:null;
-        statsByApiId.set(entry.player.id,{rating:rating>0?rating:null,minutes:stat.games.minutes??0,goals:stat.goals.total??0,assists:stat.goals.assists??0,shots_on_target:stat.shots.on??0,big_chances_missed:0,completed_passes:completedPassesFromApi(stat.passes.total,stat.passes.accuracy),tackles_won:stat.tackles.total??0,penalty_goals:stat.penalty.scored??0,penalties_missed:stat.penalty.missed??0,penalties_conceded:stat.penalty.commited??0,saves:stat.goals.saves??0,penalties_saved:stat.penalty.saved??0,goals_conceded:teamGoalsConceded??stat.goals.conceded??0,yellow_cards:stat.cards.yellow??0,second_yellow_cards:0,red_cards:stat.cards.red??0,own_goals:0,man_of_the_match:false});
+        statsByApiId.set(entry.player.id,{rating:rating>0?rating:null,minutes:stat.games.minutes??0,goals:stat.goals.total??0,assists:stat.goals.assists??0,shots_on_target:stat.shots.on??0,big_chances_missed:0,completed_passes:completedPassesFromApi(stat.passes.total,stat.passes.accuracy),tackles_won:stat.tackles.total??0,penalty_goals:stat.penalty.scored??0,penalties_missed:stat.penalty.missed??0,penalties_conceded:stat.penalty.commited??0,saves:stat.goals.saves??0,penalties_saved:stat.penalty.saved??0,goals_conceded:teamGoalsConceded??stat.goals.conceded??0,yellow_cards:stat.cards.yellow??0,second_yellow_cards:0,red_cards:stat.cards.red??0,own_goals:ownGoalsByFixtureAndApiPlayer.get(fixture.fixture.id)?.get(entry.player.id)??0,man_of_the_match:false});
         if((stat.games.minutes??0)>0){
           const priorKickoff=appearanceKickoffByApiId.get(entry.player.id);
           if(!priorKickoff||fixture.fixture.date>priorKickoff)appearanceKickoffByApiId.set(entry.player.id,fixture.fixture.date);
@@ -130,6 +142,6 @@ export async function POST(request:NextRequest){
     const refresh=await fetch(`${supabaseUrl}/rest/v1/rpc/refresh_league_matchup_scores`,{method:"POST",headers:adminHeaders(serviceRoleKey),body:JSON.stringify({p_league_id:body.leagueId,p_gameweek:gameweek}),cache:"no-store"});
     if(!refresh.ok)throw new Error((await refresh.text())||"Matchup total refresh failed");
     const matchupsUpdated=Number(await refresh.json())||0;
-    return NextResponse.json({ok:true,competition,season,round,gameweek,status:roundStatus,fixturesStarted:activeFixtures.length,fixturesTotal:roundFixtures.length,seasonFixturesCached:fixtureRows.length,playersWithStats:statsByApiId.size,playersUpdated:rows.length,lineupPlayersUpdated:lineupPlayers.length,matchupsUpdated,injuriesCleared,requestsUsed:scheduleBodies.length+activeFixtures.length,notes:["Accurate passes come directly from the API accuracy count.","Big chances missed is not part of fantasy scoring."]});
+    return NextResponse.json({ok:true,competition,season,round,gameweek,status:roundStatus,fixturesStarted:activeFixtures.length,fixturesTotal:roundFixtures.length,seasonFixturesCached:fixtureRows.length,playersWithStats:statsByApiId.size,playersUpdated:rows.length,lineupPlayersUpdated:lineupPlayers.length,matchupsUpdated,injuriesCleared,eventFixturesSynced:eventPages.length,requestsUsed:scheduleBodies.length+activeFixtures.length+eventPages.length,notes:["Accurate passes come directly from the API accuracy count.","Big chances missed is not part of fantasy scoring."]});
   }catch(error){return NextResponse.json({error:error instanceof Error?error.message:"Live score synchronization failed."},{status:502})}
 }

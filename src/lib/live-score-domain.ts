@@ -16,6 +16,13 @@ export type CachedFixture = {
   fixture_id: number;
   status: string;
   kickoff: string;
+  events_synced_at?: string | null;
+};
+
+export type ProviderFixtureEvent = {
+  player: { id: number | null; name: string | null };
+  type: string;
+  detail: string;
 };
 
 export type ProviderFixture = {
@@ -145,6 +152,7 @@ export function normalizeProviderPlayerPages(
   pages: ProviderPlayerPage[],
   internalPlayerIdByApiId: ReadonlyMap<number, number>,
   observedAt: string,
+  ownGoalsByFixtureAndApiPlayer: ReadonlyMap<number, ReadonlyMap<number, number>> = new Map(),
 ): { rows: FixturePlayerStatRow[]; observations: FixtureObservation[] } {
   const rows: FixturePlayerStatRow[] = [];
   const observations: FixtureObservation[] = [];
@@ -177,6 +185,7 @@ export function normalizeProviderPlayerPages(
         : team.team.id === fixture.teams.away.id
           ? fixture.goals.home
           : null;
+      const fixtureOwnGoals = ownGoalsByFixtureAndApiPlayer.get(fixture.fixture.id);
       rows.push({
         fixture_id: fixture.fixture.id,
         player_id: playerId,
@@ -195,6 +204,7 @@ export function normalizeProviderPlayerPages(
         goals_conceded: teamGoalsConceded ?? stat.goals.conceded ?? 0,
         yellow_cards: stat.cards.yellow ?? 0,
         red_cards: stat.cards.red ?? 0,
+        ...(fixtureOwnGoals ? { own_goals: fixtureOwnGoals.get(entry.player.id) ?? 0 } : {}),
         man_of_the_match: false,
         source_updated_at: observedAt,
       });
@@ -278,7 +288,7 @@ export function buildLeaguePlayerScoreRows({
       yellow_cards: sum(playerStats, "yellow_cards"),
       second_yellow_cards: 0,
       red_cards: sum(playerStats, "red_cards"),
-      own_goals: 0,
+      own_goals: sum(playerStats, "own_goals"),
       man_of_the_match: false,
       stats_received: playerStats.length > 0,
       status: resolvePlayerScoreStatus(playerFixtureStatuses, gameweekIsFinal),

@@ -5,11 +5,12 @@ import {
   reconcileFixtureStatus,
 } from "@/lib/live-score-domain";
 import { refreshAffectedLeagueScores } from "@/lib/live-score-leagues";
-import { fetchProviderSnapshot } from "@/lib/live-score-provider";
+import { fetchProviderOwnGoals, fetchProviderSnapshot } from "@/lib/live-score-provider";
 import { LiveScoreStore } from "@/lib/live-score-store";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
+const COMPLETED_MATCH_STATUSES = new Set(["FT", "AET", "PEN"]);
 
 function validForcedFixtureId(request: NextRequest) {
   const fixtureId = Number(request.nextUrl.searchParams.get("fixtureId") ?? 0);
@@ -77,19 +78,35 @@ export async function GET(request: NextRequest) {
     const cachedStatuses = new Map(
       candidates.map((fixture) => [fixture.fixture_id, fixture.status]),
     );
-    await Promise.all(
-      snapshot.fixtures.map((fixture) =>
-        store.updateFixtureState(
-          fixture,
-          reconcileFixtureStatus(
-            fixture.fixture.status.short,
-            cachedStatuses.get(fixture.fixture.id),
-            priorStatuses.get(fixture.fixture.id),
-          ),
-          ranAt,
+    const reconciledStatuses = new Map(
+      snapshot.fixtures.map((fixture) => [
+        fixture.fixture.id,
+        reconcileFixtureStatus(
+          fixture.fixture.status.short,
+          cachedStatuses.get(fixture.fixture.id),
+          priorStatuses.get(fixture.fixture.id),
         ),
-      ),
+      ]),
     );
+    await Promise.all(
+      snapshot.fixtures.map((fixture) => store.updateFixtureState(
+        fixture,
+        reconciledStatuses.get(fixture.fixture.id) ?? fixture.fixture.status.short,
+        ranAt,
+      )),
+    );
+
+    // Player-stat payloads do not include own goals. Fetch the event ledger once,
+    // only after a fixture has been confirmed terminal, then cache that completion.
+    const candidateById = new Map(candidates.map((fixture) => [fixture.fixture_id, fixture]));
+    const eventFixtureIds = snapshot.fixtures.flatMap((fixture) => {
+      const fixtureId = fixture.fixture.id;
+      return COMPLETED_MATCH_STATUSES.has(reconciledStatuses.get(fixtureId) ?? "")
+        && !candidateById.get(fixtureId)?.events_synced_at
+        ? [fixtureId]
+        : [];
+    });
+    const ownGoalSnapshot = await fetchProviderOwnGoals(eventFixtureIds);
 
     const apiIds = providerPlayerIds(snapshot.playerPages);
     const mappings = await store.playerMappings(apiIds);
@@ -102,10 +119,12 @@ export async function GET(request: NextRequest) {
       snapshot.playerPages,
       internalPlayerIdByApiId,
       ranAt,
+      ownGoalSnapshot.byFixtureAndApiPlayer,
     );
 
     await store.insertObservations(normalized.observations);
     await store.upsertFixtureStats(normalized.rows, ranAt);
+    await store.markFixtureEventsSynced(ownGoalSnapshot.fixtureIdsSynced, ranAt);
     const kickoffByFixtureId = new Map(
       snapshot.fixtures.map((fixture) => [fixture.fixture.id, fixture.fixture.date]),
     );
@@ -137,19 +156,21 @@ export async function GET(request: NextRequest) {
       mappedPlayers: normalized.rows.length,
       unmappedPlayers,
       injuriesCleared,
+      eventFixturesSynced: ownGoalSnapshot.fixtureIdsSynced.length,
       ...leagueSummary,
     });
 
     return NextResponse.json({
       ok: true,
       ranAt,
-      requestsUsed: snapshot.requestsUsed,
+      requestsUsed: snapshot.requestsUsed + ownGoalSnapshot.requestsUsed,
       fixturesEligible: candidates.length,
       fixturesLive: snapshot.fixtures.length,
       sharedPlayerRowsUpdated: normalized.rows.length,
       fantasyLeagueGameweeksUpdated: leagueSummary.leagueGameweeksUpdated,
       leaguePlayerRowsUpdated: leagueSummary.leagueRowsUpdated,
       injuriesCleared,
+      eventFixturesSynced: ownGoalSnapshot.fixtureIdsSynced.length,
     });
   } catch (error) {
     console.error("[cron/scores] pipeline failed", {

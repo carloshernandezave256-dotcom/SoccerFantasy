@@ -81,11 +81,11 @@ export class LiveScoreStore {
     const windowStart = new Date(now.getTime() - 4 * 60 * 60 * 1000).toISOString();
     const query = forcedFixtureId
       ? new URLSearchParams({
-          select: "fixture_id,status,kickoff",
+          select: "fixture_id,status,kickoff,events_synced_at",
           fixture_id: `eq.${forcedFixtureId}`,
         })
       : new URLSearchParams({
-          select: "fixture_id,status,kickoff",
+          select: "fixture_id,status,kickoff,events_synced_at",
           and: `(kickoff.gte.${windowStart},kickoff.lte.${now.toISOString()})`,
         });
     return this.read<CachedFixture[]>(
@@ -149,19 +149,34 @@ export class LiveScoreStore {
 
   async upsertFixtureStats(rows: FixturePlayerStatRow[], syncedAt: string) {
     if (!rows.length) return;
-    await this.write(
-      "football_fixture_player_stats?on_conflict=fixture_id,player_id",
-      "POST",
-      rows,
-      "Shared player-stat cache update failed.",
-      "resolution=merge-duplicates,return=minimal",
-    );
+    const rowsWithOwnGoals = rows.filter((row) => Object.hasOwn(row, "own_goals"));
+    const rowsWithoutOwnGoals = rows.filter((row) => !Object.hasOwn(row, "own_goals"));
+    for (const group of [rowsWithOwnGoals, rowsWithoutOwnGoals]) {
+      if (!group.length) continue;
+      await this.write(
+        "football_fixture_player_stats?on_conflict=fixture_id,player_id",
+        "POST",
+        group,
+        "Shared player-stat cache update failed.",
+        "resolution=merge-duplicates,return=minimal",
+      );
+    }
     const fixtureIds = [...new Set(rows.map((row) => row.fixture_id))];
     await this.write(
       `football_fixture_cache?fixture_id=in.(${fixtureIds.join(",")})`,
       "PATCH",
       { stats_synced_at: syncedAt },
       "Could not mark fixture statistics as synchronized.",
+    );
+  }
+
+  async markFixtureEventsSynced(fixtureIds: number[], syncedAt: string) {
+    if (!fixtureIds.length) return;
+    await this.write(
+      `football_fixture_cache?fixture_id=in.(${fixtureIds.join(",")})`,
+      "PATCH",
+      { events_synced_at: syncedAt },
+      "Could not mark fixture events as synchronized.",
     );
   }
 
