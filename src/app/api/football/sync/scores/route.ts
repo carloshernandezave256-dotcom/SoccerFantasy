@@ -2,7 +2,7 @@ import {NextRequest,NextResponse} from "next/server";
 import {apiFootball} from "@/lib/api-football-server";
 import {isDeveloperRequest} from "@/lib/developer-auth";
 import {completedPassesFromApi} from "@/lib/api-football-stats";
-import {fantasyWeekWindow,fixtureInsideFantasyWeek} from "@/lib/fantasy-week-window";
+import {fantasyWeekWindow,fixturesForFantasyWeek} from "@/lib/fantasy-week-window";
 
 const competitions:Record<string,number>={"Premier League":39,"La Liga":140,"Serie A":135,"Bundesliga":78,"Ligue 1":61};
 const finalStatuses=new Set(["FT","AET","PEN"]);
@@ -77,9 +77,16 @@ export async function POST(request:NextRequest){
     if(!calendarRoundFixtures.length)return NextResponse.json({ok:true,competition,season,round,gameweek,status:"upcoming",fixturesStarted:0,fixturesTotal:0,seasonFixturesCached:fixtureRows.length,playersUpdated:0,requestsUsed:scheduleBodies.length,message:`${competition} fantasy gameweek ${gameweek} has no scheduled fixtures yet. Real-match history was still refreshed.`});
     const scoringWindow=fantasyWeekWindow(calendarRoundFixtures.map(item=>({kickoff:item.fixture.date})));
     if(!scoringWindow)throw new Error("The active Fantasy Calendar round has no valid kickoffs.");
-    const roundFixtures=scheduleBodies
-      .flatMap(item=>item.body.response)
-      .filter(item=>fixtureInsideFantasyWeek({kickoff:item.fixture.date},scoringWindow));
+    const roundFixtures=fixturesForFantasyWeek(
+      scheduleBodies.flatMap(({name,body:scheduled})=>scheduled.response.map(fixture=>({
+        competition:name,
+        officialRound:parseGameweek(fixture.league.round),
+        kickoff:fixture.fixture.date,
+        fixture,
+      }))),
+      scoringWindow,
+      {[competition]:gameweek},
+    ).map(candidate=>candidate.fixture);
     const activeFixtures=roundFixtures.filter(item=>!unstartedStatuses.has(item.fixture.status.short)&&new Date(item.fixture.date)<=now);
     const allFinal=roundFixtures.length>0&&roundFixtures.every(item=>finalStatuses.has(item.fixture.status.short));
     const roundStatus=allFinal?"final":"live";

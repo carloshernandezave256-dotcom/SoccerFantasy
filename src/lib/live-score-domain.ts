@@ -72,7 +72,13 @@ export type FixtureObservation = {
   unmapped_players: UnmappedProviderPlayer[];
 };
 
-export type WeekFixture = { fixture_id: number; status: string; kickoff: string };
+export type WeekFixture = {
+  fixture_id: number;
+  status: string;
+  kickoff: string;
+  competition: string;
+  gameweek: number;
+};
 
 export type LeaguePlayerScoreRow = {
   league_id: string;

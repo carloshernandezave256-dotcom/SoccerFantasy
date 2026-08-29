@@ -86,8 +86,8 @@ describe("league score aggregation", () => {
         { fixture_id: 1570344, player_id: 1272, minutes: 24, completed_passes: 20, rating: 6.9 },
       ],
       weekFixtures: [
-        { fixture_id: 1570344, status: "FT", kickoff: "2026-08-23T15:00:00Z" },
-        { fixture_id: 1570348, status: "2H", kickoff: "2026-08-23T15:30:00Z" },
+        { fixture_id: 1570344, status: "FT", kickoff: "2026-08-23T15:00:00Z", competition: "Premier League", gameweek: 2 },
+        { fixture_id: 1570348, status: "2H", kickoff: "2026-08-23T15:30:00Z", competition: "Premier League", gameweek: 2 },
       ],
       updatedAt: "2026-08-23T17:14:00Z",
     });

@@ -1,5 +1,5 @@
 import { buildLeaguePlayerScoreRows } from "./live-score-domain";
-import { fantasyWeekWindow } from "./fantasy-week-window";
+import { fantasyWeekWindow,fixturesForFantasyWeek } from "./fantasy-week-window";
 import { LiveScoreStore } from "./live-score-store";
 
 export type LeagueRefreshSummary = {
@@ -29,11 +29,19 @@ export async function refreshAffectedLeagueScores(
 
     const scoringWindow=fantasyWeekWindow(calendarFixtures);
     if(!scoringWindow)continue;
-    const weekFixtures = await store.weekFixtures(
+    const windowFixtures = await store.weekFixtures(
       leagueId,
       league.player_pool,
       scoringWindow.startsAt,
       scoringWindow.endsAt,
+    );
+    const weekFixtures=fixturesForFantasyWeek(
+      windowFixtures.map(fixture=>({
+        ...fixture,
+        officialRound:fixture.gameweek,
+      })),
+      scoringWindow,
+      {[league.calendar_competition]:window.gameweek},
     );
     const fixtureIdsForWeek = weekFixtures.map((fixture) => fixture.fixture_id);
     if (!fixtureIdsForWeek.length) continue;

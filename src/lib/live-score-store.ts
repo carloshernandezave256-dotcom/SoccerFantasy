@@ -191,7 +191,7 @@ export class LiveScoreStore {
       league_id: `eq.${leagueId}`,
       competition: `eq.${competition}`,
       gameweek: `eq.${gameweek}`,
-      select: "fixture_id,status,kickoff",
+      select: "fixture_id,status,kickoff,competition,gameweek",
       order: "kickoff.asc",
     });
     return this.read<WeekFixture[]>(
@@ -209,7 +209,7 @@ export class LiveScoreStore {
     const query = new URLSearchParams({
       league_id: `eq.${leagueId}`,
       and: `(kickoff.gte.${firstKickoff},kickoff.lte.${lastKickoff})`,
-      select: "fixture_id,status,kickoff",
+      select: "fixture_id,status,kickoff,competition,gameweek",
     });
     if (playerPool !== "All Top Five") query.set("competition", `eq.${playerPool}`);
     return this.read<WeekFixture[]>(
