@@ -125,7 +125,7 @@ export async function POST(request:NextRequest){
     const playersResponse=await fetch(`${supabaseUrl}/rest/v1/players?id=in.(${playerIds.join(",")})&select=id,api_football_id`,{headers:adminHeaders(serviceRoleKey),cache:"no-store"});
     const lineupPlayers=playersResponse.ok?await playersResponse.json() as PlayerRow[]:[];
     const playedApiIds=[...statsByApiId.keys()];
-    const playedResponse=playedApiIds.length?await fetch(`${supabaseUrl}/rest/v1/players?api_football_id=in.(${playedApiIds.join(",")})&select=id,api_football_id`,{headers:adminHeaders(serviceRoleKey),cache:"no-store"}):null;
+    const playedResponse=playedApiIds.length?await fetch(`${supabaseUrl}/rest/v1/rpc/resolve_api_football_player_mappings`,{method:"POST",headers:adminHeaders(serviceRoleKey),body:JSON.stringify({p_api_ids:playedApiIds}),cache:"no-store"}):null;
     const playedPlayers=playedResponse?.ok?await playedResponse.json() as PlayerRow[]:[];
     const players=[...new Map([...lineupPlayers,...playedPlayers].map(player=>[player.id,player])).values()];
     const rows=players.map(player=>({league_id:body.leagueId,gameweek,player_id:player.id,rating:null,minutes:0,goals:0,assists:0,shots_on_target:0,big_chances_missed:0,completed_passes:0,tackles_won:0,penalty_goals:0,penalties_missed:0,penalties_conceded:0,saves:0,penalties_saved:0,goals_conceded:0,yellow_cards:0,second_yellow_cards:0,red_cards:0,own_goals:0,status:roundStatus,source:"api-football-live",source_updated_at:new Date().toISOString(),updated_at:new Date().toISOString(),...(player.api_football_id?statsByApiId.get(player.api_football_id)??{}:{}),man_of_the_match:false}));
