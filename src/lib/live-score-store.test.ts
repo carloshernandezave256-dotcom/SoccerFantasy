@@ -22,4 +22,27 @@ describe("LiveScoreStore player mappings", () => {
       }),
     );
   });
+
+  it("stores appearance-confirmed clubs through the protected database function", async () => {
+    const fetchMock = vi.fn(async () => new Response("1", { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const store = new LiveScoreStore("https://example.test", "service-role-key");
+    const appearances = [{
+      fixture_id: 1557384,
+      player_id: 3013,
+      club: "Manchester United",
+      competition: "Premier League",
+      kickoff: "2026-08-30T15:30:00Z",
+      observed_at: "2026-08-31T14:30:00Z",
+    }];
+    await expect(store.reconcilePlayerClubs(appearances)).resolves.toBe(1);
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://example.test/rest/v1/rpc/reconcile_player_clubs_from_appearances",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ p_appearances: appearances }),
+      }),
+    );
+  });
 });

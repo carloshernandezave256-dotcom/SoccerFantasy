@@ -10,6 +10,7 @@ import {
 
 const fixture = (status: string): ProviderFixture => ({
   fixture: { id: 1570344, date: "2026-08-23T15:00:00Z", status: { short: status } },
+  league: { id: 140, name: "La Liga" },
   teams: { home: { id: 530 }, away: { id: 533 } },
   goals: { home: 2, away: 2 },
 });
@@ -67,6 +68,14 @@ describe("live score player normalization", () => {
     expect(initial.rows[0]).toMatchObject({ player_id: 1272, minutes: 24, completed_passes: 20 });
     expect(corrected.rows[0]).toMatchObject({ player_id: 1272, minutes: 31, source_updated_at: "2026-08-23T17:14:00Z" });
     expect(corrected.observations[0]).toMatchObject({ provider_player_rows: 1, mapped_player_rows: 1 });
+    expect(corrected.clubAppearances[0]).toEqual({
+      fixture_id: 1570344,
+      player_id: 1272,
+      club: "Atletico Madrid",
+      competition: "La Liga",
+      kickoff: "2026-08-23T15:00:00Z",
+      observed_at: "2026-08-23T17:14:00Z",
+    });
   });
 
   it("records unmapped provider players instead of silently dropping evidence", () => {

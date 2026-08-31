@@ -124,6 +124,7 @@ export async function GET(request: NextRequest) {
 
     await store.insertObservations(normalized.observations);
     await store.upsertFixtureStats(normalized.rows, ranAt);
+    const clubsUpdated = await store.reconcilePlayerClubs(normalized.clubAppearances);
     await store.markFixtureEventsSynced(ownGoalSnapshot.fixtureIdsSynced, ranAt);
     const kickoffByFixtureId = new Map(
       snapshot.fixtures.map((fixture) => [fixture.fixture.id, fixture.fixture.date]),
@@ -156,6 +157,7 @@ export async function GET(request: NextRequest) {
       mappedPlayers: normalized.rows.length,
       unmappedPlayers,
       injuriesCleared,
+      clubsUpdated,
       eventFixturesSynced: ownGoalSnapshot.fixtureIdsSynced.length,
       ...leagueSummary,
     });
@@ -170,6 +172,7 @@ export async function GET(request: NextRequest) {
       fantasyLeagueGameweeksUpdated: leagueSummary.leagueGameweeksUpdated,
       leaguePlayerRowsUpdated: leagueSummary.leagueRowsUpdated,
       injuriesCleared,
+      clubsUpdated,
       eventFixturesSynced: ownGoalSnapshot.fixtureIdsSynced.length,
     });
   } catch (error) {

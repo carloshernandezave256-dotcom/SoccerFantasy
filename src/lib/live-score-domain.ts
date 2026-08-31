@@ -27,6 +27,7 @@ export type ProviderFixtureEvent = {
 
 export type ProviderFixture = {
   fixture: { id: number; date: string; status: { short: string } };
+  league: { id: number; name: string };
   teams: { home: { id: number }; away: { id: number } };
   goals: { home: number | null; away: number | null };
 };
@@ -77,6 +78,15 @@ export type FixtureObservation = {
   provider_player_rows: number;
   mapped_player_rows: number;
   unmapped_players: UnmappedProviderPlayer[];
+};
+
+export type PlayerClubAppearance = {
+  fixture_id: number;
+  player_id: number;
+  club: string;
+  competition: string;
+  kickoff: string;
+  observed_at: string;
 };
 
 export type WeekFixture = {
@@ -153,9 +163,14 @@ export function normalizeProviderPlayerPages(
   internalPlayerIdByApiId: ReadonlyMap<number, number>,
   observedAt: string,
   ownGoalsByFixtureAndApiPlayer: ReadonlyMap<number, ReadonlyMap<number, number>> = new Map(),
-): { rows: FixturePlayerStatRow[]; observations: FixtureObservation[] } {
+): {
+  rows: FixturePlayerStatRow[];
+  observations: FixtureObservation[];
+  clubAppearances: PlayerClubAppearance[];
+} {
   const rows: FixturePlayerStatRow[] = [];
   const observations: FixtureObservation[] = [];
+  const clubAppearances: PlayerClubAppearance[] = [];
 
   for (const { fixture, teams } of pages) {
     const entries = teams.flatMap((team) =>
@@ -208,6 +223,16 @@ export function normalizeProviderPlayerPages(
         man_of_the_match: false,
         source_updated_at: observedAt,
       });
+      if ((stat.games.minutes ?? 0) > 0) {
+        clubAppearances.push({
+          fixture_id: fixture.fixture.id,
+          player_id: playerId,
+          club: team.team.name,
+          competition: fixture.league.name,
+          kickoff: fixture.fixture.date,
+          observed_at: observedAt,
+        });
+      }
       mappedPlayerRows += 1;
     }
 
@@ -223,7 +248,7 @@ export function normalizeProviderPlayerPages(
     });
   }
 
-  return { rows, observations };
+  return { rows, observations, clubAppearances };
 }
 
 function sum(rows: FixturePlayerStatRow[], field: string) {

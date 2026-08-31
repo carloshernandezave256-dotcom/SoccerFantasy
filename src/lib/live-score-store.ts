@@ -4,6 +4,7 @@ import type {
   FixtureObservation,
   FixturePlayerStatRow,
   LeaguePlayerScoreRow,
+  PlayerClubAppearance,
   ProviderFixture,
   WeekFixture,
 } from "./live-score-domain";
@@ -13,6 +14,7 @@ export type LeagueFixture = { league_id: string; fixture_id: number };
 export type LeagueConfig = { calendar_competition: string; player_pool: string };
 export type TransactionWindow = { gameweek: number; roster_lock_at: string };
 export type PlayerAppearance = { player_id: number; kickoff: string };
+export type FixtureClubContext = { fixture_id: number; kickoff: string; competition: string };
 
 const TOP_FIVE_COMPETITIONS = [
   "Premier League",
@@ -141,6 +143,14 @@ export class LiveScoreStore {
     return response.json() as Promise<PlayerMapping[]>;
   }
 
+  async fixtureClubContexts(fixtureIds: number[]): Promise<FixtureClubContext[]> {
+    if (!fixtureIds.length) return [];
+    return this.read<FixtureClubContext[]>(
+      `football_fixture_cache?fixture_id=in.(${fixtureIds.join(",")})&select=fixture_id,kickoff,competition`,
+      "Could not read fixture club contexts.",
+    );
+  }
+
   async insertObservations(observations: FixtureObservation[]) {
     if (!observations.length) return;
     await this.write(
@@ -191,6 +201,18 @@ export class LiveScoreStore {
       "POST",
       { p_appearances: appearances },
       "Could not reconcile player availability from appearance data.",
+      "return=representation",
+    );
+    return Number(await response.json()) || 0;
+  }
+
+  async reconcilePlayerClubs(appearances: PlayerClubAppearance[]) {
+    if (!appearances.length) return 0;
+    const response = await this.write(
+      "rpc/reconcile_player_clubs_from_appearances",
+      "POST",
+      { p_appearances: appearances },
+      "Could not reconcile player clubs from fixture appearances.",
       "return=representation",
     );
     return Number(await response.json()) || 0;

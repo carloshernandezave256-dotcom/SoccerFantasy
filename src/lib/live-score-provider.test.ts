@@ -8,6 +8,7 @@ import { fetchProviderOwnGoals, fetchProviderSnapshot } from "./live-score-provi
 
 const completedFixture: ProviderFixture = {
   fixture: { id: 1570344, date: "2026-08-23T15:00:00Z", status: { short: "FT" } },
+  league: { id: 140, name: "La Liga" },
   teams: { home: { id: 530 }, away: { id: 533 } },
   goals: { home: 2, away: 2 },
 };
