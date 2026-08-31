@@ -131,10 +131,14 @@ export class LiveScoreStore {
 
   async playerMappings(apiIds: number[]): Promise<PlayerMapping[]> {
     if (!apiIds.length) return [];
-    return this.read<PlayerMapping[]>(
-      `players?api_football_id=in.(${apiIds.join(",")})&select=id,api_football_id`,
+    const response = await this.write(
+      "rpc/resolve_api_football_player_mappings",
+      "POST",
+      { p_api_ids: apiIds },
       "Could not map provider players.",
+      "return=representation",
     );
+    return response.json() as Promise<PlayerMapping[]>;
   }
 
   async insertObservations(observations: FixtureObservation[]) {
