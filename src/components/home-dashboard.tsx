@@ -9,6 +9,7 @@ import { resolveActiveLeague } from "@/lib/active-league";
 import { supabase } from "@/lib/supabase";
 import { useLanguage } from "@/lib/i18n";
 import { loadPlayerSeasonTotals } from "@/lib/player-season-totals";
+import {ActivePlayerFixture} from "./active-player-fixture";
 
 type League = {
   league_id: string;
@@ -854,6 +855,7 @@ export function HomeDashboard() {
                   <div>
                     <strong>{player.name}</strong>
                     <small>{player.club} · {player.competition}</small>
+                    {league?<ActivePlayerFixture leagueId={league.league_id} club={player.club}/>:null}
                     <em className={`pulse-status ${pulseStatus(player.status).tone}`}>{pulseStatus(player.status).label}</em>
                     <p>
                       {player.goals || player.assists
