@@ -42,7 +42,7 @@ function PitchPlayer({player,onSelect}:{player:Player;onSelect:(player:Player)=>
   return <button className="pitch-player" onClick={()=>onSelect(player)} aria-label={`Open ${player.full_name} scoring breakdown`}>
     <span className="pitch-player-photo"><PlayerHeadshot name={player.full_name} position={player.position} photoUrl={player.photo_url}/><b className={player.score<0?"negative":"positive"}>{player.score}</b><EventBadges player={player}/></span>
     <strong title={player.full_name}>{displayName}</strong>
-    <small>{player.position}</small>
+    <small>{player.position} · {fixtureLabel(player.fixture,player.club)}</small>
   </button>;
 }
 
@@ -51,7 +51,7 @@ function BenchPlayer({player,onSelect}:{player:Player;onSelect:(player:Player)=>
   const displayName=player.full_name.length>18&&words.length>1?`${words[0][0]}. ${words.slice(1).join(" ")}`:player.full_name;
   return <button className="bench-player" onClick={()=>onSelect(player)} aria-label={`Open ${player.full_name} bench scoring card`}>
     <span className="bench-player-photo"><PlayerHeadshot name={player.full_name} position={player.position} photoUrl={player.photo_url}/><EventBadges player={player}/></span>
-    <span className="bench-player-copy"><strong title={player.full_name}>{displayName}</strong><small>{player.position} · {player.club}</small></span>
+    <span className="bench-player-copy"><strong title={player.full_name}>{displayName}</strong><small>{player.position} · {player.club}</small><small className="active-player-fixture compact"><b>{fixtureLabel(player.fixture,player.club)}</b>{player.fixture?<i>{new Date(player.fixture.kickoff).toLocaleString([], {weekday:"short",hour:"numeric",minute:"2-digit"})}</i>:null}</small></span>
     <b className={player.score<0?"negative":"positive"}>{player.score} pts</b>
   </button>;
 }
@@ -63,6 +63,10 @@ function PlayerStatus({status}:{status:PlayerDataStatus}){
 function fixtureOpponent(fixture:PlayerFixture|null,club:string){
   if(!fixture)return"Opponent to be confirmed";
   return normalizeClubName(fixture.home_team)===normalizeClubName(club)?fixture.away_team:fixture.home_team;
+}
+function fixtureLabel(fixture:PlayerFixture|null,club:string){
+  if(!fixture)return"Fixture pending";
+  return `${normalizeClubName(fixture.home_team)===normalizeClubName(club)?"vs":"@"} ${fixtureOpponent(fixture,club)}`;
 }
 
 function MatchupPlayerDialog({player,gameweek,lastUpdated,onClose}:{player:Player;gameweek:number;lastUpdated:Date|null;onClose:()=>void}){
@@ -80,7 +84,7 @@ function MatchupPlayerDialog({player,gameweek,lastUpdated,onClose}:{player:Playe
       <header className="ledger-header"><span className={`position ${player.position.toLowerCase()}`}>{player.position}</span>{player.isBench?<span className="bench-ledger-label">BENCH · NOT COUNTED</span>:null}<button className="ledger-close" onClick={onClose} aria-label="Close player report" autoFocus>×</button></header>
       <div className="ledger-scroll">
         <section className="matchup-player-identity"><PlayerHeadshot name={player.full_name} position={player.position} photoUrl={player.photo_url}/><div><p className="eyebrow">GAMEWEEK {gameweek} REPORT</p><h2 id="ledger-player-name">{player.full_name}</h2><p>{player.club}{player.competition?` · ${player.competition}`:""}{player.captain?" · Captain":""}</p></div></section>
-        <section className="matchup-fixture-summary"><div><small>{fixture?new Date(fixture.kickoff).toLocaleString([], {weekday:"short",month:"short",day:"numeric",hour:"numeric",minute:"2-digit"}):"FIXTURE PENDING"}</small><strong>vs {fixtureOpponent(fixture,player.club)}</strong><span>{fixture?fixture.status.replaceAll("_"," "):"The fixture has not synchronized yet."}</span></div><PlayerStatus status={player.dataStatus}/></section>
+        <section className="matchup-fixture-summary"><div><small>{fixture?new Date(fixture.kickoff).toLocaleString([], {weekday:"short",month:"short",day:"numeric",hour:"numeric",minute:"2-digit"}):"FIXTURE PENDING"}</small><strong>{fixtureLabel(fixture,player.club)}</strong><span>{fixture?fixture.status.replaceAll("_"," "):"The fixture has not synchronized yet."}</span></div><PlayerStatus status={player.dataStatus}/></section>
         <div className={`ledger-data-status status-${player.dataStatus}`}><PlayerStatus status={player.dataStatus}/><span><strong>{playerDataStatusCopy[player.dataStatus].title}</strong><small>{playerDataStatusCopy[player.dataStatus].detail}</small></span></div>
         {player.injured?<section className="matchup-availability"><small>AVAILABILITY</small><strong>{player.injury_reason??player.injury_type??"Unavailable"}</strong>{returnDate?<span>Expected return: {returnEstimateLabel(returnDate)}</span>:null}</section>:null}
         <section className="matchup-points-hero"><div><small>{player.isBench?"BENCH POINTS":"GAMEWEEK POINTS"}</small><strong>{player.score}</strong></div>{player.captain?<div><small>BEFORE CAPTAIN</small><strong>{player.baseScore}</strong><span>+50% applied</span></div>:null}{player.rating!==null?<div><small>API RATING</small><strong>{player.rating.toFixed(1)}</strong></div>:null}</section>
