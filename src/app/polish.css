@@ -853,3 +853,4 @@ textarea,
     text-align: center;
   }
 }
+.active-player-fixture{display:flex;min-width:0;align-items:center;gap:4px;color:var(--lime);font-size:7px;line-height:1.2}.active-player-fixture b,.active-player-fixture i{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.active-player-fixture b{font-weight:900}.active-player-fixture i{color:var(--muted);font-style:normal;font-weight:700}.saved-pitch-player>.active-player-fixture{max-width:76px;flex-direction:column;gap:1px}.saved-bench-player>.active-player-fixture{max-width:92px;justify-content:center}.home-news-scroll .active-player-fixture{margin-top:3px;font-size:8px}.bench-player-copy>.active-player-fixture{font-size:8px}
