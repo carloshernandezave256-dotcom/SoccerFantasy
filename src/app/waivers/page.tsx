@@ -9,8 +9,10 @@ import { resolveActiveLeague } from "@/lib/active-league";
 import { PlayerHeadshot } from "@/components/player-headshot";
 import { PlayerStatsDialog } from "@/components/player-stats-dialog";
 import { loadPlayerSeasonTotals, type PlayerSeasonTotal } from "@/lib/player-season-totals";
+import {fixturesForFantasyWeek} from "@/lib/fantasy-week-window";
+import {fixtureForClub,fixtureOpponent,fixtureVenue,type PlayerFixture} from "@/lib/player-fixtures";
 
-type League = { league_id: string; league_name: string; team_name: string; is_commissioner: boolean; game_format?: string; player_pool?: string };
+type League = { league_id: string; league_name: string; team_name: string; is_commissioner: boolean; game_format?: string; player_pool?: string; calendar_competition:string };
 type Player = { id: number; full_name: string; position: string; club: string; competition: string; draft_rank?: number; photo_url?:string|null; injured?:boolean; injury_type?:string|null; injury_reason?:string|null; expected_return?:string|null };
 type Pick = { user_id: string; player_id: number; players: Player | null };
 type Claim = { id: string; user_id: string; add_player_id: number; drop_player_id: number | null; gameweek:number; claim_rank:number; status: string; created_at: string; processed_at: string | null; note: string | null };
@@ -31,6 +33,7 @@ export default function WaiversPage() {
   const [priority, setPriority] = useState<Priority[]>([]);
   const [seasonTotals, setSeasonTotals] = useState<PlayerSeasonTotal[]>([]);
   const [currentScores,setCurrentScores]=useState<CurrentScore[]>([]);
+  const [weekFixtures,setWeekFixtures]=useState<PlayerFixture[]>([]);
   const [watchlist,setWatchlist]=useState<Set<number>>(new Set());
   const [userId, setUserId] = useState("");
   const [query, setQuery] = useState("");
@@ -66,7 +69,13 @@ export default function WaiversPage() {
     const currentScoreResult=currentWindow
       ?await supabase.from("league_player_scores").select("player_id,gameweek,fantasy_points,minutes,status,stats_received").eq("league_id",active.league_id).eq("gameweek",currentWindow.gameweek)
       :{data:[],error:null};
-    const error = playerResult.error ?? pickResult.error ?? claimResult.error ?? priorityResult.error ?? scoreResult.error??windowResult.error??offerResult.error??budgetResult.error??watchResult.error??currentScoreResult.error;
+    const lockDate=currentWindow?new Date(currentWindow.roster_lock_at):null;
+    const weekStartsAt=lockDate?new Date(Date.UTC(lockDate.getUTCFullYear(),lockDate.getUTCMonth(),lockDate.getUTCDate())):null;
+    const weekEndsAt=weekStartsAt?new Date(weekStartsAt.getTime()+7*24*60*60*1000-1):null;
+    const fixtureResult=weekStartsAt&&weekEndsAt
+      ?await supabase.from("league_headline_fixtures").select("fixture_id,gameweek,competition,kickoff,status,home_team,away_team,home_score,away_score").eq("league_id",active.league_id).gte("kickoff",weekStartsAt.toISOString()).lte("kickoff",weekEndsAt.toISOString()).order("kickoff",{ascending:true})
+      :{data:[],error:null};
+    const error = playerResult.error ?? pickResult.error ?? claimResult.error ?? priorityResult.error ?? scoreResult.error??windowResult.error??offerResult.error??budgetResult.error??watchResult.error??currentScoreResult.error??fixtureResult.error;
     if (error) setMessage(error.message);
     setPlayers(((playerResult.data ?? []) as Player[]).filter(player=>!active.player_pool||active.player_pool==="All Top Five"||player.competition===active.player_pool));
     setPicks((pickResult.data ?? []) as unknown as Pick[]);
@@ -78,6 +87,8 @@ export default function WaiversPage() {
     setContractBudget(Number(budgetResult.data?.remaining_budget??0));
     setWatchlist(new Set(((watchResult.data??[]) as WatchRow[]).map(row=>row.player_id)));
     setCurrentScores((currentScoreResult.data??[]) as CurrentScore[]);
+    const fixtureRows=(fixtureResult.data??[]) as PlayerFixture[];
+    setWeekFixtures(weekStartsAt&&weekEndsAt?fixturesForFantasyWeek(fixtureRows.map(fixture=>({...fixture,officialRound:fixture.gameweek})),{startsAt:weekStartsAt.toISOString(),endsAt:weekEndsAt.toISOString()},{[active.calendar_competition]:currentWindow?.gameweek??0}):[]);
     setUserId(currentUser);
     setLoading(false);
   }
@@ -221,12 +232,13 @@ export default function WaiversPage() {
             const owner=ownerByPlayer.get(player.id);
             const totals=totalsByPlayer.get(player.id)??emptyTotals;
             const current=currentScoreByPlayer.get(player.id);
+            const fixture=fixtureForClub(weekFixtures,player.club);
             const watching=watchlist.has(player.id);
             const currentLabel=current?.status==="live"?"LIVE":current?.status==="final"?"FINAL":current?"UPCOMING":"NO WEEK DATA";
             return <article className={`market-player-card ${owner?"owned":"available"} ${player.injured?"unavailable":""}`} key={player.id} role="button" tabIndex={0} onClick={()=>setStatsPlayer(player)} onKeyDown={event=>{if(event.key==="Enter"||event.key===" ")setStatsPlayer(player)}}>
               <div className="market-player-primary">
                 <PlayerHeadshot name={player.full_name} position={player.position} photoUrl={player.photo_url}/>
-                <div><span className={`position ${player.position.toLowerCase()}`}>{player.position}</span><strong>{player.full_name}</strong><small>{player.club} · {player.competition}</small></div>
+                <div><span className={`position ${player.position.toLowerCase()}`}>{player.position}</span><strong>{player.full_name}</strong><small>{player.club} · {player.competition}</small>{fixture?<span className="market-player-fixture"><b>{fixtureVenue(fixture,player.club)==="Home"?"vs":"@"} {fixtureOpponent(fixture,player.club)}</b> · {new Date(fixture.kickoff).toLocaleString([], {weekday:"short",hour:"numeric",minute:"2-digit"})}</span>:<span className="market-player-fixture pending">This week&apos;s fixture unavailable</span>}</div>
                 <button type="button" className={`market-watch ${watching?"active":""}`} aria-label={watching?`Remove ${player.full_name} from watchlist`:`Add ${player.full_name} to watchlist`} onClick={event=>{event.stopPropagation();void toggleWatchlist(player.id)}}>{watching?"★":"☆"}</button>
               </div>
               <div className="market-player-metrics">
