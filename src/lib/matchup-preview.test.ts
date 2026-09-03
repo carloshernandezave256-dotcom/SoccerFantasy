@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { managerTrend, matchupForecast, type ManagerTrend, type PreviewMatchup } from "./matchup-preview";
+import { managerTrend, matchupForecast, projectPlayerPoints, projectedLineupForecast, type ManagerTrend, type PreviewMatchup, type ProjectionFixture } from "./matchup-preview";
 
 const matchups: PreviewMatchup[] = [
   { gameweek: 1, home_user_id: "home", away_user_id: "away", home_score: 90, away_score: 80, status: "final" },
@@ -28,5 +28,37 @@ describe("matchup preview metrics", () => {
     const home: ManagerTrend = { played: 2, pointsFor: 200, pointsAgainst: 120, averageFor: 100, averageAgainst: 60, form: ["W"] };
     const away: ManagerTrend = { played: 2, pointsFor: 160, pointsAgainst: 180, averageFor: 80, averageAgainst: 90, form: ["L"] };
     expect(matchupForecast(home, away)).toMatchObject({ homeScore: 95, awayScore: 70, homeShare: 58, awayShare: 42, leader: "home" });
+  });
+
+  it("adjusts an attacker's expected points for the actual opponent and venue", () => {
+    const fixtures: ProjectionFixture[] = [
+      { status: "FT", kickoff: "2026-08-15", home_team: "Chelsea", away_team: "Arsenal", home_score: 1, away_score: 3 },
+      { status: "FT", kickoff: "2026-08-22", home_team: "Liverpool", away_team: "Chelsea", home_score: 3, away_score: 2 },
+      { status: "FT", kickoff: "2026-08-22", home_team: "Arsenal", away_team: "Everton", home_score: 1, away_score: 0 },
+    ];
+    const projection = projectPlayerPoints({
+      id: 9,
+      position: "FWD",
+      club: "Arsenal",
+      fixture: { home_team: "Arsenal", away_team: "Chelsea" },
+      seasonPoints: 20,
+      appearances: 2,
+    }, fixtures);
+    expect(projection.opponent).toBe("Chelsea");
+    expect(projection.pointsPerAppearance).toBe(10);
+    expect(projection.opponentFactor).toBeGreaterThan(1);
+    expect(projection.expectedPoints).toBeGreaterThan(10);
+  });
+
+  it("totals player-level projections for the matchup headline", () => {
+    const base = { pointsPerAppearance: 8, opponent: "Opponent", opponentFactor: 1, appearanceRate: 1 };
+    expect(projectedLineupForecast(
+      [{ ...base, playerId: 1, expectedPoints: 12 }, { ...base, playerId: 2, expectedPoints: 8 }],
+      [{ ...base, playerId: 3, expectedPoints: 10 }],
+    )).toMatchObject({ homeScore: 20, awayScore: 10, homeShare: 67, awayShare: 33, leader: "home" });
+  });
+
+  it("does not project points for an unavailable player", () => {
+    expect(projectPlayerPoints({ id: 7, position: "MID", club: "Milan", fixture: { home_team: "Milan", away_team: "Roma" }, seasonPoints: 18, appearances: 2, injured: true }, [])).toMatchObject({ expectedPoints: 0, appearanceRate: 0 });
   });
 });
