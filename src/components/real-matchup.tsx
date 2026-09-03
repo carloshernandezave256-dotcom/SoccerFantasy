@@ -244,7 +244,6 @@ export function RealMatchup(){
       return record;
     },{homeWins:0,awayWins:0,draws:0});
   },[featured,previousMeetings]);
-
   useEffect(()=>{
     if(!featured||!league)return;
     const request=++refreshRequest.current;
@@ -257,24 +256,27 @@ export function RealMatchup(){
         supabase.from("draft_picks").select("user_id,pick_number,players(id,full_name,position,club,competition,photo_url,injured,injury_type,injury_reason,expected_return,fotmob_expected_return)").eq("league_id",league.league_id).in("user_id",ids).order("pick_number"),
         supabase.from("league_matchups").select("home_score,away_score,status").eq("id",featured.id).single(),
         supabase.rpc("league_standings",{p_league_id:league.league_id}),
-        supabase.from("league_headline_fixtures").select("status,kickoff,home_team,away_team,competition,gameweek").eq("league_id",league.league_id),
+        supabase.from("league_headline_fixtures").select("status,kickoff,home_team,away_team,competition,gameweek").eq("league_id",league.league_id).eq("gameweek",gameweek),
         supabase.from("leagues").select("calendar_competition").eq("id",league.league_id).single(),
       ]);
       const lineupRows=(lineupResult.data??[]) as unknown as {user_id:string;is_starter:boolean;is_captain:boolean;pitch_order:number|null;bench_order:number|null;players:PlayerSource|null}[];
       const snapshotRows=(snapshotResult.data??[]) as unknown as {user_id:string;is_starter:boolean;is_star_pick:boolean;pitch_order:number|null;bench_order?:number|null;players:PlayerSource|null}[];
       const pickRows=(picksResult.data??[]) as unknown as {user_id:string;pick_number:number;players:PlayerSource|null}[];
       const relevantPlayerIds=[...new Set([...lineupRows,...snapshotRows,...pickRows].flatMap(row=>row.players?[row.players.id]:[]))];
-      const scoreResult=relevantPlayerIds.length
-        ?await supabase.from("league_player_scores").select("player_id,rating,minutes,goals,assists,shots_on_target,big_chances_missed,completed_passes,tackles_won,penalty_goals,penalties_missed,penalties_conceded,saves,penalties_saved,goals_conceded,yellow_cards,second_yellow_cards,red_cards,own_goals,stats_received,status,fantasy_points,score_ledger").eq("league_id",league.league_id).eq("gameweek",gameweek).in("player_id",relevantPlayerIds)
-        :{data:[]};
-      const scoreRows=(scoreResult.data??[]) as ScoreRow[];
       const allFixtures=(fixturesResult.data??[]) as HeadlineFixture[];
       const calendarCompetition=(leagueConfigResult.data as {calendar_competition?:string}|null)?.calendar_competition;
       const calendarFixtures=allFixtures.filter(fixture=>fixture.competition===calendarCompetition&&fixture.gameweek===gameweek);
       const scoringWindow=fantasyWeekWindow(calendarFixtures);
-      const playerFixtures=scoringWindow
-        ?allFixtures.filter(fixture=>fixtureInsideFantasyWeek(fixture,scoringWindow))
-        :calendarFixtures;
+      const[scoreResult,playerFixtureResult]=await Promise.all([
+        relevantPlayerIds.length
+          ?supabase.from("league_player_scores").select("player_id,rating,minutes,goals,assists,shots_on_target,big_chances_missed,completed_passes,tackles_won,penalty_goals,penalties_missed,penalties_conceded,saves,penalties_saved,goals_conceded,yellow_cards,second_yellow_cards,red_cards,own_goals,stats_received,status,fantasy_points,score_ledger").eq("league_id",league.league_id).eq("gameweek",gameweek).in("player_id",relevantPlayerIds)
+          :Promise.resolve({data:[]}),
+        scoringWindow
+          ?supabase.from("league_headline_fixtures").select("status,kickoff,home_team,away_team,competition,gameweek").eq("league_id",league.league_id).gte("kickoff",scoringWindow.startsAt).lte("kickoff",scoringWindow.endsAt)
+          :Promise.resolve({data:calendarFixtures}),
+      ]);
+      const scoreRows=(scoreResult.data??[]) as ScoreRow[];
+      const playerFixtures=((playerFixtureResult.data??[]) as HeadlineFixture[]).filter(fixture=>!scoringWindow||fixtureInsideFantasyWeek(fixture,scoringWindow));
       const liveMatchup=matchupResult.data as {home_score:number|string;away_score:number|string;status:Matchup["status"]}|null;
       if(liveMatchup&&(Number(liveMatchup.home_score)!==Number(featured.home_score)||Number(liveMatchup.away_score)!==Number(featured.away_score)||liveMatchup.status!==featured.status)){
         setMatchups(current=>current.map(matchup=>matchup.id===featured.id?{...matchup,...liveMatchup}:matchup));
