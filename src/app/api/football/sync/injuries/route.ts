@@ -1,7 +1,7 @@
 import {NextRequest,NextResponse} from "next/server";
 import {apiFootball} from "@/lib/api-football-server";
 import {isDeveloperRequest} from "@/lib/developer-auth";
-import {fotmobConfirmsActive} from "@/lib/fotmob-return-update";
+import {fotmobConfirmsActive,recentFotmobClearBlocksInjury} from "@/lib/fotmob-return-update";
 import {isApiFootballUnavailable} from "@/lib/player-unavailability";
 import {appearanceDisprovesInjury,injuryObservedAt} from "@/lib/injury-observation";
 
@@ -17,7 +17,7 @@ type InjuryEntry={player:{id:number;name:string;type?:string|null;reason?:string
 type InjuriesPage={response:InjuryEntry[]};
 type SidelinedEntry={type?:string|null;start?:string|null;end?:string|null};
 type SidelinedPage={response:SidelinedEntry[]};
-type ExistingInjury={api_football_id:number;injured:boolean;injury_type:string|null;injury_reason:string|null;expected_return:string|null;sidelined_checked_at:string|null;fotmob_expected_return:string|null;injury_updated_at:string|null;availability_last_appearance_at:string|null};
+type ExistingInjury={api_football_id:number;injured:boolean;injury_type:string|null;injury_reason:string|null;expected_return:string|null;sidelined_checked_at:string|null;fotmob_expected_return:string|null;fotmob_return_checked_at:string|null;injury_updated_at:string|null;availability_last_appearance_at:string|null};
 
 export const maxDuration=300;
 
@@ -58,7 +58,7 @@ export async function POST(request:NextRequest){
   for(const competition of competitions){
     try{
       const injuryBody=await apiFootball<InjuriesPage>(`injuries?league=${competition.id}&season=${season}`);requestsUsed++;
-      const existingResponse=await fetch(`${supabaseUrl}/rest/v1/players?competition=eq.${encodeURIComponent(competition.name)}&select=api_football_id,injured,injury_type,injury_reason,expected_return,sidelined_checked_at,fotmob_expected_return,injury_updated_at,availability_last_appearance_at`,{headers:adminHeaders,cache:"no-store"});
+      const existingResponse=await fetch(`${supabaseUrl}/rest/v1/players?competition=eq.${encodeURIComponent(competition.name)}&select=api_football_id,injured,injury_type,injury_reason,expected_return,sidelined_checked_at,fotmob_expected_return,fotmob_return_checked_at,injury_updated_at,availability_last_appearance_at`,{headers:adminHeaders,cache:"no-store"});
       if(!existingResponse.ok)throw new Error((await existingResponse.text())||"Could not load cached injury statuses");
       const existingRows=await existingResponse.json() as ExistingInjury[];
       const existingById=new Map(existingRows.filter(row=>row.api_football_id).map(row=>[row.api_football_id,row]));
@@ -81,6 +81,7 @@ export async function POST(request:NextRequest){
         const injuryReason=injury.player.reason??null;
         const existing=existingById.get(injury.player.id);
         if(fotmobConfirmsActive(existing?.fotmob_expected_return))continue;
+        if(existing&&recentFotmobClearBlocksInjury(existing.injured,existing.fotmob_return_checked_at))continue;
         if(appearanceDisprovesInjury(existing,injuryType,injuryReason))continue;
         const refreshSidelined=shouldRefreshSidelined(existing,injuryType,injuryReason);
         let returnDate=existing?.expected_return??null;
