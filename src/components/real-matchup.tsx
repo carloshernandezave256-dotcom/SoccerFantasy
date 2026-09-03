@@ -11,7 +11,7 @@ import { PlayerHeadshot } from "./player-headshot";
 import { partitionMatchupLineup, selectMatchupLineup } from "@/lib/matchup-lineup";
 import { fixtureForClub, normalizeClubName, playerDataStatusCopy, resolvePlayerDataStatus, type PlayerDataStatus, type PlayerFixture } from "@/lib/matchup-player-status";
 import { loadPlayerSeasonTotals, type PlayerSeasonTotal } from "@/lib/player-season-totals";
-import { managerTrend, matchupForecast } from "@/lib/matchup-preview";
+import { managerTrend, projectPlayerPoints, projectedLineupForecast, type PlayerProjection, type ProjectionFixture } from "@/lib/matchup-preview";
 
 type League={league_id:string;league_name:string;team_name:string;game_format:string};
 type Manager={draft_slot:number;user_id:string;team_name:string};
@@ -22,7 +22,7 @@ type TeamView={userId:string;name:string;score:number;players:Player[];bench:Pla
 type ScoreRow={player_id:number;rating:number|null;minutes:number;goals:number;assists:number;shots_on_target:number;big_chances_missed:number;completed_passes:number;tackles_won:number;penalty_goals:number;penalties_missed:number;penalties_conceded:number;saves:number;penalties_saved:number;goals_conceded:number;yellow_cards:number;second_yellow_cards:number;red_cards:number;own_goals:number;stats_received:boolean;status:"not_started"|"live"|"final";fantasy_points:number|string;score_ledger:LedgerEntry[]};
 type HistoryRow={fixture_id:number;gameweek:number;kickoff:string;rating:number|null;minutes:number;goals:number;assists:number;shots_on_target:number;completed_passes:number;saves:number;goals_conceded:number;yellow_cards:number;red_cards:number;status:string;home_team:string;away_team:string;home_score:number|null;away_score:number|null;points:number|string};
 type Standing={rank:number;user_id:string;team_name:string;played:number;wins:number;draws:number;losses:number;points:number;fantasy_points:number|string};
-type HeadlineFixture=PlayerFixture&{competition:string;gameweek:number};
+type HeadlineFixture=PlayerFixture&ProjectionFixture&{competition:string;gameweek:number};
 
 const positionOrder:Record<string,number>={GK:0,DEF:1,MID:2,FWD:3};
 const homePitchRows=["GK","DEF","MID","FWD"] as const;
@@ -112,6 +112,7 @@ export function RealMatchup(){
   const[teams,setTeams]=useState<TeamView[]>([]);
   const[standings,setStandings]=useState<Standing[]>([]);
   const[seasonTotals,setSeasonTotals]=useState<PlayerSeasonTotal[]>([]);
+  const[projectionFixtures,setProjectionFixtures]=useState<ProjectionFixture[]>([]);
   const[selected,setSelected]=useState<Player|null>(null);
   const[loading,setLoading]=useState(true);
   const[message,setMessage]=useState("");
@@ -216,19 +217,24 @@ export function RealMatchup(){
   const featured=useMemo(()=>weekFixtures.find(matchup=>matchup.id===selectedMatchupId)??weekFixtures.find(matchup=>matchup.home_user_id===userId||matchup.away_user_id===userId)??weekFixtures[0]??null,[weekFixtures,userId,selectedMatchupId]);
   const maxWeek=Math.max(1,...matchups.map(matchup=>matchup.gameweek));
   const seasonTotalByPlayer=useMemo(()=>new Map(seasonTotals.map(total=>[total.player_id,total])),[seasonTotals]);
+  const projectionByPlayer=useMemo(()=>new Map(teams.flatMap(team=>team.players.map(player=>{
+    const total=seasonTotalByPlayer.get(player.id);
+    return[player.id,projectPlayerPoints({id:player.id,position:player.position,club:player.club,captain:player.captain,injured:player.injured,fixture:player.fixture,seasonPoints:total?.points??0,appearances:total?.appearances??0},projectionFixtures)] as const;
+  }))),[teams,seasonTotalByPlayer,projectionFixtures]);
   const managerPreviews=useMemo(()=>teams.map(team=>{
     const standing=standings.find(row=>row.user_id===team.userId);
     const trend=managerTrend(matchups,team.userId,gameweek);
     const players=[...team.players].sort((a,b)=>{
-      const pointsDifference=(seasonTotalByPlayer.get(b.id)?.points??0)-(seasonTotalByPlayer.get(a.id)?.points??0);
+      const pointsDifference=(projectionByPlayer.get(b.id)?.expectedPoints??0)-(projectionByPlayer.get(a.id)?.expectedPoints??0);
       if(pointsDifference!==0)return pointsDifference;
       if(Boolean(a.captain)!==Boolean(b.captain))return a.captain?-1:1;
       return a.full_name.localeCompare(b.full_name);
     }).slice(0,2);
     const lineupPoints=team.players.reduce((total,player)=>total+(seasonTotalByPlayer.get(player.id)?.points??0),0);
-    return{team,standing,players,lineupPoints,...trend};
-  }),[teams,standings,matchups,gameweek,seasonTotalByPlayer]);
-  const forecast=useMemo(()=>managerPreviews.length===2?matchupForecast(managerPreviews[0],managerPreviews[1]):null,[managerPreviews]);
+    const projections=team.players.map(player=>projectionByPlayer.get(player.id)).filter((projection):projection is PlayerProjection=>Boolean(projection));
+    return{team,standing,players,lineupPoints,projections,...trend};
+  }),[teams,standings,matchups,gameweek,seasonTotalByPlayer,projectionByPlayer]);
+  const forecast=useMemo(()=>managerPreviews.length===2?projectedLineupForecast(managerPreviews[0].projections,managerPreviews[1].projections):null,[managerPreviews]);
   const previousMeetings=useMemo(()=>{
     if(!featured)return[];
     return matchups.filter(matchup=>matchup.id!==featured.id&&matchup.status==="final"&&matchup.gameweek<featured.gameweek&&((matchup.home_user_id===featured.home_user_id&&matchup.away_user_id===featured.away_user_id)||(matchup.home_user_id===featured.away_user_id&&matchup.away_user_id===featured.home_user_id)));
@@ -251,18 +257,19 @@ export function RealMatchup(){
     void(async()=>{
       setLoading(true);
       const ids=[featured.home_user_id,featured.away_user_id];
-      const[lineupResult,snapshotResult,picksResult,matchupResult,standingsResult,fixturesResult,leagueConfigResult]=await Promise.all([
+      const[lineupResult,snapshotResult,picksResult,matchupResult,standingsResult,fixturesResult,projectionHistoryResult,leagueConfigResult]=await Promise.all([
         supabase.from("lineup_players").select("user_id,is_starter,is_captain,pitch_order,bench_order,players(id,full_name,position,club,competition,photo_url,injured,injury_type,injury_reason,expected_return,fotmob_expected_return)").eq("league_id",league.league_id).in("user_id",ids),
         supabase.from("lineup_gameweek_players").select("user_id,is_starter,is_star_pick,pitch_order,players(id,full_name,position,club,competition,photo_url,injured,injury_type,injury_reason,expected_return,fotmob_expected_return)").eq("league_id",league.league_id).eq("gameweek",gameweek).in("user_id",ids),
         supabase.from("draft_picks").select("user_id,pick_number,players(id,full_name,position,club,competition,photo_url,injured,injury_type,injury_reason,expected_return,fotmob_expected_return)").eq("league_id",league.league_id).in("user_id",ids).order("pick_number"),
         supabase.from("league_matchups").select("home_score,away_score,status").eq("id",featured.id).single(),
         supabase.rpc("league_standings",{p_league_id:league.league_id}),
-        supabase.from("league_headline_fixtures").select("status,kickoff,home_team,away_team,competition,gameweek").eq("league_id",league.league_id).eq("gameweek",gameweek),
+        supabase.from("league_headline_fixtures").select("status,kickoff,home_team,away_team,home_score,away_score,competition,gameweek").eq("league_id",league.league_id).eq("gameweek",gameweek),
+        supabase.from("league_headline_fixtures").select("status,kickoff,home_team,away_team,home_score,away_score").eq("league_id",league.league_id).in("status",["FT","FINAL","AET","PEN"]).order("kickoff",{ascending:false}).limit(500),
         supabase.rpc("league_calendar_competition",{p_league_id:league.league_id}),
       ]);
-      if(fixturesResult.error||leagueConfigResult.error){
+      if(fixturesResult.error||projectionHistoryResult.error||leagueConfigResult.error){
         if(request===refreshRequest.current){
-          setMessage(fixturesResult.error?.message??leagueConfigResult.error?.message??"The matchup fixtures could not be loaded.");
+          setMessage(fixturesResult.error?.message??projectionHistoryResult.error?.message??leagueConfigResult.error?.message??"The matchup fixtures could not be loaded.");
           setLoading(false);setRefreshing(false);
         }
         return;
@@ -272,6 +279,7 @@ export function RealMatchup(){
       const pickRows=(picksResult.data??[]) as unknown as {user_id:string;pick_number:number;players:PlayerSource|null}[];
       const relevantPlayerIds=[...new Set([...lineupRows,...snapshotRows,...pickRows].flatMap(row=>row.players?[row.players.id]:[]))];
       const allFixtures=(fixturesResult.data??[]) as HeadlineFixture[];
+      setProjectionFixtures((projectionHistoryResult.data??[]) as ProjectionFixture[]);
       const calendarCompetition=leagueConfigResult.data as string|null;
       const calendarFixtures=allFixtures.filter(fixture=>fixture.competition===calendarCompetition&&fixture.gameweek===gameweek);
       const scoringWindow=fantasyWeekWindow(calendarFixtures);
@@ -348,16 +356,16 @@ export function RealMatchup(){
           </div>
           <div className="matchday-history"><span>HEAD TO HEAD</span><strong>{previousMeetings.length?`${headToHead.homeWins}–${headToHead.draws}–${headToHead.awayWins}`:"First meeting"}</strong></div>
           {forecast?<section className="matchup-forecast" aria-label="Form-based matchup forecast">
-            <div className="forecast-heading"><span><small>PERFORMANCE PROJECTION</small><strong>{forecast.leader==="even"?"Too close to call":`${forecast.leader==="home"?managerPreviews[0].team.name:managerPreviews[1].team.name} has the edge`}</strong></span><b><small>PROJECTED PTS</small>{forecast.homeScore.toFixed(0)} <i>–</i> {forecast.awayScore.toFixed(0)}</b></div>
+            <div className="forecast-heading"><span><small>PLAYER MATCHUP PROJECTION</small><strong>{forecast.leader==="even"?"Too close to call":`${forecast.leader==="home"?managerPreviews[0].team.name:managerPreviews[1].team.name} has the edge`}</strong></span><b><small>EXPECTED XI PTS</small>{forecast.homeScore.toFixed(0)} <i>–</i> {forecast.awayScore.toFixed(0)}</b></div>
             <div className="forecast-meter"><span style={{width:`${forecast.homeShare}%`}}/><i style={{left:`${forecast.homeShare}%`}}/></div>
-            <div className="forecast-shares"><span>{forecast.homeShare}% share</span><small>Projected scoring share · not win probability · based on {Math.min(managerPreviews[0]?.played??0,managerPreviews[1]?.played??0)} completed GWs</small><span>{forecast.awayShare}% share</span></div>
+            <div className="forecast-shares"><span>{forecast.homeShare}% share</span><small>Each starter’s scoring average adjusted for opponent strength, venue and appearance rate · not win probability</small><span>{forecast.awayShare}% share</span></div>
           </section>:null}
           <div className="matchup-comparison">
             <p><span>TEAM METRIC</span><b>SEASON COMPARISON</b></p>
             {[{label:"Avg score",home:managerPreviews[0]?.averageFor??0,away:managerPreviews[1]?.averageFor??0},{label:"Avg allowed",home:managerPreviews[0]?.averageAgainst??0,away:managerPreviews[1]?.averageAgainst??0},{label:"Starting XI points",home:managerPreviews[0]?.lineupPoints??0,away:managerPreviews[1]?.lineupPoints??0}].map(metric=>{const max=Math.max(metric.home,metric.away,1);return <div className="comparison-row" key={metric.label}><b>{metric.home.toFixed(metric.label==="Starting XI points"?0:1)}</b><span><small>{metric.label}</small><i><em style={{width:`${metric.home/max*100}%`}}/><em style={{width:`${metric.away/max*100}%`}}/></i></span><b>{metric.away.toFixed(metric.label==="Starting XI points"?0:1)}</b></div>})}
           </div>
           <div className="matchup-form-row">{managerPreviews.map(({team,form})=><div key={team.userId}><small>RECENT FORM</small><span>{form.length?form.map((result,index)=><i className={`form-${result.toLowerCase()}`} key={`${result}-${index}`}>{result}</i>):<em>No results yet</em>}</span></div>)}</div>
-          <div className="impact-players"><div className="impact-heading"><span>IMPACT PLAYERS</span><small>Tap a player for the full report</small></div><div className="impact-grid">{managerPreviews.map(({team,players})=><article key={team.userId}><header>{team.name}</header>{players.length?players.map((player,index)=>{const total=seasonTotalByPlayer.get(player.id);const appearances=total?.appearances??0;const contributions=(total?.goals??0)+(total?.assists??0);return <button key={player.id} onClick={()=>setSelected(player)} aria-label={`Open ${player.full_name} preview`}><span className="impact-rank">0{index+1}</span><PlayerHeadshot name={player.full_name} position={player.position} photoUrl={player.photo_url}/><span className="impact-copy"><strong>{player.full_name}{player.captain?<i>★</i>:null}</strong><small>{player.position} · {fixtureLabel(player.fixture,player.club)}</small><em>{appearances?`${((total?.points??0)/appearances).toFixed(1)} pts/app`:"No appearances"} · {contributions} G+A · {appearances} apps</em></span><b>{total?.points??0}<small>PTS</small></b></button>}):<span className="preview-empty">Lineup pending</span>}</article>)}</div></div>
+          <div className="impact-players"><div className="impact-heading"><span>PROJECTED IMPACT</span><small>Tap a player for the full report</small></div><div className="impact-grid">{managerPreviews.map(({team,players})=><article key={team.userId}><header>{team.name}</header>{players.length?players.map((player,index)=>{const total=seasonTotalByPlayer.get(player.id);const projection=projectionByPlayer.get(player.id);const appearances=total?.appearances??0;return <button key={player.id} onClick={()=>setSelected(player)} aria-label={`Open ${player.full_name} preview`}><span className="impact-rank">0{index+1}</span><PlayerHeadshot name={player.full_name} position={player.position} photoUrl={player.photo_url}/><span className="impact-copy"><strong>{player.full_name}{player.captain?<i>★</i>:null}</strong><small>{player.position} · {fixtureLabel(player.fixture,player.club)}</small><em>{appearances?`${projection?.pointsPerAppearance.toFixed(1)??"0.0"} avg · ${Math.round((projection?.appearanceRate??0)*100)}% appearance rate`:"No completed appearances"}</em></span><b>{projection?.expectedPoints.toFixed(1)??"0.0"}<small>xPTS</small></b></button>}):<span className="preview-empty">Lineup pending</span>}</article>)}</div></div>
           <p className="matchday-note" aria-live="polite"><span/>Live scores and player ledgers take over at kickoff.</p>
         </>:<>
           <span className="simulation-chip">{featured.status==="final"?"FINAL":"LIVE"}</span>
