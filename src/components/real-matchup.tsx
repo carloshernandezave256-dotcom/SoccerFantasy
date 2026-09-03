@@ -340,15 +340,15 @@ export function RealMatchup(){
     {featured&&teams.length===2?<>
       <section className={`match-card gameweek-score real-score${featured.status==="scheduled"?" matchday-preview":""}`}>
         {featured.status==="scheduled"?<>
-          <div className="matchday-kicker"><span>MATCHDAY</span><b>GAMEWEEK {gameweek}</b><span>PREVIEW</span></div>
+          <div className="matchday-kicker"><span>MATCHUP PREVIEW</span><b>GAMEWEEK {gameweek}</b></div>
           <div className="matchday-hero">
             {managerPreviews.map(({team,standing},index)=><div className={`matchday-manager ${index===0?"home":"away"}`} key={team.userId}><small>{index===0?"HOME XI":"AWAY XI"}</small><div className="manager-monogram" aria-hidden="true">{teamMonogram(team.name)}</div><strong>{team.name}</strong><span>{standing?`#${standing.rank} · ${standing.wins}-${standing.draws}-${standing.losses}`:"Season opening"}</span></div>)}
             <div className="matchday-vs"><span>VS</span><small>{previousMeetings.length?`${headToHead.homeWins}–${headToHead.draws}–${headToHead.awayWins} H2H`:"FIRST MEETING"}</small></div>
           </div>
           {forecast?<section className="matchup-forecast" aria-label="Form-based matchup forecast">
-            <div className="forecast-heading"><span><small>FORM FORECAST</small><strong>{forecast.leader==="even"?"Too close to call":`${forecast.leader==="home"?managerPreviews[0].team.name:managerPreviews[1].team.name} has the edge`}</strong></span><b>{forecast.homeScore.toFixed(0)} <i>–</i> {forecast.awayScore.toFixed(0)}</b></div>
+            <div className="forecast-heading"><span><small>PERFORMANCE PROJECTION</small><strong>{forecast.leader==="even"?"Too close to call":`${forecast.leader==="home"?managerPreviews[0].team.name:managerPreviews[1].team.name} has the edge`}</strong></span><b><small>PROJECTED PTS</small>{forecast.homeScore.toFixed(0)} <i>–</i> {forecast.awayScore.toFixed(0)}</b></div>
             <div className="forecast-meter"><span style={{width:`${forecast.homeShare}%`}}/><i style={{left:`${forecast.homeShare}%`}}/></div>
-            <div className="forecast-shares"><span>{forecast.homeShare}%</span><small>Scoring average + opponent points allowed</small><span>{forecast.awayShare}%</span></div>
+            <div className="forecast-shares"><span>{forecast.homeShare}% share</span><small>Projected scoring share · not win probability · based on {Math.min(managerPreviews[0]?.played??0,managerPreviews[1]?.played??0)} completed GWs</small><span>{forecast.awayShare}% share</span></div>
           </section>:null}
           <div className="matchup-comparison">
             <p><span>TEAM METRIC</span><b>SEASON COMPARISON</b></p>
