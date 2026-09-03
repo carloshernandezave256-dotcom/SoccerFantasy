@@ -257,14 +257,21 @@ export function RealMatchup(){
         supabase.from("league_matchups").select("home_score,away_score,status").eq("id",featured.id).single(),
         supabase.rpc("league_standings",{p_league_id:league.league_id}),
         supabase.from("league_headline_fixtures").select("status,kickoff,home_team,away_team,competition,gameweek").eq("league_id",league.league_id).eq("gameweek",gameweek),
-        supabase.from("leagues").select("calendar_competition").eq("id",league.league_id).single(),
+        supabase.rpc("league_calendar_competition",{p_league_id:league.league_id}),
       ]);
+      if(fixturesResult.error||leagueConfigResult.error){
+        if(request===refreshRequest.current){
+          setMessage(fixturesResult.error?.message??leagueConfigResult.error?.message??"The matchup fixtures could not be loaded.");
+          setLoading(false);setRefreshing(false);
+        }
+        return;
+      }
       const lineupRows=(lineupResult.data??[]) as unknown as {user_id:string;is_starter:boolean;is_captain:boolean;pitch_order:number|null;bench_order:number|null;players:PlayerSource|null}[];
       const snapshotRows=(snapshotResult.data??[]) as unknown as {user_id:string;is_starter:boolean;is_star_pick:boolean;pitch_order:number|null;bench_order?:number|null;players:PlayerSource|null}[];
       const pickRows=(picksResult.data??[]) as unknown as {user_id:string;pick_number:number;players:PlayerSource|null}[];
       const relevantPlayerIds=[...new Set([...lineupRows,...snapshotRows,...pickRows].flatMap(row=>row.players?[row.players.id]:[]))];
       const allFixtures=(fixturesResult.data??[]) as HeadlineFixture[];
-      const calendarCompetition=(leagueConfigResult.data as {calendar_competition?:string}|null)?.calendar_competition;
+      const calendarCompetition=leagueConfigResult.data as string|null;
       const calendarFixtures=allFixtures.filter(fixture=>fixture.competition===calendarCompetition&&fixture.gameweek===gameweek);
       const scoringWindow=fantasyWeekWindow(calendarFixtures);
       const[scoreResult,playerFixtureResult]=await Promise.all([
@@ -273,8 +280,15 @@ export function RealMatchup(){
           :Promise.resolve({data:[]}),
         scoringWindow
           ?supabase.from("league_headline_fixtures").select("status,kickoff,home_team,away_team,competition,gameweek").eq("league_id",league.league_id).gte("kickoff",scoringWindow.startsAt).lte("kickoff",scoringWindow.endsAt)
-          :Promise.resolve({data:calendarFixtures}),
+          :Promise.resolve({data:calendarFixtures,error:null}),
       ]);
+      if(playerFixtureResult.error){
+        if(request===refreshRequest.current){
+          setMessage(playerFixtureResult.error.message);
+          setLoading(false);setRefreshing(false);
+        }
+        return;
+      }
       const scoreRows=(scoreResult.data??[]) as ScoreRow[];
       const playerFixtures=((playerFixtureResult.data??[]) as HeadlineFixture[]).filter(fixture=>!scoringWindow||fixtureInsideFantasyWeek(fixture,scoringWindow));
       const liveMatchup=matchupResult.data as {home_score:number|string;away_score:number|string;status:Matchup["status"]}|null;
