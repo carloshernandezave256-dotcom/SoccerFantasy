@@ -11,6 +11,7 @@ import { PlayerHeadshot } from "./player-headshot";
 import { partitionMatchupLineup, selectMatchupLineup } from "@/lib/matchup-lineup";
 import { fixtureForClub, normalizeClubName, playerDataStatusCopy, resolvePlayerDataStatus, type PlayerDataStatus, type PlayerFixture } from "@/lib/matchup-player-status";
 import { loadPlayerSeasonTotals, type PlayerSeasonTotal } from "@/lib/player-season-totals";
+import { managerTrend, matchupForecast } from "@/lib/matchup-preview";
 
 type League={league_id:string;league_name:string;team_name:string;game_format:string};
 type Manager={draft_slot:number;user_id:string;team_name:string};
@@ -213,21 +214,17 @@ export function RealMatchup(){
   const seasonTotalByPlayer=useMemo(()=>new Map(seasonTotals.map(total=>[total.player_id,total])),[seasonTotals]);
   const managerPreviews=useMemo(()=>teams.map(team=>{
     const standing=standings.find(row=>row.user_id===team.userId);
-    const completedMatchups=matchups.filter(matchup=>matchup.status==="final"&&matchup.gameweek<gameweek&&(matchup.home_user_id===team.userId||matchup.away_user_id===team.userId));
-    const matchupTotals=completedMatchups.reduce((totals,matchup)=>{
-      const isHome=matchup.home_user_id===team.userId;
-      totals.pointsFor+=Number(isHome?matchup.home_score:matchup.away_score);
-      totals.pointsAgainst+=Number(isHome?matchup.away_score:matchup.home_score);
-      return totals;
-    },{pointsFor:0,pointsAgainst:0});
+    const trend=managerTrend(matchups,team.userId,gameweek);
     const players=[...team.players].sort((a,b)=>{
       const pointsDifference=(seasonTotalByPlayer.get(b.id)?.points??0)-(seasonTotalByPlayer.get(a.id)?.points??0);
       if(pointsDifference!==0)return pointsDifference;
       if(Boolean(a.captain)!==Boolean(b.captain))return a.captain?-1:1;
       return a.full_name.localeCompare(b.full_name);
     }).slice(0,2);
-    return{team,standing,players,...matchupTotals};
+    const lineupPoints=team.players.reduce((total,player)=>total+(seasonTotalByPlayer.get(player.id)?.points??0),0);
+    return{team,standing,players,lineupPoints,...trend};
   }),[teams,standings,matchups,gameweek,seasonTotalByPlayer]);
+  const forecast=useMemo(()=>managerPreviews.length===2?matchupForecast(managerPreviews[0],managerPreviews[1]):null,[managerPreviews]);
   const previousMeetings=useMemo(()=>{
     if(!featured)return[];
     return matchups.filter(matchup=>matchup.id!==featured.id&&matchup.status==="final"&&matchup.gameweek<featured.gameweek&&((matchup.home_user_id===featured.home_user_id&&matchup.away_user_id===featured.away_user_id)||(matchup.home_user_id===featured.away_user_id&&matchup.away_user_id===featured.home_user_id)));
@@ -337,16 +334,25 @@ export function RealMatchup(){
     {loading&&teams.length===0?<section className="panel empty-state">Loading the league schedule…</section>:null}
     {message?<section className="panel empty-state">{message}</section>:null}
     {featured&&teams.length===2?<>
-      <section className="match-card gameweek-score real-score">
+      <section className={`match-card gameweek-score real-score${featured.status==="scheduled"?" matchday-preview":""}`}>
         {featured.status==="scheduled"?<>
-          <span className="simulation-chip">MATCHUP PREVIEW</span>
-          <div className="preview-versus"><strong>{teams[0].name}</strong><span>VS</span><strong>{teams[1].name}</strong></div>
-          <div className="manager-preview-grid">
-            {managerPreviews.map(({team,standing,pointsFor,pointsAgainst})=><article key={team.userId}><small>COMING IN</small><strong>{standing?`#${standing.rank}`:"—"}</strong><span>League rank</span><div><span><b>{pointsFor}</b><small>POINTS SCORED</small></span><span><b>{pointsAgainst}</b><small>POINTS ALLOWED</small></span><span><b>{standing?`${standing.wins}-${standing.draws}-${standing.losses}`:"0-0-0"}</b><small>W-D-L</small></span></div></article>)}
+          <div className="matchday-kicker"><span>MATCHDAY</span><b>GAMEWEEK {gameweek}</b><span>PREVIEW</span></div>
+          <div className="matchday-hero">
+            {managerPreviews.map(({team,standing},index)=><div className="matchday-manager" key={team.userId}><small>{index===0?"HOME":"AWAY"}</small><strong>{team.name}</strong><span>{standing?`#${standing.rank} · ${standing.wins}-${standing.draws}-${standing.losses}`:"Season opening"}</span></div>)}
+            <div className="matchday-vs"><span>VS</span><small>{previousMeetings.length?`${headToHead.homeWins}–${headToHead.draws}–${headToHead.awayWins} H2H`:"FIRST MEETING"}</small></div>
           </div>
-          <div className="head-to-head-strip"><span>HEAD TO HEAD</span><strong>{previousMeetings.length?`${headToHead.homeWins}–${headToHead.awayWins}${headToHead.draws?` · ${headToHead.draws} draw${headToHead.draws===1?"":"s"}`:""}`:"First meeting"}</strong></div>
-          <div className="players-to-watch"><p>PLAYERS TO WATCH</p><div>{managerPreviews.map(({team,players})=><article key={team.userId}><small>{team.name}</small>{players.length?players.map(player=>{const total=seasonTotalByPlayer.get(player.id);return <button key={player.id} onClick={()=>setSelected(player)} aria-label={`Open ${player.full_name} preview`}><PlayerHeadshot name={player.full_name} position={player.position} photoUrl={player.photo_url}/><span><strong>{player.full_name}{player.captain?<i>★</i>:null}</strong><small>{player.position} · {fixtureLabel(player.fixture,player.club)}</small></span><b>{total?.points??0}<small>PTS</small></b></button>}):<span className="preview-empty">Lineup pending</span>}</article>)}</div></div>
-          <p className="score-freshness" aria-live="polite">Scoring and player ledgers will replace this preview when the matchup begins.</p>
+          {forecast?<section className="matchup-forecast" aria-label="Form-based matchup forecast">
+            <div className="forecast-heading"><span><small>FORM FORECAST</small><strong>{forecast.leader==="even"?"Too close to call":`${forecast.leader==="home"?managerPreviews[0].team.name:managerPreviews[1].team.name} has the edge`}</strong></span><b>{forecast.homeScore.toFixed(0)} <i>–</i> {forecast.awayScore.toFixed(0)}</b></div>
+            <div className="forecast-meter"><span style={{width:`${forecast.homeShare}%`}}/><i style={{left:`${forecast.homeShare}%`}}/></div>
+            <div className="forecast-shares"><span>{forecast.homeShare}%</span><small>Scoring average + opponent points allowed</small><span>{forecast.awayShare}%</span></div>
+          </section>:null}
+          <div className="matchup-comparison">
+            <p><span>TEAM METRIC</span><b>SEASON COMPARISON</b></p>
+            {[{label:"Avg score",home:managerPreviews[0]?.averageFor??0,away:managerPreviews[1]?.averageFor??0},{label:"Avg allowed",home:managerPreviews[0]?.averageAgainst??0,away:managerPreviews[1]?.averageAgainst??0},{label:"Starting XI points",home:managerPreviews[0]?.lineupPoints??0,away:managerPreviews[1]?.lineupPoints??0}].map(metric=>{const max=Math.max(metric.home,metric.away,1);return <div className="comparison-row" key={metric.label}><b>{metric.home.toFixed(metric.label==="Starting XI points"?0:1)}</b><span><small>{metric.label}</small><i><em style={{width:`${metric.home/max*100}%`}}/><em style={{width:`${metric.away/max*100}%`}}/></i></span><b>{metric.away.toFixed(metric.label==="Starting XI points"?0:1)}</b></div>})}
+          </div>
+          <div className="matchup-form-row">{managerPreviews.map(({team,form})=><div key={team.userId}><small>RECENT FORM</small><span>{form.length?form.map((result,index)=><i className={`form-${result.toLowerCase()}`} key={`${result}-${index}`}>{result}</i>):<em>No results yet</em>}</span></div>)}</div>
+          <div className="impact-players"><div className="impact-heading"><span>IMPACT PLAYERS</span><small>Tap a player for the full report</small></div><div className="impact-grid">{managerPreviews.map(({team,players})=><article key={team.userId}><header>{team.name}</header>{players.length?players.map((player,index)=>{const total=seasonTotalByPlayer.get(player.id);const appearances=total?.appearances??0;const contributions=(total?.goals??0)+(total?.assists??0);return <button key={player.id} onClick={()=>setSelected(player)} aria-label={`Open ${player.full_name} preview`}><span className="impact-rank">0{index+1}</span><PlayerHeadshot name={player.full_name} position={player.position} photoUrl={player.photo_url}/><span className="impact-copy"><strong>{player.full_name}{player.captain?<i>★</i>:null}</strong><small>{player.position} · {fixtureLabel(player.fixture,player.club)}</small><em>{appearances?`${((total?.points??0)/appearances).toFixed(1)} pts/app`:"No appearances"} · {contributions} G+A · {appearances} apps</em></span><b>{total?.points??0}<small>PTS</small></b></button>}):<span className="preview-empty">Lineup pending</span>}</article>)}</div></div>
+          <p className="matchday-note" aria-live="polite"><span/>Live scores and player ledgers take over at kickoff.</p>
         </>:<>
           <span className="simulation-chip">{featured.status==="final"?"FINAL":"LIVE"}</span>
           <div className="versus"><div><strong>{teams[0].score}</strong><span>{teams[0].name}</span></div><div className="versus-mark">VS</div><div><strong>{teams[1].score}</strong><span>{teams[1].name}</span></div></div>
