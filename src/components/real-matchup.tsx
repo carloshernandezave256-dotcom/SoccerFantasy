@@ -20,6 +20,7 @@ type PlayerSource={id:number;full_name:string;position:string;club:string;compet
 type Player={id:number;full_name:string;position:string;club:string;competition?:string|null;photo_url?:string|null;injured?:boolean;injury_type?:string|null;injury_reason?:string|null;expected_return?:string|null;fotmob_expected_return?:string|null;captain?:boolean;isBench?:boolean;score:number;baseScore:number;rating:number|null;minutes:number;status:"not_started"|"live"|"final";dataStatus:PlayerDataStatus;ledger:LedgerEntry[];goals:number;assists:number;yellowCards:number;redCards:number;fixture:PlayerFixture|null;stats:ScoreRow|null};
 type TeamView={userId:string;name:string;score:number;players:Player[];bench:Player[];lineupSet:boolean};
 type ScoreRow={player_id:number;rating:number|null;minutes:number;goals:number;assists:number;shots_on_target:number;big_chances_missed:number;completed_passes:number;tackles_won:number;penalty_goals:number;penalties_missed:number;penalties_conceded:number;saves:number;penalties_saved:number;goals_conceded:number;yellow_cards:number;second_yellow_cards:number;red_cards:number;own_goals:number;stats_received:boolean;status:"not_started"|"live"|"final";fantasy_points:number|string;score_ledger:LedgerEntry[]};
+type RecentScoreRow={player_id:number;gameweek:number;fantasy_points:number|string;minutes:number;status:string};
 type HistoryRow={fixture_id:number;gameweek:number;kickoff:string;rating:number|null;minutes:number;goals:number;assists:number;shots_on_target:number;completed_passes:number;saves:number;goals_conceded:number;yellow_cards:number;red_cards:number;status:string;home_team:string;away_team:string;home_score:number|null;away_score:number|null;points:number|string};
 type Standing={rank:number;user_id:string;team_name:string;played:number;wins:number;draws:number;losses:number;points:number;fantasy_points:number|string};
 type HeadlineFixture=PlayerFixture&ProjectionFixture&{competition:string;gameweek:number};
@@ -113,6 +114,7 @@ export function RealMatchup(){
   const[standings,setStandings]=useState<Standing[]>([]);
   const[seasonTotals,setSeasonTotals]=useState<PlayerSeasonTotal[]>([]);
   const[projectionFixtures,setProjectionFixtures]=useState<ProjectionFixture[]>([]);
+  const[recentScores,setRecentScores]=useState<RecentScoreRow[]>([]);
   const[selected,setSelected]=useState<Player|null>(null);
   const[loading,setLoading]=useState(true);
   const[message,setMessage]=useState("");
@@ -217,10 +219,19 @@ export function RealMatchup(){
   const featured=useMemo(()=>weekFixtures.find(matchup=>matchup.id===selectedMatchupId)??weekFixtures.find(matchup=>matchup.home_user_id===userId||matchup.away_user_id===userId)??weekFixtures[0]??null,[weekFixtures,userId,selectedMatchupId]);
   const maxWeek=Math.max(1,...matchups.map(matchup=>matchup.gameweek));
   const seasonTotalByPlayer=useMemo(()=>new Map(seasonTotals.map(total=>[total.player_id,total])),[seasonTotals]);
+  const recentScoresByPlayer=useMemo(()=>{
+    const scores=new Map<number,number[]>();
+    for(const row of recentScores){
+      if(row.minutes<=0||row.status!=="final")continue;
+      const playerScores=scores.get(row.player_id)??[];
+      if(playerScores.length<3){playerScores.push(Number(row.fantasy_points));scores.set(row.player_id,playerScores)}
+    }
+    return scores;
+  },[recentScores]);
   const projectionByPlayer=useMemo(()=>new Map(teams.flatMap(team=>team.players.map(player=>{
     const total=seasonTotalByPlayer.get(player.id);
-    return[player.id,projectPlayerPoints({id:player.id,position:player.position,club:player.club,captain:player.captain,injured:player.injured,fixture:player.fixture,seasonPoints:total?.points??0,appearances:total?.appearances??0},projectionFixtures)] as const;
-  }))),[teams,seasonTotalByPlayer,projectionFixtures]);
+    return[player.id,projectPlayerPoints({id:player.id,position:player.position,club:player.club,captain:player.captain,injured:player.injured,fixture:player.fixture,seasonPoints:total?.points??0,appearances:total?.appearances??0,recentPoints:recentScoresByPlayer.get(player.id)},projectionFixtures)] as const;
+  }))),[teams,seasonTotalByPlayer,recentScoresByPlayer,projectionFixtures]);
   const managerPreviews=useMemo(()=>teams.map(team=>{
     const standing=standings.find(row=>row.user_id===team.userId);
     const trend=managerTrend(matchups,team.userId,gameweek);
@@ -283,22 +294,26 @@ export function RealMatchup(){
       const calendarCompetition=leagueConfigResult.data as string|null;
       const calendarFixtures=allFixtures.filter(fixture=>fixture.competition===calendarCompetition&&fixture.gameweek===gameweek);
       const scoringWindow=fantasyWeekWindow(calendarFixtures);
-      const[scoreResult,playerFixtureResult]=await Promise.all([
+      const[scoreResult,playerFixtureResult,recentScoreResult]=await Promise.all([
         relevantPlayerIds.length
           ?supabase.from("league_player_scores").select("player_id,rating,minutes,goals,assists,shots_on_target,big_chances_missed,completed_passes,tackles_won,penalty_goals,penalties_missed,penalties_conceded,saves,penalties_saved,goals_conceded,yellow_cards,second_yellow_cards,red_cards,own_goals,stats_received,status,fantasy_points,score_ledger").eq("league_id",league.league_id).eq("gameweek",gameweek).in("player_id",relevantPlayerIds)
           :Promise.resolve({data:[]}),
         scoringWindow
           ?supabase.from("league_headline_fixtures").select("status,kickoff,home_team,away_team,competition,gameweek").eq("league_id",league.league_id).gte("kickoff",scoringWindow.startsAt).lte("kickoff",scoringWindow.endsAt)
           :Promise.resolve({data:calendarFixtures,error:null}),
+        relevantPlayerIds.length&&gameweek>1
+          ?supabase.from("league_player_scores").select("player_id,gameweek,fantasy_points,minutes,status").eq("league_id",league.league_id).lt("gameweek",gameweek).in("player_id",relevantPlayerIds).order("gameweek",{ascending:false})
+          :Promise.resolve({data:[],error:null}),
       ]);
-      if(playerFixtureResult.error){
+      if(playerFixtureResult.error||recentScoreResult.error){
         if(request===refreshRequest.current){
-          setMessage(playerFixtureResult.error.message);
+          setMessage(playerFixtureResult.error?.message??recentScoreResult.error?.message??"Recent player form could not be loaded.");
           setLoading(false);setRefreshing(false);
         }
         return;
       }
       const scoreRows=(scoreResult.data??[]) as ScoreRow[];
+      setRecentScores((recentScoreResult.data??[]) as RecentScoreRow[]);
       const playerFixtures=((playerFixtureResult.data??[]) as HeadlineFixture[]).filter(fixture=>!scoringWindow||fixtureInsideFantasyWeek(fixture,scoringWindow));
       const liveMatchup=matchupResult.data as {home_score:number|string;away_score:number|string;status:Matchup["status"]}|null;
       if(liveMatchup&&(Number(liveMatchup.home_score)!==Number(featured.home_score)||Number(liveMatchup.away_score)!==Number(featured.away_score)||liveMatchup.status!==featured.status)){
@@ -358,14 +373,14 @@ export function RealMatchup(){
           {forecast?<section className="matchup-forecast" aria-label="Form-based matchup forecast">
             <div className="forecast-heading"><span><small>PLAYER MATCHUP PROJECTION</small><strong>{forecast.leader==="even"?"Too close to call":`${forecast.leader==="home"?managerPreviews[0].team.name:managerPreviews[1].team.name} has the edge`}</strong></span><b><small>EXPECTED XI PTS</small>{forecast.homeScore.toFixed(0)} <i>–</i> {forecast.awayScore.toFixed(0)}</b></div>
             <div className="forecast-meter"><span style={{width:`${forecast.homeShare}%`}}/><i style={{left:`${forecast.homeShare}%`}}/></div>
-            <div className="forecast-shares"><span>{forecast.homeShare}% share</span><small>Each starter’s scoring average adjusted for opponent strength, venue and appearance rate · not win probability</small><span>{forecast.awayShare}% share</span></div>
+            <div className="forecast-shares"><span>{forecast.homeShare}% share</span><small>Season level + weighted last 3 · opponent, venue and small samples adjusted · not win probability</small><span>{forecast.awayShare}% share</span></div>
           </section>:null}
           <div className="matchup-comparison">
             <p><span>TEAM METRIC</span><b>SEASON COMPARISON</b></p>
             {[{label:"Avg score",home:managerPreviews[0]?.averageFor??0,away:managerPreviews[1]?.averageFor??0},{label:"Avg allowed",home:managerPreviews[0]?.averageAgainst??0,away:managerPreviews[1]?.averageAgainst??0},{label:"Starting XI points",home:managerPreviews[0]?.lineupPoints??0,away:managerPreviews[1]?.lineupPoints??0}].map(metric=>{const max=Math.max(metric.home,metric.away,1);return <div className="comparison-row" key={metric.label}><b>{metric.home.toFixed(metric.label==="Starting XI points"?0:1)}</b><span><small>{metric.label}</small><i><em style={{width:`${metric.home/max*100}%`}}/><em style={{width:`${metric.away/max*100}%`}}/></i></span><b>{metric.away.toFixed(metric.label==="Starting XI points"?0:1)}</b></div>})}
           </div>
           <div className="matchup-form-row">{managerPreviews.map(({team,form})=><div key={team.userId}><small>RECENT FORM</small><span>{form.length?form.map((result,index)=><i className={`form-${result.toLowerCase()}`} key={`${result}-${index}`}>{result}</i>):<em>No results yet</em>}</span></div>)}</div>
-          <div className="impact-players"><div className="impact-heading"><span>PROJECTED IMPACT</span><small>Tap a player for the full report</small></div><div className="impact-grid">{managerPreviews.map(({team,players})=><article key={team.userId}><header>{team.name}</header>{players.length?players.map((player,index)=>{const total=seasonTotalByPlayer.get(player.id);const projection=projectionByPlayer.get(player.id);const appearances=total?.appearances??0;return <button key={player.id} onClick={()=>setSelected(player)} aria-label={`Open ${player.full_name} preview`}><span className="impact-rank">0{index+1}</span><PlayerHeadshot name={player.full_name} position={player.position} photoUrl={player.photo_url}/><span className="impact-copy"><strong>{player.full_name}{player.captain?<i>★</i>:null}</strong><small>{player.position} · {fixtureLabel(player.fixture,player.club)}</small><em>{appearances?`${projection?.pointsPerAppearance.toFixed(1)??"0.0"} avg · ${Math.round((projection?.appearanceRate??0)*100)}% appearance rate`:"No completed appearances"}</em></span><b>{projection?.expectedPoints.toFixed(1)??"0.0"}<small>xPTS</small></b></button>}):<span className="preview-empty">Lineup pending</span>}</article>)}</div></div>
+          <div className="impact-players"><div className="impact-heading"><span>PROJECTED IMPACT</span><small>Tap a player for the full report</small></div><div className="impact-grid">{managerPreviews.map(({team,players})=><article key={team.userId}><header>{team.name}</header>{players.length?players.map((player,index)=>{const total=seasonTotalByPlayer.get(player.id);const projection=projectionByPlayer.get(player.id);const appearances=total?.appearances??0;return <button key={player.id} onClick={()=>setSelected(player)} aria-label={`Open ${player.full_name} preview`}><span className="impact-rank">0{index+1}</span><PlayerHeadshot name={player.full_name} position={player.position} photoUrl={player.photo_url}/><span className="impact-copy"><strong>{player.full_name}{player.captain?<i>★</i>:null}</strong><small>{player.position} · {fixtureLabel(player.fixture,player.club)}</small><em>{appearances?`Season ${projection?.pointsPerAppearance.toFixed(1)??"0.0"}${projection?.formAverage!==null&&projection?.formAverage!==undefined?` · Form ${projection.formAverage.toFixed(1)}`:""}`:"No completed appearances"}</em></span><b>{projection?.expectedPoints.toFixed(1)??"0.0"}<small>xPTS</small></b></button>}):<span className="preview-empty">Lineup pending</span>}</article>)}</div></div>
           <p className="matchday-note" aria-live="polite"><span/>Live scores and player ledgers take over at kickoff.</p>
         </>:<>
           <span className="simulation-chip">{featured.status==="final"?"FINAL":"LIVE"}</span>

@@ -34,6 +34,7 @@ export type ProjectionPlayer = {
   fixture: Pick<ProjectionFixture, "home_team" | "away_team"> | null;
   seasonPoints: number;
   appearances: number;
+  recentPoints?: number[];
 };
 
 export type PlayerProjection = {
@@ -43,9 +44,11 @@ export type PlayerProjection = {
   opponent: string | null;
   opponentFactor: number;
   appearanceRate: number;
+  formAverage: number | null;
 };
 
 const terminalStatuses = new Set(["FT", "AET", "PEN", "FINAL"]);
+const positionBaseline: Record<string, number> = { GK: 4.1, DEF: 4.9, MID: 4.4, FWD: 3 };
 
 function normalizedClub(name: string) {
   return name.toLocaleLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
@@ -70,8 +73,13 @@ function clamp(value: number, minimum: number, maximum: number) {
 
 export function projectPlayerPoints(player: ProjectionPlayer, fixtures: ProjectionFixture[]): PlayerProjection {
   const pointsPerAppearance = player.appearances ? player.seasonPoints / player.appearances : 0;
+  const recentPoints = (player.recentPoints ?? []).slice(0, 3);
+  const recentWeights = [3, 2, 1].slice(0, recentPoints.length);
+  const formAverage = recentPoints.length
+    ? recentPoints.reduce((total, points, index) => total + points * recentWeights[index], 0) / recentWeights.reduce((total, weight) => total + weight, 0)
+    : null;
   if (!player.fixture || !player.appearances || player.injured) {
-    return { playerId: player.id, expectedPoints: 0, pointsPerAppearance, opponent: null, opponentFactor: 1, appearanceRate: 0 };
+    return { playerId: player.id, expectedPoints: 0, pointsPerAppearance, opponent: null, opponentFactor: 1, appearanceRate: 0, formAverage };
   }
 
   const club = normalizedClub(player.club);
@@ -82,7 +90,6 @@ export function projectPlayerPoints(player: ProjectionPlayer, fixtures: Projecti
     ? completed.reduce((goals, fixture) => goals + Number(fixture.home_score) + Number(fixture.away_score), 0) / (completed.length * 2)
     : 1.35;
   const opponentRecord = clubRecord(completed, opponent);
-  const playerClubRecord = clubRecord(completed, player.club);
   const opponentAttack = opponentRecord.played ? (opponentRecord.goalsFor / opponentRecord.played) / Math.max(leagueGoalsPerTeam, 0.5) : 1;
   const opponentDefense = opponentRecord.played ? (opponentRecord.goalsAgainst / opponentRecord.played) / Math.max(leagueGoalsPerTeam, 0.5) : 1;
   const attackEase = clamp(opponentDefense, 0.7, 1.3);
@@ -94,10 +101,20 @@ export function projectPlayerPoints(player: ProjectionPlayer, fixtures: Projecti
       : player.position === "DEF"
         ? 0.65 + 0.35 * cleanSheetEase
         : 0.7 + 0.3 * cleanSheetEase;
-  const appearanceRate = playerClubRecord.played ? clamp(player.appearances / playerClubRecord.played, 0.35, 1) : 1;
+  // A missed match may be rest, rotation, or a transfer completed after the
+  // season began. A healthy fantasy starter is therefore projected to play;
+  // sparse early-season samples are stabilized against the position average.
+  const priorAppearances = Math.max(0, 3 - player.appearances);
+  const stabilizedAverage = (player.seasonPoints + (positionBaseline[player.position] ?? 4) * priorAppearances) / (player.appearances + priorAppearances);
+  // Recent form matters, but remains a supporting signal: the newest of the
+  // last three scores receives the most weight and the whole form adjustment
+  // is capped at 35% of the player's stabilized season baseline.
+  const formWeight = formAverage === null ? 0 : Math.min(0.35, recentPoints.length * 0.12);
+  const formAdjustedAverage = stabilizedAverage * (1 - formWeight) + (formAverage ?? stabilizedAverage) * formWeight;
+  const appearanceRate = 1;
   const venueFactor = isHome ? 1.03 : 0.97;
   const captainFactor = player.captain ? 1.5 : 1;
-  const expectedPoints = Math.max(0, pointsPerAppearance * opponentFactor * appearanceRate * venueFactor * captainFactor);
+  const expectedPoints = Math.max(0, formAdjustedAverage * opponentFactor * venueFactor * captainFactor);
 
   return {
     playerId: player.id,
@@ -106,6 +123,7 @@ export function projectPlayerPoints(player: ProjectionPlayer, fixtures: Projecti
     opponent,
     opponentFactor: Math.round(opponentFactor * 100) / 100,
     appearanceRate: Math.round(appearanceRate * 100) / 100,
+    formAverage: formAverage === null ? null : Math.round(formAverage * 10) / 10,
   };
 }
 

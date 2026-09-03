@@ -47,11 +47,30 @@ describe("matchup preview metrics", () => {
     expect(projection.opponent).toBe("Chelsea");
     expect(projection.pointsPerAppearance).toBe(10);
     expect(projection.opponentFactor).toBeGreaterThan(1);
-    expect(projection.expectedPoints).toBeGreaterThan(10);
+    expect(projection.expectedPoints).toBeGreaterThan(8);
+  });
+
+  it("does not cut a healthy starter's projection because they missed an earlier match", () => {
+    const fixtures: ProjectionFixture[] = [
+      { status: "FT", kickoff: "2026-08-15", home_team: "PSG", away_team: "Lyon", home_score: 2, away_score: 0 },
+      { status: "FT", kickoff: "2026-08-22", home_team: "Marseille", away_team: "PSG", home_score: 1, away_score: 1 },
+    ];
+    const projection = projectPlayerPoints({ id: 10, position: "FWD", club: "PSG", fixture: { home_team: "PSG", away_team: "Monaco" }, seasonPoints: 2, appearances: 1 }, fixtures);
+    expect(projection.appearanceRate).toBe(1);
+    expect(projection.expectedPoints).toBeGreaterThan(2);
+  });
+
+  it("rewards good recent form without replacing the season baseline", () => {
+    const base = { id: 11, position: "MID", club: "Bayern", fixture: { home_team: "Bayern", away_team: "Leipzig" }, seasonPoints: 15, appearances: 3 };
+    const normal = projectPlayerPoints(base, []);
+    const inForm = projectPlayerPoints({ ...base, recentPoints: [12, 9, 6] }, []);
+    expect(inForm.formAverage).toBe(10);
+    expect(inForm.expectedPoints).toBeGreaterThan(normal.expectedPoints);
+    expect(inForm.expectedPoints).toBeLessThan(10);
   });
 
   it("totals player-level projections for the matchup headline", () => {
-    const base = { pointsPerAppearance: 8, opponent: "Opponent", opponentFactor: 1, appearanceRate: 1 };
+    const base = { pointsPerAppearance: 8, opponent: "Opponent", opponentFactor: 1, appearanceRate: 1, formAverage: null };
     expect(projectedLineupForecast(
       [{ ...base, playerId: 1, expectedPoints: 12 }, { ...base, playerId: 2, expectedPoints: 8 }],
       [{ ...base, playerId: 3, expectedPoints: 10 }],
