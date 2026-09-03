@@ -2,6 +2,13 @@ export function fotmobConfirmsActive(returnLabel:string|null|undefined){
   return /^(back in training|fit|available)$/i.test(returnLabel?.trim()??"");
 }
 
+export function recentFotmobClearBlocksInjury(injured:boolean,checkedAt:string|null|undefined,now=Date.now()){
+  if(injured||!checkedAt)return false;
+  const checked=Date.parse(checkedAt);
+  const sevenDays=7*24*60*60*1000;
+  return Number.isFinite(checked)&&now>=checked&&now-checked<sevenDays;
+}
+
 export function fotmobReturnUpdate(fotmobId:number|null,returnLabel:string|null,checkedAt:string){
   const update:{
     fotmob_id:number|null;
