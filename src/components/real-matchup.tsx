@@ -342,8 +342,9 @@ export function RealMatchup(){
         {featured.status==="scheduled"?<>
           <div className="matchday-kicker"><span>MATCHUP PREVIEW</span><b>GAMEWEEK {gameweek}</b></div>
           <div className="matchday-hero">
-            {managerPreviews.map(({team,standing},index)=><div className={`matchday-manager ${index===0?"home":"away"}`} key={team.userId}><small>{index===0?"HOME XI":"AWAY XI"}</small><div className="manager-monogram" aria-hidden="true">{teamMonogram(team.name)}</div><strong>{team.name}</strong><span>{standing?`#${standing.rank} · ${standing.wins}-${standing.draws}-${standing.losses}`:"Season opening"}</span></div>)}
+            <div className="matchday-manager home"><small>HOME XI</small><div className="manager-monogram" aria-hidden="true">{teamMonogram(managerPreviews[0].team.name)}</div><strong>{managerPreviews[0].team.name}</strong><span>{managerPreviews[0].standing?`#${managerPreviews[0].standing.rank} · ${managerPreviews[0].standing.wins}-${managerPreviews[0].standing.draws}-${managerPreviews[0].standing.losses}`:"Season opening"}</span></div>
             <div className="matchday-vs"><span aria-label="versus"><b>V</b><i aria-hidden="true"/><b>S</b></span></div>
+            <div className="matchday-manager away"><small>AWAY XI</small><div className="manager-monogram" aria-hidden="true">{teamMonogram(managerPreviews[1].team.name)}</div><strong>{managerPreviews[1].team.name}</strong><span>{managerPreviews[1].standing?`#${managerPreviews[1].standing.rank} · ${managerPreviews[1].standing.wins}-${managerPreviews[1].standing.draws}-${managerPreviews[1].standing.losses}`:"Season opening"}</span></div>
           </div>
           <div className="matchday-history"><span>HEAD TO HEAD</span><strong>{previousMeetings.length?`${headToHead.homeWins}–${headToHead.draws}–${headToHead.awayWins}`:"First meeting"}</strong></div>
           {forecast?<section className="matchup-forecast" aria-label="Form-based matchup forecast">
