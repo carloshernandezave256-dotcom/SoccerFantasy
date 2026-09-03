@@ -10,6 +10,7 @@ import { resolveActiveLeague } from "@/lib/active-league";
 import { PlayerHeadshot } from "./player-headshot";
 import { partitionMatchupLineup, selectMatchupLineup } from "@/lib/matchup-lineup";
 import { fixtureForClub, normalizeClubName, playerDataStatusCopy, resolvePlayerDataStatus, type PlayerDataStatus, type PlayerFixture } from "@/lib/matchup-player-status";
+import { loadPlayerSeasonTotals, type PlayerSeasonTotal } from "@/lib/player-season-totals";
 
 type League={league_id:string;league_name:string;team_name:string;game_format:string};
 type Manager={draft_slot:number;user_id:string;team_name:string};
@@ -105,6 +106,7 @@ export function RealMatchup(){
   const[gameweek,setGameweek]=useState(1);
   const[teams,setTeams]=useState<TeamView[]>([]);
   const[standings,setStandings]=useState<Standing[]>([]);
+  const[seasonTotals,setSeasonTotals]=useState<PlayerSeasonTotal[]>([]);
   const[selected,setSelected]=useState<Player|null>(null);
   const[loading,setLoading]=useState(true);
   const[message,setMessage]=useState("");
@@ -155,6 +157,15 @@ export function RealMatchup(){
   useEffect(()=>{void load()},[load]);
 
   useEffect(()=>{
+    if(!league)return;
+    let active=true;
+    void loadPlayerSeasonTotals().then(result=>{
+      if(active&&!result.error)setSeasonTotals(result.data);
+    });
+    return()=>{active=false};
+  },[league]);
+
+  useEffect(()=>{
     const timer=window.setInterval(()=>setNow(Date.now()),30000);
     return()=>window.clearInterval(timer);
   },[]);
@@ -199,6 +210,40 @@ export function RealMatchup(){
   const weekFixtures=useMemo(()=>matchups.filter(matchup=>matchup.gameweek===gameweek),[matchups,gameweek]);
   const featured=useMemo(()=>weekFixtures.find(matchup=>matchup.id===selectedMatchupId)??weekFixtures.find(matchup=>matchup.home_user_id===userId||matchup.away_user_id===userId)??weekFixtures[0]??null,[weekFixtures,userId,selectedMatchupId]);
   const maxWeek=Math.max(1,...matchups.map(matchup=>matchup.gameweek));
+  const seasonTotalByPlayer=useMemo(()=>new Map(seasonTotals.map(total=>[total.player_id,total])),[seasonTotals]);
+  const managerPreviews=useMemo(()=>teams.map(team=>{
+    const standing=standings.find(row=>row.user_id===team.userId);
+    const completedMatchups=matchups.filter(matchup=>matchup.status==="final"&&matchup.gameweek<gameweek&&(matchup.home_user_id===team.userId||matchup.away_user_id===team.userId));
+    const matchupTotals=completedMatchups.reduce((totals,matchup)=>{
+      const isHome=matchup.home_user_id===team.userId;
+      totals.pointsFor+=Number(isHome?matchup.home_score:matchup.away_score);
+      totals.pointsAgainst+=Number(isHome?matchup.away_score:matchup.home_score);
+      return totals;
+    },{pointsFor:0,pointsAgainst:0});
+    const players=[...team.players].sort((a,b)=>{
+      const pointsDifference=(seasonTotalByPlayer.get(b.id)?.points??0)-(seasonTotalByPlayer.get(a.id)?.points??0);
+      if(pointsDifference!==0)return pointsDifference;
+      if(Boolean(a.captain)!==Boolean(b.captain))return a.captain?-1:1;
+      return a.full_name.localeCompare(b.full_name);
+    }).slice(0,2);
+    return{team,standing,players,...matchupTotals};
+  }),[teams,standings,matchups,gameweek,seasonTotalByPlayer]);
+  const previousMeetings=useMemo(()=>{
+    if(!featured)return[];
+    return matchups.filter(matchup=>matchup.id!==featured.id&&matchup.status==="final"&&matchup.gameweek<featured.gameweek&&((matchup.home_user_id===featured.home_user_id&&matchup.away_user_id===featured.away_user_id)||(matchup.home_user_id===featured.away_user_id&&matchup.away_user_id===featured.home_user_id)));
+  },[featured,matchups]);
+  const headToHead=useMemo(()=>{
+    if(!featured)return{homeWins:0,awayWins:0,draws:0};
+    return previousMeetings.reduce((record,matchup)=>{
+      const featuredHomeWasHome=matchup.home_user_id===featured.home_user_id;
+      const featuredHomeScore=Number(featuredHomeWasHome?matchup.home_score:matchup.away_score);
+      const featuredAwayScore=Number(featuredHomeWasHome?matchup.away_score:matchup.home_score);
+      if(featuredHomeScore>featuredAwayScore)record.homeWins+=1;
+      else if(featuredAwayScore>featuredHomeScore)record.awayWins+=1;
+      else record.draws+=1;
+      return record;
+    },{homeWins:0,awayWins:0,draws:0});
+  },[featured,previousMeetings]);
 
   useEffect(()=>{
     if(!featured||!league)return;
@@ -277,15 +322,26 @@ export function RealMatchup(){
     {message?<section className="panel empty-state">{message}</section>:null}
     {featured&&teams.length===2?<>
       <section className="match-card gameweek-score real-score">
-        <span className="simulation-chip">{featured.status==="final"?"FINAL":featured.status==="live"?"LIVE":"SCHEDULED"}</span>
-        <div className="versus"><div><strong>{teams[0].score}</strong><span>{teams[0].name}</span></div><div className="versus-mark">VS</div><div><strong>{teams[1].score}</strong><span>{teams[1].name}</span></div></div>
-        <div className="progress"><span style={{width:teams[0].score+teams[1].score>0?`${teams[0].score/(teams[0].score+teams[1].score)*100}%`:"50%"}}/></div>
-        <div className="match-status"><span className="live-dot"/> {refreshing?"Updating scores…":featured.status==="scheduled"?"Scores begin when live match data is connected":featured.status==="live"?"Scoring in progress":"Matchup complete"}</div>
-        <p className="score-freshness" aria-live="polite">{refreshing?"Synchronizing latest stored data…":featured.status==="final"?`${freshness} · final data checked`:freshness}</p>
+        {featured.status==="scheduled"?<>
+          <span className="simulation-chip">MATCHUP PREVIEW</span>
+          <div className="preview-versus"><strong>{teams[0].name}</strong><span>VS</span><strong>{teams[1].name}</strong></div>
+          <div className="manager-preview-grid">
+            {managerPreviews.map(({team,standing,pointsFor,pointsAgainst})=><article key={team.userId}><small>COMING IN</small><strong>{standing?`#${standing.rank}`:"—"}</strong><span>League rank</span><div><span><b>{pointsFor}</b><small>POINTS SCORED</small></span><span><b>{pointsAgainst}</b><small>POINTS ALLOWED</small></span><span><b>{standing?`${standing.wins}-${standing.draws}-${standing.losses}`:"0-0-0"}</b><small>W-D-L</small></span></div></article>)}
+          </div>
+          <div className="head-to-head-strip"><span>HEAD TO HEAD</span><strong>{previousMeetings.length?`${headToHead.homeWins}–${headToHead.awayWins}${headToHead.draws?` · ${headToHead.draws} draw${headToHead.draws===1?"":"s"}`:""}`:"First meeting"}</strong></div>
+          <div className="players-to-watch"><p>PLAYERS TO WATCH</p><div>{managerPreviews.map(({team,players})=><article key={team.userId}><small>{team.name}</small>{players.length?players.map(player=>{const total=seasonTotalByPlayer.get(player.id);return <button key={player.id} onClick={()=>setSelected(player)} aria-label={`Open ${player.full_name} preview`}><PlayerHeadshot name={player.full_name} position={player.position} photoUrl={player.photo_url}/><span><strong>{player.full_name}{player.captain?<i>★</i>:null}</strong><small>{player.position} · {fixtureLabel(player.fixture,player.club)}</small></span><b>{total?.points??0}<small>PTS</small></b></button>}):<span className="preview-empty">Lineup pending</span>}</article>)}</div></div>
+          <p className="score-freshness" aria-live="polite">Scoring and player ledgers will replace this preview when the matchup begins.</p>
+        </>:<>
+          <span className="simulation-chip">{featured.status==="final"?"FINAL":"LIVE"}</span>
+          <div className="versus"><div><strong>{teams[0].score}</strong><span>{teams[0].name}</span></div><div className="versus-mark">VS</div><div><strong>{teams[1].score}</strong><span>{teams[1].name}</span></div></div>
+          <div className="progress"><span style={{width:teams[0].score+teams[1].score>0?`${teams[0].score/(teams[0].score+teams[1].score)*100}%`:"50%"}}/></div>
+          <div className="match-status"><span className="live-dot"/> {refreshing?"Updating scores…":featured.status==="live"?"Scoring in progress":"Matchup complete"}</div>
+          <p className="score-freshness" aria-live="polite">{refreshing?"Synchronizing latest stored data…":featured.status==="final"?`${freshness} · final data checked`:freshness}</p>
+        </>}
       </section>
       <section className="panel matchup-pitch-card"><div className="lineup-pitch shared-matchup-pitch"><span className="pitch-markings" aria-hidden="true"/>{teams[0]?<div className="pitch-half home-half">{homePitchRows.map(position=>{const players=teams[0].players.filter(player=>player.position===position);return <div className={`pitch-row ${position.toLowerCase()}`} key={`home-${position}`} style={{gridTemplateColumns:`repeat(${Math.max(players.length,1)}, minmax(0, 1fr))`}}>{players.map(player=><PitchPlayer player={player} onSelect={setSelected} key={player.id}/>)}</div>})}</div>:null}{teams[1]?<div className="pitch-half away-half">{awayPitchRows.map(position=>{const players=teams[1].players.filter(player=>player.position===position);return <div className={`pitch-row ${position.toLowerCase()}`} key={`away-${position}`} style={{gridTemplateColumns:`repeat(${Math.max(players.length,1)}, minmax(0, 1fr))`}}>{players.map(player=><PitchPlayer player={player} onSelect={setSelected} key={player.id}/>)}</div>})}</div>:null}</div>{teams.some(team=>team.players.length===0)?<p className="empty-state">A starting XI has not been saved for this matchup yet.</p>:null}</section>
       <section className="panel matchup-bench-card"><div className="section-row"><div><p className="eyebrow">SQUAD DEPTH</p><h2>Bench performance</h2><small className="lineup-state">Points shown here are not included in the matchup total.</small></div><span className="muted-chip">BENCH</span></div><div className="bench-matchup-grid">{teams.map(team=><article className="team-bench" key={team.userId}><header><strong>{team.name}</strong><span>{team.bench.reduce((total,player)=>total+player.score,0)} bench pts</span></header><div className="bench-player-list">{team.bench.length?team.bench.map(player=><BenchPlayer player={player} onSelect={setSelected} key={player.id}/>):<p className="empty-state">No bench has been saved for this lineup.</p>}</div></article>)}</div></section>
-      <section className="panel fixture-list"><div className="section-row"><div><h2>Gameweek {gameweek} fixtures</h2><small className="lineup-state">Open any matchup to view both Starting XIs, benches and scoring cards.</small></div><span className="muted-chip">{weekFixtures.length}</span></div>{weekFixtures.map(matchup=><button className={`fixture-row fixture-button${featured.id===matchup.id?" active":""}`} key={matchup.id} onClick={()=>{if(featured.id===matchup.id)return;setTeams([]);setSelectedMatchupId(matchup.id);setSelected(null);window.scrollTo({top:0,behavior:"smooth"})}} aria-label={`Open ${managers.find(manager=>manager.user_id===matchup.home_user_id)?.team_name??"home team"} versus ${managers.find(manager=>manager.user_id===matchup.away_user_id)?.team_name??"away team"}`} aria-current={featured.id===matchup.id?"true":undefined}><span>{managers.find(manager=>manager.user_id===matchup.home_user_id)?.team_name}</span><b>{Number(matchup.home_score)}–{Number(matchup.away_score)}</b><span>{managers.find(manager=>manager.user_id===matchup.away_user_id)?.team_name}</span><i aria-hidden="true">›</i></button>)}</section>
+      <section className="panel fixture-list"><div className="section-row"><div><h2>Gameweek {gameweek} fixtures</h2><small className="lineup-state">Open any matchup to view both Starting XIs, benches and scoring cards.</small></div><span className="muted-chip">{weekFixtures.length}</span></div>{weekFixtures.map(matchup=><button className={`fixture-row fixture-button${featured.id===matchup.id?" active":""}`} key={matchup.id} onClick={()=>{if(featured.id===matchup.id)return;setTeams([]);setSelectedMatchupId(matchup.id);setSelected(null);window.scrollTo({top:0,behavior:"smooth"})}} aria-label={`Open ${managers.find(manager=>manager.user_id===matchup.home_user_id)?.team_name??"home team"} versus ${managers.find(manager=>manager.user_id===matchup.away_user_id)?.team_name??"away team"}`} aria-current={featured.id===matchup.id?"true":undefined}><span>{managers.find(manager=>manager.user_id===matchup.home_user_id)?.team_name}</span><b>{matchup.status==="scheduled"?"VS":`${Number(matchup.home_score)}–${Number(matchup.away_score)}`}</b><span>{managers.find(manager=>manager.user_id===matchup.away_user_id)?.team_name}</span><i aria-hidden="true">›</i></button>)}</section>
       <section className="panel standings-result"><div className="section-row"><h2>League table</h2><span className="muted-chip">LIVE TABLE</span></div><div className="standings-head"><span>#</span><span>Team</span><span>P</span><span>W-D-L</span><span>Pts</span><span>FP</span></div>{standings.map(row=><div className="standing-row" key={row.user_id}><span>{row.rank}</span><strong>{row.team_name}</strong><span>{row.played}</span><span>{row.wins}-{row.draws}-{row.losses}</span><b>{row.points}</b><span>{Number(row.fantasy_points)}</span></div>)}</section>
     </>:null}
     {selected?<MatchupPlayerDialog player={selected} gameweek={gameweek} lastUpdated={lastUpdated} onClose={()=>setSelected(null)}/>:null}
