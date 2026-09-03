@@ -1,5 +1,5 @@
 import {describe,expect,it} from "vitest";
-import {fotmobConfirmsActive,fotmobReturnUpdate} from "./fotmob-return-update";
+import {fotmobConfirmsActive,fotmobReturnUpdate,recentFotmobClearBlocksInjury} from "./fotmob-return-update";
 
 describe("FotMob return estimate updates",()=>{
   it("keeps fuzzy provider labels out of the exact return-date field",()=>{
@@ -21,5 +21,12 @@ describe("FotMob return estimate updates",()=>{
       injury_reason:null,
       expected_return:null,
     });
+  });
+
+  it("protects a recent FotMob clearance from a stale injury feed",()=>{
+    const now=Date.parse("2026-09-03T12:00:00.000Z");
+    expect(recentFotmobClearBlocksInjury(false,"2026-09-03T10:00:00.000Z",now)).toBe(true);
+    expect(recentFotmobClearBlocksInjury(true,"2026-09-03T10:00:00.000Z",now)).toBe(false);
+    expect(recentFotmobClearBlocksInjury(false,"2026-08-20T10:00:00.000Z",now)).toBe(false);
   });
 });
