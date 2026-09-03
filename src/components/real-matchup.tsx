@@ -70,6 +70,10 @@ function fixtureLabel(fixture:PlayerFixture|null,club:string){
   if(!fixture)return"Fixture pending";
   return `${normalizeClubName(fixture.home_team)===normalizeClubName(club)?"vs":"@"} ${fixtureOpponent(fixture,club)}`;
 }
+function teamMonogram(name:string){
+  const words=name.trim().split(/\s+/).filter(Boolean);
+  return (words.length>1?`${words[0][0]}${words.at(-1)?.[0]??""}`:words[0]?.slice(0,2)??"XI").toUpperCase();
+}
 
 function MatchupPlayerDialog({player,gameweek,lastUpdated,onClose}:{player:Player;gameweek:number;lastUpdated:Date|null;onClose:()=>void}){
   const[history,setHistory]=useState<HistoryRow[]>([]),[historyLoading,setHistoryLoading]=useState(true);
@@ -338,7 +342,7 @@ export function RealMatchup(){
         {featured.status==="scheduled"?<>
           <div className="matchday-kicker"><span>MATCHDAY</span><b>GAMEWEEK {gameweek}</b><span>PREVIEW</span></div>
           <div className="matchday-hero">
-            {managerPreviews.map(({team,standing},index)=><div className="matchday-manager" key={team.userId}><small>{index===0?"HOME":"AWAY"}</small><strong>{team.name}</strong><span>{standing?`#${standing.rank} · ${standing.wins}-${standing.draws}-${standing.losses}`:"Season opening"}</span></div>)}
+            {managerPreviews.map(({team,standing},index)=><div className={`matchday-manager ${index===0?"home":"away"}`} key={team.userId}><small>{index===0?"HOME XI":"AWAY XI"}</small><div className="manager-monogram" aria-hidden="true">{teamMonogram(team.name)}</div><strong>{team.name}</strong><span>{standing?`#${standing.rank} · ${standing.wins}-${standing.draws}-${standing.losses}`:"Season opening"}</span></div>)}
             <div className="matchday-vs"><span>VS</span><small>{previousMeetings.length?`${headToHead.homeWins}–${headToHead.draws}–${headToHead.awayWins} H2H`:"FIRST MEETING"}</small></div>
           </div>
           {forecast?<section className="matchup-forecast" aria-label="Form-based matchup forecast">
