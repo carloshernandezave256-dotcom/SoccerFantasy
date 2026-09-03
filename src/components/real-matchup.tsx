@@ -343,7 +343,7 @@ export function RealMatchup(){
           <div className="matchday-kicker"><span>MATCHUP PREVIEW</span><b>GAMEWEEK {gameweek}</b></div>
           <div className="matchday-hero">
             {managerPreviews.map(({team,standing},index)=><div className={`matchday-manager ${index===0?"home":"away"}`} key={team.userId}><small>{index===0?"HOME XI":"AWAY XI"}</small><div className="manager-monogram" aria-hidden="true">{teamMonogram(team.name)}</div><strong>{team.name}</strong><span>{standing?`#${standing.rank} · ${standing.wins}-${standing.draws}-${standing.losses}`:"Season opening"}</span></div>)}
-            <div className="matchday-vs"><span>VS</span></div>
+            <div className="matchday-vs"><span aria-label="versus"><b>V</b><i aria-hidden="true"/><b>S</b></span></div>
           </div>
           <div className="matchday-history"><span>HEAD TO HEAD</span><strong>{previousMeetings.length?`${headToHead.homeWins}–${headToHead.draws}–${headToHead.awayWins}`:"First meeting"}</strong></div>
           {forecast?<section className="matchup-forecast" aria-label="Form-based matchup forecast">
