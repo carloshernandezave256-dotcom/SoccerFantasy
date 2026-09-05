@@ -64,6 +64,39 @@ export class LiveScoreStore {
     return response;
   }
 
+  async excludedScoringLeagueIds(){
+    const response=await this.write('rpc/excluded_scoring_leagues','POST',{},'Could not read excluded weeks.','return=representation');
+    return (await response.json() as Array<{league_id:string}>).map(row=>row.league_id);
+  }
+
+  async recordFixtureEvidence(fixtureId:number,observedAt:string,complete:boolean,reason:string,playerIds:number[]){
+    await this.write('rpc/record_fixture_stat_evidence','POST',{
+      p_fixture_id:fixtureId,p_observed_at:observedAt,p_complete:complete,p_reason:reason,p_player_ids:playerIds,
+    },'Could not record fixture completeness.');
+  }
+
+  async scoringWeekFixtures(leagueId:string,gameweek:number):Promise<WeekFixture[]>{
+    const response=await this.write('rpc/scoring_week_fixtures','POST',{
+      p_league_id:leagueId,p_gameweek:gameweek,
+    },'Could not read authoritative week fixtures.','return=representation');
+    return response.json();
+  }
+
+  async gameweekFinalized(leagueId:string,gameweek:number){
+    const rows=await this.read<Array<{gameweek:number}>>(
+      `finalized_gameweek_locks?league_id=eq.${leagueId}&gameweek=eq.${gameweek}&select=gameweek`,
+      'Could not check finalization.');
+    return rows.length>0;
+  }
+
+  async publishLeagueScores(leagueId:string,gameweek:number,rows:LeaguePlayerScoreRow[],fixtures:WeekFixture[]){
+    const response=await this.write('rpc/publish_gameweek_scores','POST',{
+      p_league_id:leagueId,p_gameweek:gameweek,p_rows:rows,
+      p_evidence:fixtures.map(f=>({fixture_id:f.fixture_id,status:f.status,evidence_version:f.evidence_version??null})),
+    },'Could not publish reconciled week scores.','return=representation');
+    return Number(await response.json());
+  }
+
   async claimSync(now: Date) {
     const response = await this.write(
       `football_sync_state?singleton_id=eq.1&live_claimed_until=lt.${now.toISOString()}`,
@@ -90,10 +123,14 @@ export class LiveScoreStore {
           select: "fixture_id,status,kickoff,events_synced_at",
           and: `(kickoff.gte.${windowStart},kickoff.lte.${now.toISOString()})`,
         });
-    return this.read<CachedFixture[]>(
+    const recent=await this.read<CachedFixture[]>(
       `football_fixture_cache?${query}`,
       "Could not read the fixture cache.",
     );
+    if(forcedFixtureId)return recent;
+    const response=await this.write('rpc/pending_scoring_fixtures','POST',{},'Could not read pending reconciliation fixtures.','return=representation');
+    const pending=await response.json() as CachedFixture[];
+    return [...new Map([...recent,...pending].map(f=>[f.fixture_id,f])).values()];
   }
 
   async priorProviderStatuses(fixtureIds: number[], now: Date) {
@@ -240,38 +277,6 @@ export class LiveScoreStore {
     return { league: leagues[0] ?? null, window: windows[0] ?? null };
   }
 
-  async calendarFixtures(leagueId: string, competition: string, gameweek: number) {
-    const query = new URLSearchParams({
-      league_id: `eq.${leagueId}`,
-      competition: `eq.${competition}`,
-      gameweek: `eq.${gameweek}`,
-      select: "fixture_id,status,kickoff,competition,gameweek",
-      order: "kickoff.asc",
-    });
-    return this.read<WeekFixture[]>(
-      `league_headline_fixtures?${query}`,
-      `Could not read calendar fixtures for ${leagueId}.`,
-    );
-  }
-
-  async weekFixtures(
-    leagueId: string,
-    playerPool: string,
-    firstKickoff: string,
-    lastKickoff: string,
-  ) {
-    const query = new URLSearchParams({
-      league_id: `eq.${leagueId}`,
-      and: `(kickoff.gte.${firstKickoff},kickoff.lte.${lastKickoff})`,
-      select: "fixture_id,status,kickoff,competition,gameweek",
-    });
-    if (playerPool !== "All Top Five") query.set("competition", `eq.${playerPool}`);
-    return this.read<WeekFixture[]>(
-      `league_headline_fixtures?${query}`,
-      `Could not read scoring fixtures for ${leagueId}.`,
-    );
-  }
-
   async fixtureStats(fixtureIds: number[]) {
     return fetchAllRestRows<FixturePlayerStatRow>(
       `${this.baseUrl}/rest/v1/football_fixture_player_stats?fixture_id=in.(${fixtureIds.join(",")})&select=*`,
@@ -279,12 +284,15 @@ export class LiveScoreStore {
     );
   }
 
-  async lineupPlayerIds(leagueId: string) {
+  async lineupPlayerIds(leagueId: string,gameweek?:number) {
     const rows = await this.read<Array<{ player_id: number }>>(
       `lineup_players?league_id=eq.${leagueId}&select=player_id`,
       `Could not read lineup players for ${leagueId}.`,
     );
-    return rows.map((row) => row.player_id);
+    const snapshots=gameweek===undefined?[]:await this.read<Array<{player_id:number}>>(
+      `lineup_gameweek_players?league_id=eq.${leagueId}&gameweek=eq.${gameweek}&select=player_id`,
+      'Could not read locked lineup players.');
+    return [...new Set([...rows,...snapshots].map(row=>row.player_id))];
   }
 
   async poolPlayerIds(playerPool: string) {
@@ -303,36 +311,4 @@ export class LiveScoreStore {
     return rows.map((row) => row.id);
   }
 
-  async upsertLeagueScores(rows: LeaguePlayerScoreRow[]) {
-    if (!rows.length) return;
-    for (let start = 0; start < rows.length; start += 500) {
-      await this.write(
-        "league_player_scores?on_conflict=league_id,gameweek,player_id",
-        "POST",
-        rows.slice(start, start + 500),
-        `League score update failed for ${rows[0].league_id}.`,
-        "resolution=merge-duplicates,return=minimal",
-      );
-    }
-  }
-
-  async refreshMatchupScores(leagueId: string, gameweek: number) {
-    await this.write(
-      "rpc/refresh_league_matchup_scores",
-      "POST",
-      { p_league_id: leagueId, p_gameweek: gameweek },
-      `Could not refresh matchup totals for ${leagueId}.`,
-    );
-  }
-
-  async settleFinalGameweek(leagueId: string, gameweek: number) {
-    const response = await this.write(
-      "rpc/settle_final_gameweek",
-      "POST",
-      { p_league_id: leagueId, p_gameweek: gameweek },
-      `Could not settle final gameweek ${gameweek} for ${leagueId}.`,
-      "return=representation",
-    );
-    return Number(await response.json()) || 0;
-  }
 }

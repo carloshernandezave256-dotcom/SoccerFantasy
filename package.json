@@ -10,7 +10,8 @@
     "test:draft": "node scripts/regression-draft.mjs",
     "test:auction": "node scripts/regression-auction.mjs",
     "typecheck": "tsc --noEmit",
-    "test:db": "node scripts/regression-market-db.mjs"
+    "test:db": "node scripts/regression-market-db.mjs",
+    "test:scoring:db": "node scripts/regression-scoring-db.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.95.0",

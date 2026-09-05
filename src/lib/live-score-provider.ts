@@ -83,3 +83,11 @@ export async function fetchProviderSnapshot(candidates: CachedFixture[]): Promis
     requestsUsed: 1 + droppedCandidates.length + fixtures.length,
   };
 }
+
+export async function fetchProviderLineups(fixtureIds:number[]){
+  const pages=await Promise.all(fixtureIds.map(async fixtureId=>({
+    fixtureId,
+    body:await apiFootball<{response:import('./fixture-completeness').ProviderLineup[]}>(`fixtures/lineups?fixture=${fixtureId}`),
+  })));
+  return new Map(pages.map(page=>[page.fixtureId,page.body.response]));
+}
