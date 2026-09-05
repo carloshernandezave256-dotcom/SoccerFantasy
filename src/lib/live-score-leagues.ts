@@ -1,5 +1,4 @@
 import { buildLeaguePlayerScoreRows } from "./live-score-domain";
-import { fantasyWeekWindow,fixturesForFantasyWeek } from "./fantasy-week-window";
 import { LiveScoreStore } from "./live-score-store";
 
 export type LeagueRefreshSummary = {
@@ -11,8 +10,9 @@ export async function refreshAffectedLeagueScores(
   store: LiveScoreStore,
   fixtureIds: number[],
   now: Date,
+  excludedLeagueIds: string[] = [],
 ): Promise<LeagueRefreshSummary> {
-  const leagueIds = await store.affectedLeagueIds(fixtureIds);
+  const leagueIds = fixtureIds.length ? await store.affectedLeagueIds(fixtureIds) : excludedLeagueIds;
   let leagueRowsUpdated = 0;
   let leagueGameweeksUpdated = 0;
 
@@ -20,35 +20,18 @@ export async function refreshAffectedLeagueScores(
     const { league, window } = await store.leagueContext(leagueId);
     if (!league || !window || new Date(window.roster_lock_at) > now) continue;
 
-    const calendarFixtures = await store.calendarFixtures(
-      leagueId,
-      league.calendar_competition,
-      window.gameweek,
-    );
-    if (!calendarFixtures.length || new Date(calendarFixtures[0].kickoff) > now) continue;
-
-    const scoringWindow=fantasyWeekWindow(calendarFixtures);
-    if(!scoringWindow)continue;
-    const windowFixtures = await store.weekFixtures(
-      leagueId,
-      league.player_pool,
-      scoringWindow.startsAt,
-      scoringWindow.endsAt,
-    );
-    const weekFixtures=fixturesForFantasyWeek(
-      windowFixtures.map(fixture=>({
-        ...fixture,
-        officialRound:fixture.gameweek,
-      })),
-      scoringWindow,
-      {[league.calendar_competition]:window.gameweek},
-    );
-    const fixtureIdsForWeek = weekFixtures.map((fixture) => fixture.fixture_id);
-    if (!fixtureIdsForWeek.length) continue;
+    if(await store.gameweekFinalized(leagueId,window.gameweek))continue;
+    const weekFixtures=await store.scoringWeekFixtures(leagueId,window.gameweek);
+    // A catch-up fixture may exist in league history without belonging to this
+    // fantasy week. Such an update must not publish or settle any matchup.
+    const allExcluded=weekFixtures.length>0&&weekFixtures.every(f=>f.status==='EXCLUDED');
+    if(!weekFixtures.some(f=>f.status!=='EXCLUDED'&&fixtureIds.includes(f.fixture_id))
+      && !(excludedLeagueIds.includes(leagueId)&&allExcluded))continue;
+    const fixtureIdsForWeek=weekFixtures.filter(f=>f.status!=='EXCLUDED').map(f=>f.fixture_id);
 
     const [fixtureStats, lineupPlayerIds, poolPlayerIds] = await Promise.all([
-      store.fixtureStats(fixtureIdsForWeek),
-      store.lineupPlayerIds(leagueId),
+      fixtureIdsForWeek.length?store.fixtureStats(fixtureIdsForWeek):Promise.resolve([]),
+      store.lineupPlayerIds(leagueId,window.gameweek),
       store.poolPlayerIds(league.player_pool),
     ]);
     const playerIds = [
@@ -68,11 +51,9 @@ export async function refreshAffectedLeagueScores(
     });
     if (!rows.length) continue;
 
-    await store.upsertLeagueScores(rows);
-    await store.refreshMatchupScores(leagueId, window.gameweek);
-    await store.settleFinalGameweek(leagueId, window.gameweek);
-    leagueRowsUpdated += rows.length;
-    leagueGameweeksUpdated += 1;
+    const published=await store.publishLeagueScores(leagueId,window.gameweek,rows,weekFixtures);
+    leagueRowsUpdated+=published;
+    if(published>0)leagueGameweeksUpdated+=1;
   }
 
   return { leagueRowsUpdated, leagueGameweeksUpdated };

@@ -27,3 +27,9 @@ PostgreSQL (PGlite). The harness uses synthetic accounts, a focused schema, and
 baseline SQL helpers. It checks real RPC authorization and bid behavior without
 contacting Supabase. This is not a full migration replay, concurrent-client test,
 or production RLS/cron verification. Run `npm test` and `npm run build` as well.
+
+## Scoring finalization repair
+
+See [the review notes](docs/scoring-finalization-review.md) for authoritative
+fixture membership, provider completeness requirements and release dependencies.
+Run `npm run test:scoring:db` for the focused PostgreSQL settlement regressions.

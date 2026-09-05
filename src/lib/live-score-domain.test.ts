@@ -97,7 +97,7 @@ describe("live score player normalization", () => {
 });
 
 describe("league score aggregation", () => {
-  it("combines all fixture stats and finalizes only the player's own completed fixtures", () => {
+  it("combines fixture stats but waits for reconciled week completeness", () => {
     const rows = buildLeaguePlayerScoreRows({
       leagueId: "league-1",
       gameweek: 2,
@@ -111,7 +111,7 @@ describe("league score aggregation", () => {
       ],
       updatedAt: "2026-08-23T17:14:00Z",
     });
-    expect(rows[0]).toMatchObject({ player_id: 1272, minutes: 24, completed_passes: 20, own_goals: 1, status: "final" });
+    expect(rows[0]).toMatchObject({ player_id: 1272, minutes: 24, completed_passes: 20, own_goals: 1, status: "live" });
     expect(rows[1]).toMatchObject({ player_id: 9999, minutes: 0, status: "live" });
   });
 });
