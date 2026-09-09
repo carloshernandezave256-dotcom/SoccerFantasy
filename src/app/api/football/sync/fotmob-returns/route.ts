@@ -214,7 +214,7 @@ async function syncFotmobAvailabilityBackup(supabaseUrl:string,adminHeaders:Reco
           playersMatched++;
           if(fotmobConfirmsActive(player.fotmob_expected_return))continue;
           if(recentFotmobClearBlocksInjury(player.injured,player.fotmob_return_checked_at))continue;
-          const injuryType=availability.kind==="suspension"?"Suspension":"FotMob";
+          const injuryType=availability.kind==="suspension"?"FotMob Suspension":"FotMob";
           const injuryReason=availability.reason||"Injury";
           if(appearanceDisprovesInjury(player,injuryType,injuryReason))continue;
           const update:Record<string,unknown>={
