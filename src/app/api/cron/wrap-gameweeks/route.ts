@@ -25,6 +25,7 @@ type SnapshotPlayer={player_id:number};
 type ScoreEvidence={player_id:number;status:string;stats_received:boolean|null;source:string|null;minutes:number;fantasy_points:number};
 type RecoveryPlayer={id:number;api_football_id:number|null;full_name:string;club:string;competition:string};
 type MatchupState={status:string};
+type FixtureTeams={fixture_id:number;home_team:string;away_team:string};
 
 type RecoveryWeek={
   leagueId:string;
@@ -79,6 +80,22 @@ async function scoringFixturesForWeek(
     scoringWindow,
     {[league.calendar_competition]:gameweek},
   );
+}
+
+async function withFixtureTeams(
+  baseUrl:string,
+  serviceRoleKey:string,
+  leagueId:string,
+  fixtures:WeekFixture[],
+){
+  if(!fixtures.length)return fixtures;
+  const ids=fixtures.map(fixture=>fixture.fixture_id);
+  const teams=await read<FixtureTeams>(
+    baseUrl,serviceRoleKey,
+    `league_headline_fixtures?league_id=eq.${leagueId}&fixture_id=in.(${ids.join(",")})&select=fixture_id,home_team,away_team`,
+  );
+  const byId=new Map(teams.map(team=>[team.fixture_id,team]));
+  return fixtures.map(fixture=>({...fixture,...(byId.get(fixture.fixture_id)??{})}));
 }
 
 function fixtureForPlayer(player:RecoveryPlayer,fixtures:WeekFixture[]){
@@ -146,7 +163,8 @@ async function recoverWeek(
   const context=await store.leagueContext(leagueId);
   if(!context.league)return {leagueId,gameweek,attemptedFixtures:[],providerRows:0,verifiedDnps:[],stillPending:[],final:false};
   const league=context.league;
-  const fixtures=await scoringFixturesForWeek(store,leagueId,league,gameweek);
+  const selectedFixtures=await scoringFixturesForWeek(store,leagueId,league,gameweek);
+  const fixtures=await withFixtureTeams(baseUrl,serviceRoleKey,leagueId,selectedFixtures);
   if(!fixtures.length)return {leagueId,gameweek,attemptedFixtures:[],providerRows:0,verifiedDnps:[],stillPending:[],final:false};
 
   let pending=await unresolvedPlayers(baseUrl,serviceRoleKey,leagueId,gameweek);
