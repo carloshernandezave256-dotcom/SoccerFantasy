@@ -95,6 +95,8 @@ export type WeekFixture = {
   kickoff: string;
   competition: string;
   gameweek: number;
+  home_team?: string;
+  away_team?: string;
 };
 
 export type LeaguePlayerScoreRow = {
