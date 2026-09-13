@@ -283,9 +283,22 @@ export function buildLeaguePlayerScoreRows({
   const fixtureStatusById = new Map(
     weekFixtures.map((fixture) => [fixture.fixture_id, fixture.status]),
   );
+  // A repeated REST page must not award a second copy of a fixture. Keep the
+  // latest observation for that player/fixture, including downward corrections.
+  const uniqueStats=new Map<string,FixturePlayerStatRow>();
+  for(const stat of fixtureStats){
+    if(!fixtureStatusById.has(stat.fixture_id))continue;
+    const key=`${stat.fixture_id}:${stat.player_id}`;
+    const previous=uniqueStats.get(key);
+    const timestamp=(row:FixturePlayerStatRow)=>{
+      const parsed=Date.parse(String(row.source_updated_at??""));
+      return Number.isFinite(parsed)?parsed:0;
+    };
+    if(!previous||timestamp(stat)>=timestamp(previous))uniqueStats.set(key,stat);
+  }
 
   return playerIds.map((playerId) => {
-    const playerStats = fixtureStats.filter((stat) => stat.player_id === playerId);
+    const playerStats = [...uniqueStats.values()].filter((stat) => stat.player_id === playerId);
     const ratings = playerStats.map((stat) => Number(stat.rating)).filter(Boolean);
     const playerFixtureStatuses = [
       ...new Set(

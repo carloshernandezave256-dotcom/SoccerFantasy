@@ -2,6 +2,41 @@ import {describe,expect,it} from "vitest";
 import {fantasyWeekWindow,fixtureInsideFantasyWeek,fixturesForFantasyWeek} from "./fantasy-week-window";
 
 describe("fantasy week kickoff window",()=>{
+  it("includes Friday when the calendar round starts Saturday",()=>{
+    const weekend=fantasyWeekWindow([{kickoff:"2026-09-12T14:00:00Z"}])!;
+    expect(weekend.startsAt).toBe("2026-09-11T00:00:00.000Z");
+    expect(fixtureInsideFantasyWeek({kickoff:"2026-09-11T18:45:00Z"},weekend)).toBe(true);
+    expect(fixtureInsideFantasyWeek({kickoff:"2026-09-18T18:45:00Z"},weekend)).toBe(false);
+  });
+
+  it("keeps Madrid and Barcelona round 5 when a larger midweek round 6 follows",()=>{
+    const weekend=fantasyWeekWindow([{kickoff:"2026-09-12T14:00:00Z"}])!;
+    const fixtures=[
+      {competition:"La Liga",officialRound:5,kickoff:"2026-09-12T19:00:00Z"},
+      {competition:"La Liga",officialRound:5,kickoff:"2026-09-13T14:15:00Z"},
+      ...Array.from({length:10},()=>({competition:"La Liga",officialRound:6,kickoff:"2026-09-16T19:00:00Z"})),
+      {competition:"La Liga",officialRound:3,kickoff:"2026-09-14T19:00:00Z"},
+    ];
+    expect(fixturesForFantasyWeek(fixtures,weekend).map(f=>f.officialRound)).toEqual([5,5]);
+    expect(fixturesForFantasyWeek([...fixtures].reverse(),weekend)).toEqual(fixtures.slice(0,2).reverse());
+  });
+
+  it("retains a selected round's Tuesday finish but excludes another round",()=>{
+    const weekend=fantasyWeekWindow([{kickoff:"2026-09-12T14:00:00Z"}])!;
+    const fixtures=[
+      {competition:"La Liga",officialRound:5,kickoff:"2026-09-12T19:00:00Z"},
+      {competition:"La Liga",officialRound:5,kickoff:"2026-09-15T19:00:00Z"},
+      {competition:"La Liga",officialRound:6,kickoff:"2026-09-16T19:00:00Z"},
+    ];
+    expect(fixturesForFantasyWeek(fixtures,weekend)).toEqual(fixtures.slice(0,2));
+  });
+
+  it("does not substitute a catch-up round when the configured round is absent",()=>{
+    const weekend=fantasyWeekWindow([{kickoff:"2026-09-12T14:00:00Z"}])!;
+    expect(fixturesForFantasyWeek([
+      {competition:"Premier League",officialRound:3,kickoff:"2026-09-12T19:00:00Z"},
+    ],weekend,{"Premier League":4})).toEqual([]);
+  });
   const window=fantasyWeekWindow([
     {kickoff:"2026-08-28T19:00:00.000Z"},
     {kickoff:"2026-08-31T19:00:00.000Z"},

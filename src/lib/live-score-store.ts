@@ -274,7 +274,7 @@ export class LiveScoreStore {
 
   async fixtureStats(fixtureIds: number[]) {
     return fetchAllRestRows<FixturePlayerStatRow>(
-      `${this.baseUrl}/rest/v1/football_fixture_player_stats?fixture_id=in.(${fixtureIds.join(",")})&select=*`,
+      `${this.baseUrl}/rest/v1/football_fixture_player_stats?fixture_id=in.(${fixtureIds.join(",")})&select=*&order=fixture_id.asc,player_id.asc`,
       this.headers(),
     );
   }
@@ -295,6 +295,7 @@ export class LiveScoreStore {
       active: "eq.true",
       competition: `in.(${competitions.join(",")})`,
       select: "id",
+      order: "id.asc",
     });
     const rows = await fetchAllRestRows<{ id: number }>(
       `${this.baseUrl}/rest/v1/players?${query}`,
