@@ -12,7 +12,11 @@ export async function GET(request:NextRequest){
  try{
   let result;
   if(mode==='leagues')result=await sportmonks('leagues',{per_page:'50',page,include:'currentSeason'});
-  else if(mode==='fixtures'){
+  else if(mode==='search'){
+   const name=request.nextUrl.searchParams.get('name')??'';
+   if(!/^[a-zA-Z][a-zA-Z-]{1,40}$/.test(name))return NextResponse.json({error:'Use one player name.'},{status:400});
+   result=await sportmonks(`players/search/${name}`,{per_page:'50',page});
+  }else if(mode==='fixtures'){
    const date=request.nextUrl.searchParams.get('date')??new Date().toISOString().slice(0,10);
    if(!/^\d{4}-\d{2}-\d{2}$/.test(date))return NextResponse.json({error:'Use YYYY-MM-DD.'},{status:400});
    result=await sportmonks(`fixtures/date/${date}`,{include:'participants;scores;state;league',per_page:'50',page});
