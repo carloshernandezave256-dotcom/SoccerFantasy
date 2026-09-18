@@ -94,6 +94,21 @@ try{
  verify((await query('select * from public.excluded_scoring_leagues()')).rows,[{league_id:L}]);
  await query('select public.publish_gameweek_scores($1,$2,$3,$4)',[L,4,JSON.stringify(rows.map(r=>({...r,gameweek:4,minutes:0,fantasy_points:0}))),JSON.stringify(excludedProof)]);
  verify(await scalar('select count(*)::int from finalized_gameweek_locks'),3);
+ // Regression for the production Week 4 mismatch: Friday counts, larger midweek does not.
+ const L2='10000000-0000-0000-0000-000000000002';
+ await db.exec(`insert into leagues values('${L2}','draft','Premier League','All Top Five');
+ insert into league_transaction_windows(league_id,gameweek,roster_lock_at) values('${L2}',4,'2026-01-10T14:00Z');
+ insert into league_headline_fixtures values
+ ('${L2}',1001,'Premier League',4,'2026-01-10T14:00Z','FT'),
+ ('${L2}',1002,'La Liga',5,'2026-01-09T19:00Z','FT'),
+ ('${L2}',1003,'La Liga',5,'2026-01-11T19:00Z','FT'),
+ ('${L2}',1004,'Serie A',4,'2026-01-10T19:00Z','FT'),
+ ('${L2}',1005,'Bundesliga',3,'2026-01-10T19:00Z','FT'),
+ ('${L2}',1006,'Ligue 1',4,'2026-01-10T19:00Z','FT');
+ insert into league_headline_fixtures select '${L2}',2000+i,'La Liga',6,'2026-01-14T19:00Z'::timestamptz,'NS' from generate_series(1,10) i;`);
+ verify((await query(`select fixture_id from public.scoring_week_fixtures('${L2}',4::smallint) order by fixture_id`)).rows.map(r=>Number(r.fixture_id)),[1001,1002,1003,1004,1005,1006]);
+ const diagnostic=await scalar(`select public.gameweek_reconciliation_status('${L2}',4::smallint)`);
+ verify(diagnostic.state,'pending');verify(diagnostic.membershipFrozen,true);verify(diagnostic.fixtures.length,6);
  await db.exec('set role authenticated');
  await assert.rejects(query(`select public.scoring_week_fixtures('${L}',2::smallint)`),/permission denied/);checks++;
  console.log(`${checks} actual PostgreSQL scoring/finalization checks passed.`);

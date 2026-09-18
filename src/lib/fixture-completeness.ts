@@ -25,9 +25,9 @@ export function fixtureCompleteness(
       const entries=stats.players.filter(entry=>entry.player.id===id);
       const minutes=entries[0]?.statistics[0]?.games.minutes;
       if(entries.length!==1||!mapping.has(id)||typeof minutes!=='number'||!Number.isFinite(minutes)||minutes<0)
-        return {complete:false,reason:'Squad player missing mapped statistics or explicit minutes'};
+        return {complete:false,reason:`Player ${id} missing mapped statistics or explicit minutes (team ${teamId})`};
       if(lineup.startXI.some(row=>row.player.id===id)&&minutes<=0)
-        return {complete:false,reason:'Starter appearance not reconciled'};
+        return {complete:false,reason:`Starter ${id} appearance not reconciled (team ${teamId})`};
     }
     if(stats.players.some(entry=>!squad.includes(entry.player.id)||!mapping.has(entry.player.id)))
       return {complete:false,reason:'Statistics contain an unreconciled player'};
