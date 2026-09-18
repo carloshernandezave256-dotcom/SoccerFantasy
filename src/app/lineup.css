@@ -67,3 +67,10 @@
 .bench-drag-source{opacity:.3;outline:2px dashed var(--lime);border-radius:13px}
 .bench-drag-ghost{position:fixed;z-index:1000;pointer-events:none;transform:translate(-50%,-65%);display:grid;gap:6px;min-width:110px;padding:18px 12px;border:2px solid var(--lime);border-radius:13px;background:var(--surface);color:var(--text);box-shadow:0 12px 28px #0006;text-align:center}
 .bench-drag-ghost b{color:var(--lime);font-size:12px}.bench-drag-ghost strong{font-size:11px}
+
+/* Keep started players readable while clearly removing all edit affordances. */
+.saved-pitch-player.player-kickoff-locked,
+.saved-bench-player.player-kickoff-locked{filter:grayscale(1);opacity:.48;cursor:not-allowed;touch-action:auto;box-shadow:none;transform:none}
+.saved-pitch-player.player-kickoff-locked small,
+.saved-bench-player.player-kickoff-locked small{color:#c0c4c2}
+.captain-select:disabled{filter:grayscale(1);opacity:.55;cursor:not-allowed}
