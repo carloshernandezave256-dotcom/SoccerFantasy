@@ -9,7 +9,7 @@ export const maxDuration=300;
 export async function POST(request:NextRequest){
  const cron=Boolean(process.env.CRON_SECRET)&&request.headers.get('authorization')===`Bearer ${process.env.CRON_SECRET}`;
  if(!cron&&!await isDeveloperRequest(request))return NextResponse.json({error:'Developer access required.'},{status:403});
- const url=process.env.NEXT_PUBLIC_SUPABASE_URL;const key=process.env.SUPABASE_SERVICE_ROLE_KEY;
+ const url=process.env.NEXT_PUBLIC_SUPABASE_URL??"https://ocabrgbrkqmsnalbfzvx.supabase.co";const key=process.env.SUPABASE_SERVICE_ROLE_KEY;
  if(!url||!key)return NextResponse.json({error:'Server database credential missing.'},{status:503});
  try{
   const body=await request.json();
