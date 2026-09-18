@@ -17,6 +17,7 @@ try{
  insert into sportmonks_fixture_sources values(10,100,'{"101":1}','{"participants":[{"id":50,"meta":{"location":"home"}},{"id":51,"meta":{"location":"away"}}]}');`);
  await db.exec(await readFile(new URL('../supabase/migrations/20260918131015_sportmonks_primary_provider.sql',import.meta.url),'utf8'));
  await db.exec(await readFile(new URL('../supabase/migrations/20260918133002_prefer_canonical_sportmonks_players.sql',import.meta.url),'utf8'));
+ await db.exec(await readFile(new URL('../supabase/migrations/20260918133548_retain_reviewed_sportmonks_aliases.sql',import.meta.url),'utf8'));
  const q=async sql=>(await db.query(sql)).rows;
  assert.equal((await q('select sportmonks_id from players where id=1'))[0].sportmonks_id,101);
  assert.equal((await q('select sportmonks_id from football_fixture_cache'))[0].sportmonks_id,100);
@@ -29,6 +30,10 @@ try{
  (4,'Canonical Player','Home','Premier League','MID',400),(5,'Canonical Player','Home','Premier League','FWD',null);`);
  const canonical=(await db.query('select public.sync_sportmonks_profiles($1::jsonb)',[JSON.stringify([{club:'Home',competition:'Premier League',player:{id:104,name:'Canonical Player'}}])])).rows[0].sync_sportmonks_profiles;
  assert.equal(canonical.playerMap['104'],4);
+ await db.exec(`insert into sportmonks_player_profiles(sportmonks_id,player_id,club,competition,raw_data) values(105,4,'Home','Premier League','{}');`);
+ const alias=(await db.query('select public.sync_sportmonks_profiles($1::jsonb)',[JSON.stringify([{club:'Home',competition:'Premier League',player:{id:105,name:'Provider spelling variant'}}])])).rows[0].sync_sportmonks_profiles;
+ assert.equal(alias.playerMap['105'],4);
+ assert.equal((await q('select sportmonks_id from players where id=4'))[0].sportmonks_id,104);
  assert.match((await q("select pg_get_functiondef('private.calculate_league_player_row()'::regprocedure) d"))[0].d,/sportmonks-fixture-sum/);
  await db.exec('set role authenticated');
  await assert.rejects(db.query('select * from sportmonks_player_profiles'),/permission denied/);
