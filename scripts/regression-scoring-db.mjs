@@ -12,6 +12,7 @@ try{
  await db.exec(await read('supabase/tests/market-bootstrap.sql'));
  await db.exec(await read('supabase/tests/scoring-bootstrap.sql'));
  await db.exec(await read('supabase/migrations/20260918050601_hardened_scoring_finalization.sql'));
+ await db.exec(await read('supabase/migrations/20260918055758_isolate_late_week_settlement.sql'));
  await db.exec(`select set_config('request.jwt.claim.role','service_role',false);
  insert into leagues values('${L}','draft','Premier League','All Top Five');
  insert into league_transaction_windows(league_id,gameweek,roster_lock_at) values('${L}',2,date_trunc('day',now())-interval '1 day');
@@ -53,8 +54,12 @@ try{
  verify(await scalar('select count(*)::int from lineup_gameweek_substitutions'),0);
  verify(await scalar('select bool_and(not data_complete and status=\'live\') from league_player_scores'),true);
  await evidence(1,true,[101]);
+ // Opening the next market must not let late settlement edit its live lineup.
+ await db.exec(`insert into league_transaction_windows(league_id,gameweek,roster_lock_at) values('${L}',3,now()+interval '7 days');`);
+ const editableBefore=(await query('select * from lineup_players order by player_id')).rows;
  // Complete response permits the actual same-position captain DNP substitution.
  await publish();
+ verify((await query('select * from lineup_players order by player_id')).rows,editableBefore);
  verify(await scalar('select count(*)::int from finalized_gameweek_locks'),1);
  verify(await scalar('select count(*)::int from lineup_gameweek_substitutions'),1);
  verify((await query('select player_id,is_starter,is_star_pick from lineup_gameweek_players order by player_id')).rows,
@@ -65,6 +70,7 @@ try{
  verify(await scalar('select count(*)::int from lineup_gameweek_substitutions'),1);
  await publish([{...rows[0],minutes:90,fantasy_points:99}]);
  verify(Number(await scalar('select fantasy_points from league_player_scores where player_id=100')),0);
+ await db.exec(`delete from league_transaction_windows where league_id='${L}' and gameweek=3;`);
  // A separate open week verifies evidence-version rejection and postponement behavior.
  await db.exec(`insert into league_transaction_windows(league_id,gameweek,roster_lock_at) values('${L}',3,date_trunc('day',now())-interval '1 day');
  insert into league_headline_fixtures values('${L}',6,'Premier League',3,date_trunc('day',now()),'PST');`);
