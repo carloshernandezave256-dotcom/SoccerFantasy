@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { FotmobDoubtfulControls } from "@/components/fotmob-doubtful-controls";
 import { ApiFootballTest } from "@/components/api-football-test";
 import { FinalizedGameweekControls } from "@/components/finalized-gameweek-controls";
 import { PageShell } from "@/components/page-shell";
@@ -86,6 +87,7 @@ export default function DeveloperPage() {
             ) : null}
           </section>
           <ApiFootballTest leagueId={leagueId} />
+          <FotmobDoubtfulControls />
           <FinalizedGameweekControls leagueId={leagueId} />
           <section className="panel settings-form">
             <div className="section-row"><div><p className="eyebrow">ALTERNATIVE DATA TEST</p><h2>Provider Lab</h2></div><span className="muted-chip">READ ONLY</span></div>
