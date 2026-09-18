@@ -83,7 +83,7 @@ function MatchupPlayerDialog({player,gameweek,lastUpdated,onClose}:{player:Playe
   const recent=[...history].sort((a,b)=>new Date(b.kickoff).getTime()-new Date(a.kickoff).getTime()).slice(0,5);
   const started=player.dataStatus!=="upcoming";
   const fixture=player.fixture;
-  const returnDate=player.fotmob_expected_return??player.expected_return;
+  const returnDate=player.expected_return;
   const statItems=player.stats?[{label:"Minutes",value:player.minutes},{label:"Goals",value:player.stats.goals},{label:"Assists",value:player.stats.assists},{label:"Shots on target",value:player.stats.shots_on_target},{label:"Completed passes",value:player.stats.completed_passes},{label:player.position==="GK"?"Saves":"Goals conceded",value:player.position==="GK"?player.stats.saves:player.stats.goals_conceded}]:[];
   return <div className="confirm-overlay ledger-overlay" role="presentation" onClick={onClose}>
     <section className="confirm-card player-ledger matchup-player-report" role="dialog" aria-modal="true" aria-labelledby="ledger-player-name" onClick={event=>event.stopPropagation()}>

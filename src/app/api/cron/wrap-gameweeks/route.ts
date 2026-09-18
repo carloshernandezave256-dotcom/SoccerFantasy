@@ -12,6 +12,7 @@ export async function GET(request:NextRequest){
  const store=new LiveScoreStore(process.env.NEXT_PUBLIC_SUPABASE_URL??'https://ocabrgbrkqmsnalbfzvx.supabase.co',key);
  const now=new Date();
  try{
+  if(!await store.claimSync(now))return NextResponse.json({ok:true,reason:'A shared scoring update is running.'});
   const leagues=await store.excludedScoringLeagueIds();
   await refreshAffectedLeagueScores(store,[],now,leagues);
   const requested=request.nextUrl.searchParams.get('fixtureId');
@@ -22,7 +23,7 @@ export async function GET(request:NextRequest){
   const results=[];const errors=[];
   // Isolate fixture/provider failures so one cannot starve every following retry.
   for(const fixture of candidates){
-   try{results.push(await synchronizeFixtureScores(store,[fixture],new Date()));}
+   try{results.push(await synchronizeFixtureScores(store,[fixture],now));}
    catch(error){errors.push({fixtureId:fixture.fixture_id,error:error instanceof Error?error.message:String(error)});}
   }
   console[errors.length?'error':'info']('[cron/wrap-gameweeks]',{ranAt:now.toISOString(),attempted:candidates.length,errors});
@@ -30,5 +31,5 @@ export async function GET(request:NextRequest){
  }catch(error){
   console.error('[cron/wrap-gameweeks]',error);
   return NextResponse.json({error:error instanceof Error?error.message:String(error)},{status:502});
- }
+ }finally{await store.releaseSync(now)}
 }

@@ -68,5 +68,5 @@ export async function GET(request: NextRequest) {
       { error: error instanceof Error ? error.message : "Shared live score synchronization failed." },
       { status: 502 },
     );
-  }
+  } finally { await store.releaseSync(now); }
 }
