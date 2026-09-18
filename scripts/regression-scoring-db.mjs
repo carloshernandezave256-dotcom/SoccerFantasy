@@ -15,6 +15,7 @@ try{
  await db.exec(await read('supabase/migrations/20260918055758_isolate_late_week_settlement.sql'));
  await db.exec(await read('supabase/migrations/20260918094000_batch_scoring_settlement.sql'));
  await db.exec(await read('supabase/migrations/20260918095000_refresh_complete_dnp_evidence.sql'));
+ await db.exec(await read('supabase/migrations/20260918161018_bench_priority_autosubs.sql'));
  await db.exec(`create trigger apply_final_score_auto_substitutions after insert or update of status,minutes,fantasy_points on public.league_player_scores for each row execute function private.apply_final_score_auto_substitutions();`);
  await db.exec(`select set_config('request.jwt.claim.role','service_role',false);
  insert into leagues values('${L}','draft','Premier League','All Top Five');
