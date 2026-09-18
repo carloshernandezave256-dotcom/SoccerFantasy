@@ -1,5 +1,5 @@
 import {NextRequest,NextResponse} from "next/server";
-import {apiFootball} from "@/lib/api-football-server";
+import {syncSportMonksSchedules} from "@/lib/sportmonks-schedules";
 import {isDeveloperRequest} from "@/lib/developer-auth";
 import {LiveScoreStore} from "@/lib/live-score-store";
 import {synchronizeFixtureScores} from "@/lib/live-score-sync";
@@ -49,19 +49,10 @@ export async function POST(request:NextRequest){
   const store=new LiveScoreStore(supabaseUrl,serviceRoleKey);
   try{
     if(!await store.claimSync(now))return NextResponse.json({ok:true,message:"A score update is already running. Try again shortly.",requestsUsed:0});
-    const scheduleCompetitions=playerPool==="All Top Five"?Object.entries(competitions):[[competition,competitionId] as [string,number]];
-    const scheduleBodies=await Promise.all(scheduleCompetitions.map(async([name,id])=>({name,body:await apiFootball<FixturePage>(`fixtures?league=${id}&season=${season}`)})));
-
-    // Cache every eligible competition's schedule. The Fantasy Calendar competition still
-    // exclusively controls scoring windows; these extra fixtures only provide opponent and
-    // kickoff context for player profiles and the real-world headline section.
-    const fixtureRows=scheduleBodies.flatMap(({name,body:scheduled})=>scheduled.response.map(item=>({league_id:body.leagueId,fixture_id:item.fixture.id,gameweek:parseGameweek(item.league.round),competition:name,round_name:item.league.round,kickoff:item.fixture.date,status:item.fixture.status.short,home_team:item.teams.home.name,away_team:item.teams.away.name,home_score:item.goals.home,away_score:item.goals.away,updated_at:new Date().toISOString()})));
-    if(fixtureRows.length){
-      const fixtureUpsert=await fetch(`${supabaseUrl}/rest/v1/league_headline_fixtures?on_conflict=league_id,fixture_id`,{method:"POST",headers:{...adminHeaders(serviceRoleKey),Prefer:"resolution=merge-duplicates,return=minimal"},body:JSON.stringify(fixtureRows),cache:"no-store"});
-      if(!fixtureUpsert.ok)throw new Error((await fixtureUpsert.text())||"Fixture database update failed");
-      const calendarRefresh=await fetch(`${supabaseUrl}/rest/v1/rpc/refresh_league_calendar`,{method:"POST",headers:adminHeaders(serviceRoleKey),body:JSON.stringify({p_league_id:body.leagueId}),cache:"no-store"});
-      if(!calendarRefresh.ok)throw new Error((await calendarRefresh.text())||"Automatic gameweek activation failed");
-    }
+    const schedule=await syncSportMonksSchedules();
+    const scheduleBodies=Array.from({length:schedule.requestsUsed});
+    const fixtureRows=Array.from({length:schedule.fixturesCached});
+    await store.renewSync(now);
 
     const context=await store.leagueContext(body.leagueId);
     const activeWeek=context.window?.gameweek;
@@ -75,5 +66,5 @@ export async function POST(request:NextRequest){
       fixturesStarted:candidates.length,fixturesTotal:scoringFixtures.length,
       playersUpdated:'leaguePlayerRowsUpdated' in result?result.leaguePlayerRowsUpdated:0,
       seasonFixturesCached:fixtureRows.length,requestsUsed:result.requestsUsed+scheduleBodies.length});
-  }catch(error){return NextResponse.json({error:error instanceof Error?error.message:"Live score synchronization failed."},{status:502})}
+  }catch(error){return NextResponse.json({error:error instanceof Error?error.message:"Live score synchronization failed."},{status:502})}finally{await store.releaseSync(now)}
 }

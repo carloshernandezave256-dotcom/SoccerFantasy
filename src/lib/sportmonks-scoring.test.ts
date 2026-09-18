@@ -28,3 +28,11 @@ describe('SportMonks scoring',()=>{
  });
  it('rejects a missing substitution identity instead of guessing',()=>{const s=source();s.raw_data.events=[{id:1,type_id:18,participant_id:10,player_id:9999,related_player_id:1,rescinded:null}];expect(()=>normalize(s)).toThrow('substitution');});
 });
+
+it('keeps missing live minutes unknown but rejects the same gap at full time',()=>{
+ const s=source();s.raw_data.state.state='INPLAY_1ST_HALF';s.raw_data.lineups[0].details=[];
+ const rows=normalizeSportMonks(s,context,'2026-09-12T14:03:00Z',{live:true});
+ expect(rows.some(r=>r.player_id===1000)).toBe(false);
+ s.raw_data.state.state='FT';
+ expect(()=>normalizeSportMonks(s,context,'2026-09-12T16:00:00Z',{live:true})).toThrow('minutes');
+});

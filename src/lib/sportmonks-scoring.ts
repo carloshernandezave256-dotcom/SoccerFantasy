@@ -12,12 +12,13 @@ export type SportMonksSource={fixture_id:number;sportmonks_id:number;raw_data:Sp
 export type FixtureContext={fixture_id:number;kickoff:string;competition_id:number;home_score:number;away_score:number};
 const leagues:Record<number,number>={8:39,82:78,301:61,384:135,564:140};
 /** Only reviewed identity maps are accepted. Missing appearance evidence never becomes a DNP by default. */
-export function normalizeSportMonks(source:SportMonksSource,context:FixtureContext,observedAt:string){
+export function normalizeSportMonks(source:SportMonksSource,context:FixtureContext,observedAt:string,options:{live?:boolean}={}){
  const f=source.raw_data;
  const fail=(message:string):never=>{throw new Error(`SportMonks ${f.id}: ${message}`);};
  if(f.id!==source.sportmonks_id||context.fixture_id!==source.fixture_id||leagues[f.league_id]!==context.competition_id
    ||Date.parse(f.starting_at.replace(' ','T')+'Z')!==Date.parse(context.kickoff))fail('fixture identity mismatch');
- if(!['FT','AET','FT_PEN'].includes(f.state?.state))fail('fixture is not final');
+ const final=['FT','AET','FT_PEN'].includes(f.state?.state);
+ if(!final&&!options.live)fail('fixture is not final');
  if(f.participants?.length!==2||!Array.isArray(f.events)||!Array.isArray(f.lineups))fail('incomplete squads or events');
  const home=f.participants.find(p=>p.meta.location==='home'); const away=f.participants.find(p=>p.meta.location==='away');
  if(!home||!away||home.id===away.id)fail('invalid participants');
@@ -52,26 +53,27 @@ export function normalizeSportMonks(source:SportMonksSource,context:FixtureConte
    // Cumulative minutes include stoppage time and still prove a short late appearance.
    if(minutes==null&&value(117172)>0&&value(117172)<10)minutes=value(117172);
    if(minutes===null||minutes===undefined){
+    if(!final)continue;
     if(l.type_id!==12||subIds.has(l.player_id)||details.length||events.some(e=>[14,15,16,17].includes(e.type_id)&&(e.player_id===l.player_id||e.related_player_id===l.player_id)))fail(`missing appearance minutes: ${l.player_name}`);
     minutes=0;
    }
-   if(typeof minutes!=='number'||!Number.isFinite(minutes)||minutes<0||minutes>130||(l.type_id===11&&minutes<=0))fail(`invalid minutes: ${l.player_name}`);
+   if(typeof minutes!=='number'||!Number.isFinite(minutes)||minutes<0||minutes>130||(final&&l.type_id===11&&minutes<=0))fail(`invalid minutes: ${l.player_name}`);
    
    // Core fields must be present for everyone who played; sparse exceptional events may be absent at zero.
-   if(minutes>=10&&(!stats.has(118)||(!stats.has(80)&&!stats.has(120))))fail(`incomplete scoring statistics: ${l.player_name}`);
+   if(final&&minutes>=10&&(!stats.has(118)||(!stats.has(80)&&!stats.has(120))))fail(`incomplete scoring statistics: ${l.player_name}`);
    const count=(type:number)=>events.filter(e=>e.type_id===type&&e.player_id===l.player_id).length;
    const penalties=value(111);const own=value(324);
    let goals=value(52);
    const scoredEvents=count(14)+count(16);
    // An own-goal event may retain the attacking player's name while the defender's
    // own-goal statistic carries the corrected attribution. Never award both goals.
-   if(goals!==scoredEvents){
+   if(final&&goals!==scoredEvents){
     const ownGoalEvents=count(15);
     const opposingOwnGoals=f.lineups.filter(p=>p.team_id!==team.id).reduce((n,p)=>n+(p.details??[]).filter(d=>d.type_id===324).reduce((a,d)=>a+Number(d.data.value??0),0),0);
     if(ownGoalEvents>0&&goals===scoredEvents+ownGoalEvents&&opposingOwnGoals>=ownGoalEvents)goals=scoredEvents;
     else fail(`goal attribution does not reconcile: ${l.player_name}`);
    }
-   if(penalties!==count(16)||value(112)!==count(17))fail(`penalty or own-goal events disagree: ${l.player_name}`);
+   if(final&&(penalties!==count(16)||value(112)!==count(17)))fail(`penalty or own-goal events disagree: ${l.player_name}`);
 
    rows.push({fixture_id:source.fixture_id,player_id:playerId,minutes,rating:stats.get(118)??null,
     goals,assists:value(79),shots_on_target:value(86),completed_passes:value(116),
@@ -83,12 +85,12 @@ export function normalizeSportMonks(source:SportMonksSource,context:FixtureConte
  }
  if(seen.size!==f.lineups.length)fail('unrecognized lineup team');
  // Aggregate player stats are authoritative for scorer attribution; events can retain stale attribution.
- for(const team of f.participants){
+ if(final)for(const team of f.participants){
   const ownIds=new Set(f.lineups.filter(l=>l.team_id===team.id).map(l=>Number(source.player_map[l.player_id])));
   const total=rows.reduce((n,r)=>n+(ownIds.has(r.player_id)?Number(r.goals):Number(r.own_goals)),0);
   if(total!==scores.get(team.id))fail('player goals and own goals do not reconcile to final team score');
  }
  const goalEvents=events.filter(e=>[14,15,16].includes(e.type_id));
- if(goalEvents.length!==context.home_score+context.away_score)fail('goal events do not reconcile to score');
+ if(final&&goalEvents.length!==context.home_score+context.away_score)fail('goal events do not reconcile to score');
  return rows;
 }

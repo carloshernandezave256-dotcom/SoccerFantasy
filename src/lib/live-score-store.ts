@@ -112,6 +112,16 @@ export class LiveScoreStore {
     return claimed.length > 0;
   }
 
+  async renewSync(owner:Date){
+    const response=await this.write(`football_sync_state?singleton_id=eq.1&updated_at=eq.${owner.toISOString()}`,'PATCH',
+      {live_claimed_until:new Date(Date.now()+105_000).toISOString()},'Could not renew sync lease.','return=representation');
+    if(!(await response.json()).length)throw new Error('Shared scoring lease was lost.');
+  }
+  async releaseSync(owner:Date){
+    await this.write(`football_sync_state?singleton_id=eq.1&updated_at=eq.${owner.toISOString()}`,'PATCH',
+      {live_claimed_until:new Date().toISOString()},'Could not release sync lease.');
+  }
+
   async candidateFixtures(now: Date, forcedFixtureId?: number): Promise<CachedFixture[]> {
     const windowStart = new Date(now.getTime() - 4 * 60 * 60 * 1000).toISOString();
     const query = forcedFixtureId

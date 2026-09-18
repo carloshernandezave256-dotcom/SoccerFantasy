@@ -130,7 +130,7 @@ export type LeaguePlayerScoreRow = {
   stats_received: boolean;
   data_complete: boolean;
   status: "live" | "final";
-  source: "api-football-fixture-sum";
+  source: "sportmonks-fixture-sum";
   source_updated_at: string;
   updated_at: string;
   fantasy_points: number;
@@ -336,7 +336,7 @@ export function buildLeaguePlayerScoreRows({
       stats_received: playerStats.length > 0,
       data_complete: gameweekIsFinal,
       status: gameweekIsFinal ? "final" : "live",
-      source: "api-football-fixture-sum",
+      source: "sportmonks-fixture-sum",
       source_updated_at: updatedAt,
       updated_at: updatedAt,
       fantasy_points: sum(playerStats, "fantasy_points"),
