@@ -11,3 +11,8 @@
 .player-availability-badge{position:absolute;z-index:4;right:-5px;top:-5px;display:grid;place-items:center;box-shadow:0 2px 7px #0007}
 .player-availability-badge.injury{width:18px;height:18px;border:2px solid #fff;border-radius:50%;background:#c92f3c;color:#fff;font-size:10px;font-weight:950;line-height:1}
 .player-availability-badge.suspension{width:13px;height:18px;border:2px solid #fff;border-radius:2px;background:#d71920;transform:rotate(7deg)}
+.player-availability-badge.doubtful{background:#fbbf24;color:#422006;border-color:#92400e;font-weight:900}
+.doubtful-badge{display:inline-flex;align-items:center;justify-content:center;background:#fbbf24;color:#422006;border:1px solid #92400e;border-radius:999px;padding:3px 7px;font-size:10px;font-weight:800;line-height:1.2;white-space:nowrap}
+.doubtful-notice{display:flex;flex-direction:column;gap:5px;border:1px solid #b45309;background:#78350f33;border-radius:12px;padding:12px;margin:12px 0}
+.doubtful-notice strong{color:#fbbf24}.doubtful-notice small{color:var(--muted)}
+@media(prefers-color-scheme:light){.doubtful-notice{background:#fffbeb}.doubtful-notice strong{color:#92400e}}
