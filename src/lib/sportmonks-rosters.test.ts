@@ -1,0 +1,7 @@
+import {beforeEach,expect,it,vi} from 'vitest';
+const mocks=vi.hoisted(()=>({allPages:vi.fn(),from:vi.fn(),update:vi.fn(),rpc:vi.fn()}));
+vi.mock('./sportmonks-data',()=>({adminDb:()=>({from:mocks.from,rpc:mocks.rpc}),allPages:mocks.allPages,checked:async(q:PromiseLike<{data:unknown;error:unknown}>)=>{const r=await q;if(r.error)throw r.error;return r.data},currentSeasons:vi.fn(),competitions:[{id:8,name:'Premier League'}]}));
+import {syncSportMonksInjuries} from './sportmonks-rosters';
+beforeEach(()=>{vi.clearAllMocks();const result={data:[],error:null};const chain:any={then:(resolve:(v:unknown)=>unknown)=>Promise.resolve(result).then(resolve)};for(const method of ['select','is','or','eq','in'])chain[method]=vi.fn(()=>chain);mocks.update.mockReturnValue(chain);mocks.from.mockReturnValue({...chain,update:mocks.update});});
+it('removes legacy flags after a successful refresh with no injury reports',async()=>{mocks.allPages.mockResolvedValue({rows:[],requestsUsed:1});await syncSportMonksInjuries();expect(mocks.update).toHaveBeenCalledWith(expect.objectContaining({injured:false,injury_type:null,expected_return:null,fotmob_expected_return:null}));});
+it('keeps existing data when the provider fetch fails',async()=>{mocks.allPages.mockRejectedValue(new Error('Provider unavailable'));await expect(syncSportMonksInjuries()).rejects.toThrow('Provider unavailable');expect(mocks.update).not.toHaveBeenCalled();});

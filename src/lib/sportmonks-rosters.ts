@@ -1,5 +1,6 @@
 import {adminDb,allPages,checked,currentSeasons,competitions,type SMPlayer,type SMTeam} from './sportmonks-data';
 import {sportmonks} from './sportmonks-server';
+import {sportMonksAvailability} from './sportmonks-availability';
 export async function syncSportMonksPlayers(namesOnly=false){
  const db=adminDb(),teams=await checked(db.from('sportmonks_teams').select('*')) as SMTeam[];
  const current=await currentSeasons();let requestsUsed=current.requestsUsed,imported=0,unresolved=0,playersFound=0;
@@ -66,11 +67,13 @@ export async function syncSportMonksInjuries(){
   // Old reports cannot re-injure a player after a newer confirmed appearance.
   if(existing.availability_last_appearance_at&&sideline.start_date&&Date.parse(existing.availability_last_appearance_at)>Date.parse(sideline.start_date+'T23:59:59Z'))continue;
   const completed=sideline.completed===true;
-  const values=completed?{injured:false,injury_type:null,injury_reason:null,expected_return:null}:{injured:true,injury_type:sideline.category==='suspension'?'Suspension':'Injury',injury_reason:r.type?.name??null,expected_return:sideline.end_date&&sideline.end_date>=today?sideline.end_date:null};
-  await checked(db.from('players').update({...values,injury_updated_at:now.toISOString(),sidelined_checked_at:now.toISOString(),fotmob_expected_return:null,fotmob_return_checked_at:null}).eq('id',id));
+  const values=sportMonksAvailability(r,today);
+  await checked(db.from('players').update({...values,injury_source:'sportmonks',injury_started_at:sideline.start_date,injury_provider_record:r,injury_updated_at:now.toISOString(),sidelined_checked_at:now.toISOString(),fotmob_expected_return:null,fotmob_return_checked_at:null}).eq('id',id));
   if(completed)playersCleared++;else{injuriesSynced++;if(values.expected_return)dated++;}
  }
- return {ok:true,provider:'sportmonks',requestsUsed,injuriesSynced,playersCleared,unresolved,dated,sidelinedLookups:latest.size,sidelinedCacheHits:0,unavailable:[],notes:['An empty injury report does not clear a player.']};
+ // Only remove legacy data after the full provider fetch and all report writes succeed.
+ const legacyRemoved=await checked(db.from('players').update({injured:false,injury_type:null,injury_reason:null,expected_return:null,fotmob_expected_return:null,fotmob_return_checked_at:null,injury_updated_at:null,sidelined_checked_at:null}).is('injury_source',null).or('injured.eq.true,injury_type.not.is.null,injury_reason.not.is.null,expected_return.not.is.null,fotmob_expected_return.not.is.null').select('id'));
+ return {ok:true,provider:'sportmonks',legacyRemoved:legacyRemoved.length,requestsUsed,injuriesSynced,playersCleared,unresolved,dated,sidelinedLookups:latest.size,sidelinedCacheHits:0,unavailable:[],notes:['SportMonks only. No provider report means no confirmed assessment; legacy injury flags and return estimates are removed.']};
 }
 export async function sportMonksClubLookup(legacyId:number){
  const db=adminDb();const player=await checked(db.from('players').select('sportmonks_id').eq('api_football_id',legacyId).not('sportmonks_id','is',null).maybeSingle());
