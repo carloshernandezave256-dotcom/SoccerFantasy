@@ -11,7 +11,7 @@
     "test:auction": "node scripts/regression-auction.mjs",
     "typecheck": "tsc --noEmit",
     "test:db": "node scripts/regression-market-db.mjs",
-    "test:scoring:db": "node scripts/regression-scoring-db.mjs",
+    "test:scoring:db": "node scripts/regression-scoring-db.mjs && node scripts/regression-priority-db.mjs",
     "test:scoring:concurrency": "node scripts/regression-scoring-concurrency.mjs"
   },
   "dependencies": {

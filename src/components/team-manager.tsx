@@ -47,6 +47,8 @@ export function TeamManager(){
   const[roster,setRoster]=useState<Player[]>([]);
   const[starters,setStarters]=useState<Set<number>>(new Set());
   const[starterOrder,setStarterOrder]=useState<number[]>([]);
+  const[benchOrder,setBenchOrder]=useState<number[]>([]);
+  const[benchDirty,setBenchDirty]=useState(false);
   const[captain,setCaptain]=useState<number|null>(null);
   const[selectedStarter,setSelectedStarter]=useState<number|null>(null);
   const[editing,setEditing]=useState(false);
@@ -98,6 +100,8 @@ export function TeamManager(){
       }
     }
     setRoster(loadedRoster);
+    setBenchOrder(saved.filter(row=>!row.is_starter).sort((a,b)=>(a.bench_order??999)-(b.bench_order??999)||a.player_id-b.player_id).map(row=>row.player_id));
+    setBenchDirty(false);
     const starterIds=savedLineupIsValid?savedStarterIds:defaultStartingEleven(loadedRoster);
     const savedOrder=saved.filter(row=>row.is_starter).sort((a,b)=>(a.pitch_order??999)-(b.pitch_order??999)).map(row=>row.player_id);
     const fallbackOrder=loadedRoster.filter(player=>starterIds.has(player.id)).map(player=>player.id);
@@ -224,16 +228,16 @@ export function TeamManager(){
     suppressRefreshUntil.current=Date.now()+4000;
     const start=[...order.filter(id=>starters.has(id)),...[...starters].filter(id=>!order.includes(id))];
     const{error}=await supabase.rpc(starters.size<11?"save_partial_pitch_order":"save_pitch_order",starters.size<11?{p_league_id:league,p_players:start}:{p_league_id:league,p_starters:start});
-    if(error){setStarterOrder(rollback);setUndoOrder(null);setDirty(false);setMessage(error.message)}
-    else{setDirty(false);setMessage("Player positions saved automatically.")}
+    if(error){setStarterOrder(rollback);setUndoOrder(null);setDirty(benchDirty);setMessage(error.message)}
+    else{setDirty(benchDirty);setMessage(benchDirty?"Positions saved. Save lineup to keep your bench priority.":"Player positions saved automatically.")}
   }
 
   async function persistCaptain(nextCaptain:number,rollback:number|null){
-    if(roster.find(player=>player.id===nextCaptain)?.injured){setCaptain(rollback);setDirty(false);setMessage("Unavailable players cannot be selected as Captain.");return}
+    if(roster.find(player=>player.id===nextCaptain)?.injured){setCaptain(rollback);setDirty(benchDirty);setMessage("Unavailable players cannot be selected as Captain.");return}
     suppressRefreshUntil.current=Date.now()+4000;
     const{error}=await supabase.rpc("set_lineup_captain",{p_league_id:league,p_captain:nextCaptain});
-    if(error){setCaptain(rollback);setDirty(false);setMessage(error.message)}
-    else{setDirty(false);setMessage(`${roster.find(player=>player.id===nextCaptain)?.full_name} is saved as your Captain.`)}
+    if(error){setCaptain(rollback);setDirty(benchDirty);setMessage(error.message)}
+    else{setDirty(benchDirty);setMessage(`${roster.find(player=>player.id===nextCaptain)?.full_name} is saved as your Captain.`)}
   }
 
   function resetTo433(){
@@ -245,7 +249,17 @@ export function TeamManager(){
   async function undoChanges(){
     if(!league||!viewedUser)return;
     if(undoOrder&&isMine&&captain!==null){const current=[...starterOrder];setStarterOrder(undoOrder);await persistOrder(undoOrder,current);setUndoOrder(null);setMessage("Last player move undone and saved.");return}
-    await loadRoster(league,viewedUser);setMessage("Unsaved lineup changes were undone.");
+    await loadRoster(league,viewedUser);setDirty(false);setMessage("Unsaved lineup changes were undone.");
+  }
+
+  const orderedBench=[...benchOrder.filter(id=>roster.some(player=>player.id===id)&&!starters.has(id)),...roster.filter(player=>!starters.has(player.id)&&!benchOrder.includes(player.id)).map(player=>player.id)].slice(0,7);
+  function moveBench(id:number,target:number){
+    if(lineupLocked||!isMine)return;
+    const next=[...orderedBench],from=next.indexOf(id);
+    if(from<0||target<0||target>=next.length)return;
+    next.splice(from,1);next.splice(target,0,id);
+    setBenchOrder(next);setBenchDirty(true);setDirty(true);setUndoOrder(null);
+    setMessage("Bench priority updated. Save lineup to keep this order.");
   }
 
   async function save(){
@@ -253,9 +267,9 @@ export function TeamManager(){
     if(!isMine||!valid||captain===null){setMessage("Choose a valid starting XI and Captain before saving.");return}
     suppressRefreshUntil.current=Date.now()+4000;
     const start=[...starterOrder.filter(id=>starters.has(id)),...[...starters].filter(id=>!starterOrder.includes(id))];
-    const bench=roster.filter(player=>!starters.has(player.id)).slice(0,7).map(player=>player.id);
+    const bench=orderedBench;
     const{error}=await supabase.rpc("save_lineup",{p_league_id:league,p_starters:start,p_bench:bench,p_captain:captain});
-    if(error)setMessage(error.message);else{savedStarterIdsRef.current=new Set(start);setMessage("Lineup and Captain saved.");setDirty(false);setUndoOrder(null);setEditing(false);setSelectedStarter(null)}
+    if(error)setMessage(error.message);else{savedStarterIdsRef.current=new Set(start);setMessage("Lineup, bench priority, and Captain saved.");setBenchDirty(false);setDirty(false);setUndoOrder(null);setEditing(false);setSelectedStarter(null)}
   }
 
   return <PageShell leagueId={league} eyebrow={viewedManager?.team_name??leagues.find(item=>item.league_id===league)?.team_name??"MY CLUB"} title={isMine?"My Team":"Team Viewer"}>
@@ -288,19 +302,19 @@ export function TeamManager(){
       {isMine&&!editing?<button className="primary-button full-button edit-lineup-button" disabled={lineupLocked} onClick={()=>{setEditing(true);setSelectedStarter(null);setMessage("Tap a starter, then tap another same-position starter to reorder or choose an eligible bench replacement.")}}>{lineupLocked?"Lineup locked":valid?"Edit lineup":"Complete lineup"}</button>:null}
       {isMine&&lineupLocked?<section className="panel lineup-lock-banner"><strong>Gameweek {lineupLock?.gameweek} lineup locked</strong><p>Your starting XI, bench order, player arrangement, and Captain reopen together after this gameweek’s results and substitutions are verified.</p></section>:null}
       {isMine&&editing&&unavailableStarters.length?<section className="panel lineup-availability-alert"><strong>Replace unavailable starters</strong><p>{unavailableStarters.map(player=>player.full_name).join(", ")} cannot be saved in the Starting XI. Select an available bench player, then replace the starter.</p></section>:null}
-      {isMine&&editing?<><section className="lineup-save-dock"><span className={dirty?"dirty":valid?"ready":"attention"}><b>{dirty?"UNSAVED CHANGES":valid?"LINEUP READY":"ACTION NEEDED"}</b><small>{captain===null?"Choose a Captain to finish":dirty?"Save your changes":"Your XI and Captain are complete"}</small></span><button type="button" className="primary-button" disabled={!valid} onClick={save}>{captain===null?"Choose Captain":"Save lineup"}</button></section><section className="team-captain-control"><div><small>CAPTAIN</small><strong>{captainPlayer?.full_name??"Choose your Captain"}</strong><p>Captain earns +50% fantasy points.</p></div><select className="league-select captain-select" aria-label="Choose Captain" value={captain??""} onChange={event=>{const next=Number(event.target.value);if(!next)return;const previous=captain;setCaptain(next);setSelectedStarter(null);setDirty(true);void persistCaptain(next,previous)}}><option value="">Choose Captain</option>{starterOrder.filter(id=>starters.has(id)).flatMap(id=>{const player=roster.find(item=>item.id===id);return player?[<option key={player.id} value={player.id}>{player.full_name}</option>]:[]})}</select></section>{message?<p className="team-instruction">{message}</p>:null}<SavedTeamPitch leagueId={league} roster={roster} starters={starters} starterOrder={starterOrder} captain={captain} showPackCards={showPackCards} editing allowDrag={false} selectedStarter={selectedStarter} compatibleBenchIds={compatibleBenchIds} onInfo={id=>setInfoPlayer(roster.find(player=>player.id===id)??null)} onStarter={tapStarter} onReorder={(id,targetId)=>{setSelectedStarter(null);reorderStarter(id,targetId)}} onBench={replaceStarterWithBench}/><div className="lineup-edit-actions"><button type="button" className="secondary-button" onClick={resetTo433}>Reset 4-3-3</button><button type="button" className="secondary-button" disabled={!dirty&&!undoOrder} onClick={()=>void undoChanges()}>Undo</button></div></>:<><SavedTeamPitch leagueId={league} roster={roster} starters={starters} starterOrder={starterOrder} captain={captain} showPackCards={showPackCards} onInfo={id=>setInfoPlayer(roster.find(player=>player.id===id)??null)} onBench={id=>setInfoPlayer(roster.find(player=>player.id===id)??null)}/>{!isMine?<div className="view-only-banner">Viewing {viewedManager?.team_name} · Read only</div>:null}</>}
+      {isMine&&editing?<><section className="lineup-save-dock"><span className={dirty?"dirty":valid?"ready":"attention"}><b>{dirty?"UNSAVED CHANGES":valid?"LINEUP READY":"ACTION NEEDED"}</b><small>{captain===null?"Choose a Captain to finish":dirty?"Save your changes":"Your XI and Captain are complete"}</small></span><button type="button" className="primary-button" disabled={!valid} onClick={save}>{captain===null?"Choose Captain":"Save lineup"}</button></section><section className="team-captain-control"><div><small>CAPTAIN</small><strong>{captainPlayer?.full_name??"Choose your Captain"}</strong><p>Captain earns +50% fantasy points.</p></div><select className="league-select captain-select" aria-label="Choose Captain" value={captain??""} onChange={event=>{const next=Number(event.target.value);if(!next)return;const previous=captain;setCaptain(next);setSelectedStarter(null);setDirty(true);void persistCaptain(next,previous)}}><option value="">Choose Captain</option>{starterOrder.filter(id=>starters.has(id)).flatMap(id=>{const player=roster.find(item=>item.id===id);return player?[<option key={player.id} value={player.id}>{player.full_name}</option>]:[]})}</select></section>{message?<p className="team-instruction">{message}</p>:null}<section className="panel bench-priority-controls"><h2>Autosub priority</h2><p>Choose your order before the gameweek locks. The first substitute who played replaces a non-playing starter in the same position. Points do not change this order.</p>{orderedBench.map((id,index)=>{const player=roster.find(p=>p.id===id)!;return <label key={id} style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,marginTop:10}}><span>{player.full_name} · {player.position}</span><select className="league-select" style={{width:100}} aria-label={`Autosub priority for ${player.full_name}`} value={index} onChange={event=>moveBench(id,Number(event.target.value))}>{orderedBench.map((_,rank)=><option key={rank} value={rank}>#{rank+1}</option>)}</select></label>})}</section><SavedTeamPitch benchOrder={orderedBench} leagueId={league} roster={roster} starters={starters} starterOrder={starterOrder} captain={captain} showPackCards={showPackCards} editing allowDrag={false} selectedStarter={selectedStarter} compatibleBenchIds={compatibleBenchIds} onInfo={id=>setInfoPlayer(roster.find(player=>player.id===id)??null)} onStarter={tapStarter} onReorder={(id,targetId)=>{setSelectedStarter(null);reorderStarter(id,targetId)}} onBench={replaceStarterWithBench}/><div className="lineup-edit-actions"><button type="button" className="secondary-button" onClick={resetTo433}>Reset 4-3-3</button><button type="button" className="secondary-button" disabled={!dirty&&!undoOrder} onClick={()=>void undoChanges()}>Undo</button></div></>:<><SavedTeamPitch benchOrder={orderedBench} leagueId={league} roster={roster} starters={starters} starterOrder={starterOrder} captain={captain} showPackCards={showPackCards} onInfo={id=>setInfoPlayer(roster.find(player=>player.id===id)??null)} onBench={id=>setInfoPlayer(roster.find(player=>player.id===id)??null)}/>{!isMine?<div className="view-only-banner">Viewing {viewedManager?.team_name} · Read only</div>:null}</>}
     </>}
     {message&&isMine?<p className="form-message">{message}</p>:null}
     {infoPlayer?<PlayerStatsDialog leagueId={league} player={infoPlayer} onClose={()=>setInfoPlayer(null)}/>:null}
   </PageShell>;
 }
 
-function SavedTeamPitch({leagueId,roster,starters,starterOrder,captain,editing=false,allowDrag=editing,selectedStarter=null,compatibleBenchIds=new Set<number>(),onStarter,onBench,onReorder,onInfo,showPackCards=false}:{leagueId:string;roster:Player[];starters:Set<number>;starterOrder:number[];captain:number|null;editing?:boolean;allowDrag?:boolean;selectedStarter?:number|null;compatibleBenchIds?:Set<number>;onStarter?:(id:number)=>void;onBench?:(id:number)=>void;onReorder?:(id:number,targetId:number)=>void;onInfo?:(id:number)=>void;showPackCards?:boolean}){
+function SavedTeamPitch({benchOrder,leagueId,roster,starters,starterOrder,captain,editing=false,allowDrag=editing,selectedStarter=null,compatibleBenchIds=new Set<number>(),onStarter,onBench,onReorder,onInfo,showPackCards=false}:{benchOrder:number[];leagueId:string;roster:Player[];starters:Set<number>;starterOrder:number[];captain:number|null;editing?:boolean;allowDrag?:boolean;selectedStarter?:number|null;compatibleBenchIds?:Set<number>;onStarter?:(id:number)=>void;onBench?:(id:number)=>void;onReorder?:(id:number,targetId:number)=>void;onInfo?:(id:number)=>void;showPackCards?:boolean}){
   const[pitchDrag,setPitchDrag]=useState<{id:number;targetId:number;position:string;top:number;left:number;width:number;height:number;offsetX:number;offsetY:number;moved:boolean}|null>(null);
   const pitchDragRef=useRef<typeof pitchDrag>(null);
   const selected=[...starterOrder.filter(id=>starters.has(id)),...[...starters].filter(id=>!starterOrder.includes(id))].flatMap(id=>{const player=roster.find(item=>item.id===id);return player?[player]:[]});
   const positionRank:Record<string,number>={GK:0,DEF:1,MID:2,FWD:3};
-  const bench=roster.filter(player=>!starters.has(player.id)).sort((a,b)=>(positionRank[a.position]??9)-(positionRank[b.position]??9)||a.full_name.localeCompare(b.full_name));
+  const bench=benchOrder.flatMap(id=>{const player=roster.find(p=>p.id===id);return player?[player]:[]});
   const groups={FWD:selected.filter(player=>player.position==="FWD"),MID:selected.filter(player=>player.position==="MID"),DEF:selected.filter(player=>player.position==="DEF"),GK:selected.filter(player=>player.position==="GK")};
   function beginPitchDrag(event:React.PointerEvent<HTMLButtonElement>,player:Player){
     const slot=event.currentTarget.closest<HTMLElement>(".pitch-player-slot");if(!slot)return;
@@ -323,7 +337,7 @@ function SavedTeamPitch({leagueId,roster,starters,starterOrder,captain,editing=f
     if(active.moved&&active.targetId!==active.id)onReorder?.(active.id,active.targetId);else if(!active.moved){if(editing)onStarter?.(active.id);else onInfo?.(active.id)}
   }
   const draggedPlayer=pitchDrag?roster.find(player=>player.id===pitchDrag.id):null;
-  return <><section className={`mini-pitch saved-team-pitch ${pitchDrag?.moved?"is-reordering":""}`} aria-label="Starting eleven mini pitch"><div className="pitch-box top-box"/><div className="center-line"/><div className="center-circle"/><div className="pitch-box bottom-box"/>{(["FWD","MID","DEF","GK"] as const).map(position=><div className={`pitch-row row-${position.toLowerCase()}`} style={{gridTemplateColumns:`repeat(${Math.max(groups[position].length,1)}, minmax(0, 1fr))`}} key={position}>{groups[position].map(player=><PitchPlayer leagueId={leagueId} key={player.id} player={player} editing={editing} captain={captain} selectedStarter={selectedStarter} showPackCards={showPackCards} pitchDrag={pitchDrag} onPointerDown={beginPitchDrag} onPointerMove={updatePitchDrag} onPointerUp={finishPitchDrag}/>)}</div>)}</section>{pitchDrag?.moved&&draggedPlayer?<PitchDragGhost player={draggedPlayer} drag={pitchDrag} showPackCards={showPackCards}/>:null}<section className="panel demo-bench saved-team-bench"><div className="section-row"><div><h2>Bench</h2><small>{editing?(selectedStarter!==null?"Choose a highlighted replacement":"Tap a starter on the pitch first"):"Your substitutes"}</small></div><span className="muted-chip">{bench.length}/7</span></div><div className="bench-scroll">{bench.map((player,index)=>{const choosing=editing&&selectedStarter!==null,eligible=compatibleBenchIds.has(player.id);return <button type="button" className={`saved-bench-player ${choosing&&eligible?"eligible":""} ${choosing&&!eligible?"ineligible":""}`} key={player.id} onClick={()=>onBench?.(player.id)} disabled={choosing&&!eligible} aria-disabled={!editing||choosing&&!eligible}><span>{index+1}</span><span className="bench-player-face">{player.photo_url?<img className="api-headshot" src={player.photo_url} alt="" onError={event=>{event.currentTarget.style.display="none";event.currentTarget.parentElement?.classList.add("headshot-missing")}}/>:null}<i className={`position ${player.position.toLowerCase()}`}>{player.position}</i>{player.injured?<b className="injury-cross" title={player.injury_reason??player.injury_type??"Unavailable"}>✚</b>:null}</span><strong>{player.full_name}</strong><DoubtfulBadge playerId={player.id}/><small>{choosing&&eligible?"Tap to bring in":player.club}</small>{!choosing?<ActivePlayerFixture leagueId={leagueId} club={player.club}/>:null}</button>})}</div></section></>;
+  return <><section className={`mini-pitch saved-team-pitch ${pitchDrag?.moved?"is-reordering":""}`} aria-label="Starting eleven mini pitch"><div className="pitch-box top-box"/><div className="center-line"/><div className="center-circle"/><div className="pitch-box bottom-box"/>{(["FWD","MID","DEF","GK"] as const).map(position=><div className={`pitch-row row-${position.toLowerCase()}`} style={{gridTemplateColumns:`repeat(${Math.max(groups[position].length,1)}, minmax(0, 1fr))`}} key={position}>{groups[position].map(player=><PitchPlayer leagueId={leagueId} key={player.id} player={player} editing={editing} captain={captain} selectedStarter={selectedStarter} showPackCards={showPackCards} pitchDrag={pitchDrag} onPointerDown={beginPitchDrag} onPointerMove={updatePitchDrag} onPointerUp={finishPitchDrag}/>)}</div>)}</section>{pitchDrag?.moved&&draggedPlayer?<PitchDragGhost player={draggedPlayer} drag={pitchDrag} showPackCards={showPackCards}/>:null}<section className="panel demo-bench saved-team-bench"><div className="section-row"><div><h2>Bench</h2><small>{editing?(selectedStarter!==null?"Choose a highlighted replacement":"Tap a starter on the pitch first"):"Autosub priority · same position only"}</small></div><span className="muted-chip">{bench.length}/7</span></div><div className="bench-scroll">{bench.map((player,index)=>{const choosing=editing&&selectedStarter!==null,eligible=compatibleBenchIds.has(player.id);return <button type="button" className={`saved-bench-player ${choosing&&eligible?"eligible":""} ${choosing&&!eligible?"ineligible":""}`} key={player.id} onClick={()=>onBench?.(player.id)} disabled={choosing&&!eligible} aria-disabled={!editing||choosing&&!eligible}><span>{index+1}</span><span className="bench-player-face">{player.photo_url?<img className="api-headshot" src={player.photo_url} alt="" onError={event=>{event.currentTarget.style.display="none";event.currentTarget.parentElement?.classList.add("headshot-missing")}}/>:null}<i className={`position ${player.position.toLowerCase()}`}>{player.position}</i>{player.injured?<b className="injury-cross" title={player.injury_reason??player.injury_type??"Unavailable"}>✚</b>:null}</span><strong>{player.full_name}</strong><DoubtfulBadge playerId={player.id}/><small>{choosing&&eligible?"Tap to bring in":player.club}</small>{!choosing?<ActivePlayerFixture leagueId={leagueId} club={player.club}/>:null}</button>})}</div></section></>;
 }
 
 type PitchDrag={id:number;targetId:number;position:string;top:number;left:number;width:number;height:number;offsetX:number;offsetY:number;moved:boolean};
