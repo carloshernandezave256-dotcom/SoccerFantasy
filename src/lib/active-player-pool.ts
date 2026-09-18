@@ -9,6 +9,7 @@ export type ActivePoolPlayer = {
   draft_rank: number | null;
   photo_url?: string | null;
   injured?: boolean;
+  doubtful_until?: string | null;
   injury_type?: string | null;
   injury_reason?: string | null;
   expected_return?: string | null;
@@ -24,7 +25,7 @@ export async function loadActivePlayerPool(competition?: string) {
   while (true) {
     let request = supabase
       .from("players")
-      .select("id,full_name,position,club,competition,draft_rank,photo_url,injured,injury_type,injury_reason,expected_return,fotmob_expected_return")
+      .select("id,full_name,position,club,competition,draft_rank,photo_url,injured,doubtful_until,injury_type,injury_reason,expected_return,fotmob_expected_return")
       .eq("active", true)
       .order("draft_rank", { ascending: true, nullsFirst: false })
       .order("id", { ascending: true })
