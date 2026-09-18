@@ -329,7 +329,7 @@ export function buildLeaguePlayerScoreRows({
       penalties_saved: sum(playerStats, "penalties_saved"),
       goals_conceded: sum(playerStats, "goals_conceded"),
       yellow_cards: sum(playerStats, "yellow_cards"),
-      second_yellow_cards: 0,
+      second_yellow_cards: sum(playerStats, "second_yellow_cards"),
       red_cards: sum(playerStats, "red_cards"),
       own_goals: sum(playerStats, "own_goals"),
       man_of_the_match: false,
