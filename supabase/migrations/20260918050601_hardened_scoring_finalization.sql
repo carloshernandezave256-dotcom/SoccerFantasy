@@ -51,10 +51,12 @@ begin
       where f.league_id=p_league_id and f.competition=required.competition_name)
   ) then return;end if;
   v_start:=date_trunc('day',v_lock at time zone 'UTC') at time zone 'UTC';
+  if extract(dow from v_start at time zone 'UTC')=6 then v_start:=v_start-interval '1 day';
+  elsif extract(dow from v_start at time zone 'UTC')=0 then v_start:=v_start-interval '2 days';end if;
   insert into private.gameweek_fixture_sets values(p_league_id,p_gameweek,v_start,v_start+interval '7 days');
   with rounds as (
     select f.competition,f.gameweek,min(f.kickoff) as first_kickoff,
-      count(*) filter(where f.kickoff>=v_start and f.kickoff<v_start+interval '7 days') as inside_count
+      count(*) filter(where f.kickoff>=v_start and f.kickoff<v_start+case when extract(dow from v_start at time zone 'UTC')=5 then interval '4 days' else interval '7 days' end) as inside_count
     from public.league_headline_fixtures f where f.league_id=p_league_id group by f.competition,f.gameweek
   ), chosen as (
     select distinct on (r.competition) r.competition,r.gameweek
@@ -63,7 +65,7 @@ begin
       and r.inside_count>0
       and ((r.competition=l.calendar_competition and r.gameweek=p_gameweek)
         or (r.competition<>l.calendar_competition and r.first_kickoff>=v_start and r.first_kickoff<v_start+interval '7 days'))
-    order by r.competition,r.inside_count desc,r.gameweek desc
+    order by r.competition,r.inside_count desc,r.gameweek asc
   )
   insert into private.gameweek_fixture_members
   select p_league_id,p_gameweek,f.fixture_id,f.competition,f.gameweek,f.kickoff
@@ -155,7 +157,7 @@ begin
   if exists (
     select 1 from public.lineup_gameweek_players snapshot
     left join public.league_player_scores score on score.league_id=snapshot.league_id and score.gameweek=snapshot.gameweek and score.player_id=snapshot.player_id
-    where snapshot.league_id=p_league_id and snapshot.gameweek=p_gameweek and (score.player_id is null or not score.data_complete or score.status<>'final' or score.source_updated_at is null
+    where snapshot.league_id=p_league_id and snapshot.gameweek=p_gameweek and (score.player_id is null or not coalesce(score.data_complete,false) or score.status is distinct from 'final' or score.source_updated_at is null
       or score.source_updated_at<(select max(e.observed_at) from private.fixture_stat_evidence e join private.gameweek_fixture_members m using(fixture_id) where m.league_id=p_league_id and m.gameweek=p_gameweek))
   ) then return 0; end if;
   if not exists(select 1 from public.lineup_gameweek_players where league_id=p_league_id and gameweek=p_gameweek) then return 0;end if;
@@ -529,6 +531,7 @@ returns table(fixture_id bigint,status text,kickoff timestamptz,events_synced_at
 language plpgsql security definer set search_path='' as $$
 begin
  if coalesce(auth.jwt()->>'role','')<>'service_role' then raise exception 'Service role required';end if;
+ perform private.freeze_gameweek_fixtures(w.league_id,w.gameweek::smallint) from public.league_transaction_windows w where w.roster_lock_at<=now() and not exists(select 1 from public.finalized_gameweek_locks l where l.league_id=w.league_id and l.gameweek=w.gameweek);
  return query select c.fixture_id,c.status,c.kickoff,c.events_synced_at
  from public.football_fixture_cache c
  left join private.fixture_stat_evidence e on e.fixture_id=c.fixture_id
@@ -576,3 +579,119 @@ begin
   group by w.gameweek,w.roster_lock_at
   order by w.gameweek desc limit 1;
 end$function$;
+
+-- Read-only diagnostics: neither freezes membership nor advances a league.
+create function public.gameweek_reconciliation_status(p_league_id uuid,p_gameweek smallint)
+returns jsonb language sql stable security definer set search_path='' as $$
+ select jsonb_build_object(
+  'leagueId',p_league_id,'gameweek',p_gameweek,'checkedAt',now(),
+  'state',case when exists(select 1 from public.finalized_gameweek_locks where league_id=p_league_id and gameweek=p_gameweek) then 'settled' else 'pending' end,
+  'membershipFrozen',exists(select 1 from private.gameweek_fixture_sets where league_id=p_league_id and gameweek=p_gameweek),
+  'fixtures',coalesce((select jsonb_agg(jsonb_build_object('fixtureId',f.fixture_id,'status',f.status,
+    'complete',f.status='EXCLUDED' or coalesce(e.complete,false),'lastAttemptAt',e.observed_at,
+    'reason',coalesce(e.reason,'No reconciliation evidence'),
+    'staleAttempt',e.reason='Provider refresh in progress' and e.observed_at<now()-interval '10 minutes',
+    'missingPlayerIds',coalesce((select jsonb_agg(id) from unnest(e.player_ids) id where not exists(
+      select 1 from public.football_fixture_player_stats s where s.fixture_id=f.fixture_id and s.player_id=id and s.source_updated_at=e.observed_at)),'[]'::jsonb)))
+    from private.gameweek_scoring_fixtures(p_league_id,p_gameweek) f left join private.fixture_stat_evidence e using(fixture_id)),'[]'::jsonb),
+  'pendingLockedPlayerIds',coalesce((select jsonb_agg(distinct p.player_id) from public.lineup_gameweek_players p
+    left join public.league_player_scores s using(league_id,gameweek,player_id)
+    where p.league_id=p_league_id and p.gameweek=p_gameweek and (s.player_id is null or not coalesce(s.data_complete,false))),'[]'::jsonb)
+ );
+$$;
+revoke all on function public.gameweek_reconciliation_status(uuid,smallint) from public,anon,authenticated;
+grant execute on function public.gameweek_reconciliation_status(uuid,smallint) to service_role;
+CREATE OR REPLACE FUNCTION private.refresh_league_calendar(p_league_id uuid)
+ RETURNS integer
+ LANGUAGE plpgsql
+ SET search_path TO ''
+AS $function$
+declare
+  v_league public.leagues%rowtype;
+  v_current public.league_transaction_windows%rowtype;
+  v_gameweek integer;
+  v_first_kickoff timestamptz;
+  v_roster_lock timestamptz;
+  v_waiver_process timestamptz;
+begin
+  perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(p_league_id::text,0));
+  select * into v_league
+  from public.leagues
+  where id = p_league_id;
+
+  if not found then return null; end if;
+
+  -- Exclusive-player leagues begin only after team acquisition is complete.
+  if v_league.game_format in ('draft', 'auction')
+    and not exists (
+      select 1 from public.drafts
+      where league_id = p_league_id and status = 'complete'
+    )
+  then
+    return null;
+  end if;
+
+  -- Pack leagues need an opponent before their first scoring week begins.
+  if v_league.game_format = 'pack'
+    and (select count(*) from public.league_members where league_id = p_league_id) < 2
+  then
+    return null;
+  end if;
+
+  select * into v_current
+  from public.league_transaction_windows
+  where league_id = p_league_id
+  order by gameweek desc
+  limit 1;
+
+  if found then
+    if v_current.roster_lock_at > now() then
+      return v_current.gameweek;
+    end if;
+
+    -- Use the same complete fantasy fixture set as scoring, not only its calendar competition.
+    if not exists(select 1 from public.finalized_gameweek_locks where league_id=p_league_id and gameweek=v_current.gameweek)
+      or not exists(select 1 from public.lineup_gameweek_players
+        where league_id=p_league_id and gameweek=v_current.gameweek)
+    then
+      return v_current.gameweek;
+    end if;
+  end if;
+
+  select fixture.gameweek, min(fixture.kickoff)
+  into v_gameweek, v_first_kickoff
+  from public.league_headline_fixtures fixture
+  where fixture.league_id = p_league_id
+    and fixture.competition = v_league.calendar_competition
+    and (v_current.id is null or fixture.gameweek > v_current.gameweek)
+  group by fixture.gameweek
+  having min(fixture.kickoff) > now()
+  order by min(fixture.kickoff)
+  limit 1;
+
+  if v_gameweek is null then return null; end if;
+
+  v_roster_lock := v_first_kickoff - make_interval(mins => v_league.lineup_lock_minutes);
+  v_waiver_process := (
+    date_trunc('week', v_first_kickoff at time zone 'America/Los_Angeles')::date
+    + 3 + time '00:00'
+  ) at time zone 'America/Los_Angeles';
+
+  if v_waiver_process >= v_roster_lock then
+    v_waiver_process := v_roster_lock - interval '1 second';
+  end if;
+
+  insert into public.league_transaction_windows (
+    league_id, gameweek, waiver_process_at, roster_lock_at
+  ) values (
+    p_league_id, v_gameweek, v_waiver_process, v_roster_lock
+  )
+  on conflict (league_id, gameweek) do update
+  set waiver_process_at = excluded.waiver_process_at,
+      roster_lock_at = excluded.roster_lock_at,
+      updated_at = now()
+  where public.league_transaction_windows.processed_at is null;
+
+  return v_gameweek;
+end
+$function$

@@ -95,6 +95,8 @@ export type WeekFixture = {
   kickoff: string;
   competition: string;
   gameweek: number;
+  home_team?: string;
+  away_team?: string;
   data_complete?: boolean;
   evidence_version?: string | null;
   expected_player_ids?: number[];
@@ -287,7 +289,15 @@ export function buildLeaguePlayerScoreRows({
           &&stat.player_id===id&&new Date(String(stat.source_updated_at)).getTime()===new Date(fixture.evidence_version??'').getTime())))));
   const fixturesById=new Map(weekFixtures.map(fixture=>[fixture.fixture_id,fixture]));
   const statsByPlayer=new Map<number,FixturePlayerStatRow[]>();
+  // REST pagination/retries must never count a fixture-player twice.
+  const unique=new Map<string,FixturePlayerStatRow>();
   for(const stat of fixtureStats){
+    const key=`${stat.fixture_id}:${stat.player_id}`;
+    const prior=unique.get(key);
+    const time=(row:FixturePlayerStatRow)=>Date.parse(String(row.source_updated_at??''))||0;
+    if(!prior||time(stat)>=time(prior))unique.set(key,stat);
+  }
+  for(const stat of unique.values()){
     const fixture=fixturesById.get(stat.fixture_id);
     if(!fixture||fixture.status==='EXCLUDED')continue;
     // Drop rows left over from older provider responses, including withdrawn stats.

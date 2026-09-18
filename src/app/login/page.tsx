@@ -38,17 +38,17 @@ export default function LoginPage() {
     </section>
     <section className="auth-panel">
       <div className="auth-language" aria-label={t("account.language", "Language")}>
-        <button type="button" className={language === "en" ? "active" : ""} onClick={() => void setLanguage("en")}>EN</button>
-        <button type="button" className={language === "es" ? "active" : ""} onClick={() => void setLanguage("es")}>ES</button>
+        <button type="button" aria-pressed={language === "en"} className={language === "en" ? "active" : ""} onClick={() => void setLanguage("en")}>EN</button>
+        <button type="button" aria-pressed={language === "es"} className={language === "es" ? "active" : ""} onClick={() => void setLanguage("es")}>ES</button>
       </div>
       <div className="auth-brand"><span>XI</span><strong>MY FANTASY XI</strong></div>
       <div className="auth-content">
         <p className="eyebrow">{mode === "signup" ? t("auth.welcomeManager", "WELCOME, MANAGER") : t("auth.welcomeBack", "WELCOME BACK")}</p>
         <h1>{mode === "signup" ? t("auth.createTitle", "Create your account.") : t("auth.loginTitle", "Log in to your club.")}</h1>
         <p className="auth-copy">{mode === "signup" ? t("auth.createCopy", "Join a league, build your squad and start competing.") : t("auth.loginCopy", "Your leagues, lineups and matchups are waiting.")}</p>
-        <div className="auth-mode" role="tablist" aria-label={t("auth.action", "Account action")}>
-          <button type="button" className={mode === "signup" ? "active" : ""} onClick={()=>setMode("signup")}>{t("auth.create", "Create account")}</button>
-          <button type="button" className={mode === "login" ? "active" : ""} onClick={()=>setMode("login")}>{t("auth.login", "Log in")}</button>
+        <div className="auth-mode" role="group" aria-label={t("auth.action", "Account action")}>
+          <button type="button" aria-pressed={mode === "signup"} className={mode === "signup" ? "active" : ""} onClick={()=>setMode("signup")}>{t("auth.create", "Create account")}</button>
+          <button type="button" aria-pressed={mode === "login"} className={mode === "login" ? "active" : ""} onClick={()=>setMode("login")}>{t("auth.login", "Log in")}</button>
         </div>
         <form className="form-card auth-form" onSubmit={submit}>
           {mode === "signup" ? <label>{t("auth.managerName", "Manager name")}<input autoComplete="name" value={name} onChange={e=>setName(e.target.value)} minLength={2} required /></label> : null}

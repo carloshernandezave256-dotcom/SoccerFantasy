@@ -553,9 +553,10 @@ export function HomeDashboard() {
                   {league.team_name} · {league.game_format}
                 </small>
               </span>
-              <b>Switch</b>
+              <b>Manage league →</b>
             </Link>
           ) : null}
+          {windowState ? <p className="home-week-context">Gameweek {windowState.gameweek}<span aria-hidden="true"> · </span>{windowState.phase === "waivers" ? "Waivers open" : windowState.phase === "free_agency" ? "Free agency" : windowState.phase === "locked" ? "Rosters locked" : windowState.phase.replaceAll("_", " ")}</p> : null}
         </div>
         <AccountMenu />
       </header>
@@ -579,6 +580,44 @@ export function HomeDashboard() {
           </Link>
         </section>
       ) : null}
+      {league && action ? (
+        <section
+          className={`match-card home-command-card ${isMyTurn ? "my-turn" : ""}`}
+        >
+          <div className="home-command-head">
+            <div>
+              <p className="eyebrow">{action.eyebrow}</p>
+              <h2>{action.title}</h2>
+            </div>
+            {draft?.status === "live" ? (
+              <span className="live-pill">
+                <span />LIVE
+              </span>
+            ) : null}
+          </div>
+          <p>{action.copy}</p>
+          {draft?.status === "live" ? (
+            <>
+              <div className="home-clock">
+                <strong>
+                  {String(Math.floor(seconds / 60)).padStart(2, "0")}:
+                  {String(seconds % 60).padStart(2, "0")}
+                </strong>
+                <small>Pick {draft.current_pick} of {totalPicks}</small>
+              </div>
+              <div className="progress">
+                <span style={{ width: `${progress}%` }} />
+              </div>
+            </>
+          ) : null}
+          <Link
+            className="primary-button home-primary-link"
+            href={action.href}
+          >
+            {action.label} →
+          </Link>
+        </section>
+      ) : null}
       {league?.game_format === "draft" && !draftReady ? (
         <section className="panel home-matchup-card">
           <p className="eyebrow">MATCHUPS</p>
@@ -596,9 +635,10 @@ export function HomeDashboard() {
               </h2>
             </div>
             <span className={`home-status ${matchup.status}`}>
-              {refreshing ? "updating" : matchup.status}
+              {matchup.status === "live" ? "Provisional" : matchup.status === "final" ? "Final" : "Scheduled"}
             </span>
           </div>
+          <p className="score-context">{refreshing ? "Refreshing scores…" : matchup.status === "live" ? "Points may change until this matchup is finalized." : matchup.status === "final" ? "This result counts toward the league standings." : "Scores will appear when scoring begins."}</p>
           <div className="home-scoreboard">
             <div className="home-score-team mine">
               <span>{league.team_name}</span>
@@ -658,44 +698,6 @@ export function HomeDashboard() {
               {lineupReady ? "READY" : `${lineupCount}/11`}
             </strong>
           </div>
-        </section>
-      ) : null}
-      {league && action ? (
-        <section
-          className={`match-card home-command-card ${isMyTurn ? "my-turn" : ""}`}
-        >
-          <div className="home-command-head">
-            <div>
-              <p className="eyebrow">{action.eyebrow}</p>
-              <h2>{action.title}</h2>
-            </div>
-            {draft?.status === "live" ? (
-              <span className="live-pill">
-                <span />LIVE
-              </span>
-            ) : null}
-          </div>
-          <p>{action.copy}</p>
-          {draft?.status === "live" ? (
-            <>
-              <div className="home-clock">
-                <strong>
-                  {String(Math.floor(seconds / 60)).padStart(2, "0")}:
-                  {String(seconds % 60).padStart(2, "0")}
-                </strong>
-                <small>Pick {draft.current_pick} of {totalPicks}</small>
-              </div>
-              <div className="progress">
-                <span style={{ width: `${progress}%` }} />
-              </div>
-            </>
-          ) : null}
-          <Link
-            className="primary-button home-primary-link"
-            href={action.href}
-          >
-            {action.label} →
-          </Link>
         </section>
       ) : null}
       {league ? (
@@ -847,6 +849,7 @@ export function HomeDashboard() {
                   onClick={() => setStatsPlayer(player)}
                   onKeyDown={(event) => {
                     if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
                       setStatsPlayer(player);
                     }
                   }}
@@ -892,6 +895,7 @@ export function HomeDashboard() {
                 {standings.length} {t("home.teams", "teams")}
               </span>
             </div>
+            <p className="score-context">Records and league points include finalized matchups only.</p>
             <div className="home-table-head">
               <span>#</span>
               <span>Club</span>

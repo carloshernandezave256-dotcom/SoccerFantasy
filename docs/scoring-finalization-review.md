@@ -73,3 +73,19 @@ historical migration replay, production RLS audit or multi-client concurrency te
 The fixture labels/cache fix remains from PR #7. This batch also replaces the
 misleading exact "reopens" time with a verified-results explanation on My Team.
 No bulk rescore, ownership changes, or score-rule changes are included.
+
+## September 18 consolidation (review gate, not deployed)
+
+PR #8 is now consolidated onto main 766d967, preserving PR #7's market/cache fixes and main's later per-fixture deduplication. The unshipped original migration is replaced by `20260918050601_hardened_scoring_finalization.sql` so later existing migrations cannot overwrite its settlement guards. Do not apply the obsolete September 5 scoring migration.
+
+Additional repairs:
+- Frozen selection includes Friday for Saturday/Sunday calendar starts and selects the dominant opening-weekend round, with the lower round as tie-breaker. Older-round catch-ups remain excluded using full cached round history.
+- The hourly wrap route now uses the same `synchronizeFixtureScores` implementation as manual and live cron updates; it cannot bypass completeness with legacy zero/DNP writes.
+- Retry discovery freezes eligible windows without browser activity, and does not filter out weeks merely because matchup display labels say final.
+- Calendar rollover requires the finalized settlement lock, preventing the next window from hiding an unfinished previous week.
+- `GET /api/developer/gameweek-status?leagueId=<uuid>&gameweek=4` uses existing developer authentication. It reports membership freeze state, settlement state, fixture evidence/reasons, missing expected player IDs, pending locked players and attempts stuck longer than ten minutes. It never mutates state. No external alerts are configured.
+- `test:scoring:concurrency` uses two native PostgreSQL connections and observes the second waiting on the first transaction, then verifies one settlement/substitution. The GitHub workflow provisions a disposable PostgreSQL 16 service. PGlite results alone do not satisfy this gate.
+
+Null/default audit: provider normalization still uses numeric defaults for storage, but `fixtureCompleteness` independently rejects null/absent minutes or missing squad/mapping evidence. `buildLeaguePlayerScoreRows` can produce provisional zero totals; these have `data_complete=false` and cannot settle. Stored status remains `live` for compatibility; the diagnostics state is `pending`. SQL publication computes completeness itself rather than accepting caller flags. A genuine absent-player zero is allowed only after the entire eligible fixture set reconciles.
+
+Release remains blocked until native concurrency CI passes, current provider payloads satisfy the strict squad policy, production fixture membership is reviewed, and the missed waiver-window policy is chosen. The current league's Week 4 contains an inactive locked Reijnders row with missing evidence; do not fabricate a zero. Applying the migration and deploying must be coordinated. No production migration, bulk rescore, merge, or deployment has been performed.

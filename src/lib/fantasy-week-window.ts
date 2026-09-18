@@ -12,11 +12,16 @@ export function fantasyWeekWindow(fixtures:KickoffFixture[]){
     .filter(Number.isFinite);
   if(!kickoffTimes.length)return null;
   const firstKickoff=new Date(Math.min(...kickoffTimes));
-  const startsAt=Date.UTC(
+  let startsAt=Date.UTC(
     firstKickoff.getUTCFullYear(),
     firstKickoff.getUTCMonth(),
     firstKickoff.getUTCDate(),
   );
+  // Weekend rounds can start Friday in another competition even when the
+  // calendar competition opens Saturday or Sunday.
+  const day=firstKickoff.getUTCDay();
+  if(day===6)startsAt-=24*60*60*1000;
+  if(day===0)startsAt-=2*24*60*60*1000;
   return {
     startsAt:new Date(startsAt).toISOString(),
     endsAt:new Date(startsAt+FANTASY_WEEK_MS-1).toISOString(),
@@ -36,8 +41,15 @@ export function fixturesForFantasyWeek<T extends CompetitionRoundFixture>(
   preferredRounds:Readonly<Record<string,number>>={},
 ){
   const inside=fixtures.filter(fixture=>fixtureInsideFantasyWeek(fixture,window));
+  const openingTime=new Date(window.startsAt).getTime();
+  const weekend=new Date(openingTime).getUTCDay()===5;
+  // Choose the round played during this weekend, not a larger upcoming
+  // midweek round. Once selected, retain its eligible later fixtures too.
+  const selectionFixtures=weekend
+    ? inside.filter(fixture=>new Date(fixture.kickoff).getTime()<openingTime+4*24*60*60*1000)
+    : inside;
   const roundCounts=new Map<string,Map<number,number>>();
-  for(const fixture of inside){
+  for(const fixture of selectionFixtures){
     const competitionCounts=roundCounts.get(fixture.competition)??new Map<number,number>();
     competitionCounts.set(
       fixture.officialRound,
@@ -49,12 +61,12 @@ export function fixturesForFantasyWeek<T extends CompetitionRoundFixture>(
   const selectedRounds=new Map<string,number>();
   for(const[competition,counts]of roundCounts){
     const preferredRound=preferredRounds[competition];
-    if(preferredRound!==undefined&&counts.has(preferredRound)){
+    if(preferredRound!==undefined){
       selectedRounds.set(competition,preferredRound);
       continue;
     }
     const selected=[...counts.entries()].sort(
-      ([roundA,countA],[roundB,countB])=>countB-countA||roundB-roundA,
+      ([roundA,countA],[roundB,countB])=>countB-countA||roundA-roundB,
     )[0];
     if(selected)selectedRounds.set(competition,selected[0]);
   }

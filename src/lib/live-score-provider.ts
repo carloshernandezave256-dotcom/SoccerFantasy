@@ -11,6 +11,13 @@ import {
 type FixturePage = { response: ProviderFixture[] };
 type PlayerPage = { response: ProviderTeamPlayers[] };
 type EventPage = { response: ProviderFixtureEvent[] };
+type LineupPage = { response: ProviderLineup[] };
+
+export type ProviderLineup = {
+  team: { id: number; name?: string };
+  startXI: Array<{ player: { id: number; name?: string } }>;
+  substitutes: Array<{ player: { id: number; name?: string } }>;
+};
 
 export type ProviderSnapshot = {
   fixtures: ProviderFixture[];
@@ -23,6 +30,11 @@ export type ProviderSnapshot = {
 export type ProviderOwnGoalSnapshot = {
   byFixtureAndApiPlayer: Map<number, Map<number, number>>;
   fixtureIdsSynced: number[];
+  requestsUsed: number;
+};
+
+export type ProviderLineupSnapshot = {
+  byFixtureId: Map<number, ProviderLineup[]>;
   requestsUsed: number;
 };
 

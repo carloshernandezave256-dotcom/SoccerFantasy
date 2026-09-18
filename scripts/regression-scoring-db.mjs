@@ -11,7 +11,7 @@ const verify=(actual,expected)=>{assert.deepEqual(actual,expected);checks++};
 try{
  await db.exec(await read('supabase/tests/market-bootstrap.sql'));
  await db.exec(await read('supabase/tests/scoring-bootstrap.sql'));
- await db.exec(await read('supabase/migrations/20260905215012_authoritative_gameweek_finalization.sql'));
+ await db.exec(await read('supabase/migrations/20260918050601_hardened_scoring_finalization.sql'));
  await db.exec(`select set_config('request.jwt.claim.role','service_role',false);
  insert into leagues values('${L}','draft','Premier League','All Top Five');
  insert into league_transaction_windows(league_id,gameweek,roster_lock_at) values('${L}',2,date_trunc('day',now())-interval '1 day');

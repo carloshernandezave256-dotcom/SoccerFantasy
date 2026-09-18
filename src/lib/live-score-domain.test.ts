@@ -114,4 +114,18 @@ describe("league score aggregation", () => {
     expect(rows[0]).toMatchObject({ player_id: 1272, minutes: 24, completed_passes: 20, own_goals: 1, status: "live" });
     expect(rows[1]).toMatchObject({ player_id: 9999, minutes: 0, status: "live" });
   });
+  it("counts repeated fixture rows once and retains the newest correction", () => {
+    const stat={fixture_id:10,player_id:127,minutes:88,completed_passes:33,fantasy_points:5,source_updated_at:"2026-09-13T17:00:00Z"};
+    const corrected={...stat,completed_passes:29,fantasy_points:4,source_updated_at:"2026-09-13T17:10:00Z"};
+    const calculate=(fixtureStats:typeof stat[])=>buildLeaguePlayerScoreRows({
+      leagueId:"league-1",gameweek:4,playerIds:[127],fixtureStats,
+      weekFixtures:[10,11].map(fixture_id=>({fixture_id,status:"FT",kickoff:"2026-09-13T15:30:00Z",competition:"Premier League",gameweek:4})),
+      updatedAt:"2026-09-13T17:12:00Z",
+    })[0];
+    expect(calculate([stat,stat])).toMatchObject({minutes:88,completed_passes:33,fantasy_points:5});
+    expect(calculate([corrected,stat])).toMatchObject({completed_passes:29,fantasy_points:4});
+    expect(calculate([stat,corrected])).toMatchObject({completed_passes:29,fantasy_points:4});
+    expect(calculate([stat,{...stat,fixture_id:11}])).toMatchObject({minutes:176,fantasy_points:10});
+    expect(calculate([stat,{...stat,fixture_id:12}])).toMatchObject({minutes:88,fantasy_points:5});
+  });
 });

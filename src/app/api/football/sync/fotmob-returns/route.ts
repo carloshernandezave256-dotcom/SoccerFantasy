@@ -1,13 +1,26 @@
 import {NextRequest,NextResponse} from "next/server";
 import {isDeveloperRequest} from "@/lib/developer-auth";
-import {fotmobReturnUpdate} from "@/lib/fotmob-return-update";
+import {
+  FOTMOB_LEAGUE_IDS,
+  matchFotmobAvailabilityPlayer,
+  parseFotmobTeamAvailability,
+  resolveFotmobClubIds,
+  type AvailabilityPlayer,
+} from "@/lib/fotmob-availability";
+import {fotmobConfirmsActive,fotmobReturnUpdate,recentFotmobClearBlocksInjury} from "@/lib/fotmob-return-update";
+import {appearanceDisprovesInjury} from "@/lib/injury-observation";
 
 type InjuryPlayer={
   id:number;
   full_name:string;
   club:string;
+  competition:string;
+  injured:boolean;
   injury_type:string|null;
   injury_reason:string|null;
+  expected_return:string|null;
+  injury_updated_at:string|null;
+  availability_last_appearance_at:string|null;
   fotmob_id:number|null;
   fotmob_expected_return:string|null;
   fotmob_return_checked_at:string|null;
@@ -25,7 +38,7 @@ function tokens(value:string){return normalize(value).split(" ").filter(Boolean)
 function isConfirmedInjury(player:InjuryPlayer){
   const value=`${player.injury_type??""} ${player.injury_reason??""}`.toLowerCase();
   if(/suspend|red card|yellow card|coach|inactive|rest|transfer|loan agreement|match fitness/.test(value))return false;
-  return /injur|illness|health|hernia|strain|sprain|fracture|broken|achilles|hamstring|thigh|groin|knee|ankle|foot|calf|muscle|shoulder|back|hip|rib|arm|finger|wrist|leg/.test(value);
+  return /injur|illness|health|hernia|strain|sprain|fracture|broken|achilles|hamstring|thigh|groin|knee|ankle|foot|calf|muscle|shoulder|back|hip|rib|arm|finger|wrist|leg|fotmob/.test(value);
 }
 
 function freshEnough(player:InjuryPlayer){
@@ -147,15 +160,105 @@ async function enrichPlayer(player:InjuryPlayer,supabaseUrl:string,adminHeaders:
   return {cached:false,matched:Boolean(fotmobId),dated:Boolean(returnLabel)};
 }
 
+async function patchPlayer(supabaseUrl:string,adminHeaders:Record<string,string>,playerId:number,body:Record<string,unknown>){
+  const response=await fetch(`${supabaseUrl}/rest/v1/players?id=eq.${playerId}`,{
+    method:"PATCH",
+    headers:{...adminHeaders,Prefer:"return=minimal"},
+    body:JSON.stringify(body),
+    cache:"no-store",
+  });
+  if(!response.ok)throw new Error((await response.text())||"Could not save FotMob availability status");
+}
+
+async function syncFotmobAvailabilityBackup(supabaseUrl:string,adminHeaders:Record<string,string>){
+  const select=[
+    "id","full_name","club","competition","injured","injury_type","injury_reason","expected_return",
+    "injury_updated_at","availability_last_appearance_at","fotmob_id","fotmob_expected_return","fotmob_return_checked_at",
+  ].join(",");
+  const response=await fetch(`${supabaseUrl}/rest/v1/players?active=eq.true&select=${select}&order=draft_rank.asc.nullslast`,{headers:adminHeaders,cache:"no-store"});
+  if(!response.ok)throw new Error((await response.text())||"Could not load active players for FotMob availability backup");
+  const activePlayers=await response.json() as InjuryPlayer[];
+  const observedAt=new Date().toISOString();
+  let requestsUsed=0,clubsResolved=0,clubsChecked=0,playersFlagged=0,playersMatched=0,unmatchedReports=0;
+  const unavailableCompetitions:string[]=[];
+  const unresolvedClubs:string[]=[];
+
+  for(const [competition,leagueId] of Object.entries(FOTMOB_LEAGUE_IDS)){
+    const competitionPlayers=activePlayers.filter(player=>player.competition===competition);
+    if(!competitionPlayers.length)continue;
+    const clubs=[...new Set(competitionPlayers.map(player=>player.club).filter(Boolean))];
+    let leaguePayload:unknown;
+    try{leaguePayload=await fotmobJson(`leagues?id=${leagueId}`);requestsUsed++}
+    catch{unavailableCompetitions.push(competition);continue}
+    const clubIds=resolveFotmobClubIds(leaguePayload,clubs);
+    clubsResolved+=clubIds.size;
+    unresolvedClubs.push(...clubs.filter(club=>!clubIds.has(club)).map(club=>`${competition}: ${club}`));
+    const entries=[...clubIds.entries()];
+
+    for(let index=0;index<entries.length;index+=4){
+      const batch=entries.slice(index,index+4);
+      const payloads=await Promise.all(batch.map(async([club,teamId])=>{
+        try{return {club,payload:await fotmobJson(`teams?id=${teamId}`),ok:true}}
+        catch{return {club,payload:null,ok:false}}
+      }));
+      requestsUsed+=batch.length;
+      for(const item of payloads){
+        if(!item.ok||!item.payload)continue;
+        clubsChecked++;
+        const clubPlayers=competitionPlayers.filter(player=>player.club===item.club) as AvailabilityPlayer[];
+        for(const availability of parseFotmobTeamAvailability(item.payload)){
+          const matched=matchFotmobAvailabilityPlayer(availability,clubPlayers);
+          if(!matched){unmatchedReports++;continue}
+          const player=competitionPlayers.find(candidate=>candidate.id===matched.id);
+          if(!player)continue;
+          playersMatched++;
+          if(fotmobConfirmsActive(player.fotmob_expected_return))continue;
+          if(recentFotmobClearBlocksInjury(player.injured,player.fotmob_return_checked_at))continue;
+          const injuryType=availability.kind==="suspension"?"FotMob Suspension":"FotMob";
+          const injuryReason=availability.reason||"Injury";
+          if(appearanceDisprovesInjury(player,injuryType,injuryReason))continue;
+          const update:Record<string,unknown>={
+            injured:true,
+            fotmob_id:availability.fotmobId,
+          };
+          if(!player.injured){
+            update.injury_type=injuryType;
+            update.injury_reason=injuryReason;
+            update.injury_updated_at=observedAt;
+          }
+          if(availability.expectedReturn){
+            update.fotmob_expected_return=availability.expectedReturn;
+            update.fotmob_return_checked_at=observedAt;
+          }
+          await patchPlayer(supabaseUrl,adminHeaders,player.id,update);
+          if(!player.injured)playersFlagged++;
+        }
+      }
+    }
+  }
+
+  return {requestsUsed,clubsResolved,clubsChecked,playersFlagged,playersMatched,unmatchedReports,unavailableCompetitions,unresolvedClubs};
+}
+
 export async function POST(request:NextRequest){
   const authorization=request.headers.get("authorization")??"";
-  if(!authorization.startsWith("Bearer "))return NextResponse.json({error:"Sign in is required."},{status:401});
-  if(!await isDeveloperRequest(request))return NextResponse.json({error:"Developer access required."},{status:403});
+  const cronSecret=process.env.CRON_SECRET;
+  const cronAuthorized=Boolean(cronSecret&&authorization===`Bearer ${cronSecret}`);
+  if(!cronAuthorized){
+    if(!authorization.startsWith("Bearer "))return NextResponse.json({error:"Sign in is required."},{status:401});
+    if(!await isDeveloperRequest(request))return NextResponse.json({error:"Developer access required."},{status:403});
+  }
   const supabaseUrl=process.env.NEXT_PUBLIC_SUPABASE_URL??"https://ocabrgbrkqmsnalbfzvx.supabase.co";
   const serviceRoleKey=process.env.SUPABASE_SERVICE_ROLE_KEY;
   if(!serviceRoleKey)return NextResponse.json({error:"Server database credential is not configured."},{status:503});
   const adminHeaders={apikey:serviceRoleKey,Authorization:`Bearer ${serviceRoleKey}`,"Content-Type":"application/json"};
-  const playersResponse=await fetch(`${supabaseUrl}/rest/v1/players?injured=eq.true&select=id,full_name,club,injury_type,injury_reason,fotmob_id,fotmob_expected_return,fotmob_return_checked_at&order=draft_rank.asc.nullslast`,{headers:adminHeaders,cache:"no-store"});
+
+  let backup;
+  try{backup=await syncFotmobAvailabilityBackup(supabaseUrl,adminHeaders)}
+  catch(error){return NextResponse.json({error:error instanceof Error?error.message:"FotMob availability backup failed."},{status:502})}
+
+  const select=["id","full_name","club","competition","injured","injury_type","injury_reason","expected_return","injury_updated_at","availability_last_appearance_at","fotmob_id","fotmob_expected_return","fotmob_return_checked_at"].join(",");
+  const playersResponse=await fetch(`${supabaseUrl}/rest/v1/players?injured=eq.true&select=${select}&order=draft_rank.asc.nullslast`,{headers:adminHeaders,cache:"no-store"});
   if(!playersResponse.ok)return NextResponse.json({error:"Could not load injured players."},{status:502});
   const flagged=await playersResponse.json() as InjuryPlayer[];
   const players=flagged.filter(isConfirmedInjury);
@@ -173,5 +276,5 @@ export async function POST(request:NextRequest){
     }
     if(index+4<players.length)await new Promise(resolve=>setTimeout(resolve,150));
   }
-  return NextResponse.json({ok:true,flagged:flagged.length,injuryPlayers:players.length,matched,dated,cached,failed});
+  return NextResponse.json({ok:true,backup,flagged:flagged.length,injuryPlayers:players.length,matched,dated,cached,failed});
 }

@@ -17,7 +17,7 @@ type InjuryEntry={player:{id:number;name:string;type?:string|null;reason?:string
 type InjuriesPage={response:InjuryEntry[]};
 type SidelinedEntry={type?:string|null;start?:string|null;end?:string|null};
 type SidelinedPage={response:SidelinedEntry[]};
-type ExistingInjury={api_football_id:number;injured:boolean;injury_type:string|null;injury_reason:string|null;expected_return:string|null;sidelined_checked_at:string|null;fotmob_expected_return:string|null;fotmob_return_checked_at:string|null;injury_updated_at:string|null;availability_last_appearance_at:string|null};
+type ExistingInjury={api_football_id:number;injured:boolean;injury_type:string|null;injury_reason:string|null;expected_return:string|null;sidelined_checked_at:string|null;fotmob_id:number|null;fotmob_expected_return:string|null;fotmob_return_checked_at:string|null;injury_updated_at:string|null;availability_last_appearance_at:string|null};
 
 export const maxDuration=300;
 
@@ -41,6 +41,10 @@ function shouldRefreshSidelined(existing:ExistingInjury|undefined,type:string,re
   return Number.isFinite(returnAt)&&returnAt<=Date.now()+2*day;
 }
 
+function isFotmobBackup(row:ExistingInjury){
+  return (row.injury_type??"").startsWith("FotMob");
+}
+
 export async function POST(request:NextRequest){
   const authorization=request.headers.get("authorization")??"";
   if(!authorization.startsWith("Bearer "))return NextResponse.json({error:"Sign in is required."},{status:401});
@@ -58,23 +62,25 @@ export async function POST(request:NextRequest){
   for(const competition of competitions){
     try{
       const injuryBody=await apiFootball<InjuriesPage>(`injuries?league=${competition.id}&season=${season}`);requestsUsed++;
-      const existingResponse=await fetch(`${supabaseUrl}/rest/v1/players?competition=eq.${encodeURIComponent(competition.name)}&select=api_football_id,injured,injury_type,injury_reason,expected_return,sidelined_checked_at,fotmob_expected_return,fotmob_return_checked_at,injury_updated_at,availability_last_appearance_at`,{headers:adminHeaders,cache:"no-store"});
+      const existingResponse=await fetch(`${supabaseUrl}/rest/v1/players?competition=eq.${encodeURIComponent(competition.name)}&select=api_football_id,injured,injury_type,injury_reason,expected_return,sidelined_checked_at,fotmob_id,fotmob_expected_return,fotmob_return_checked_at,injury_updated_at,availability_last_appearance_at`,{headers:adminHeaders,cache:"no-store"});
       if(!existingResponse.ok)throw new Error((await existingResponse.text())||"Could not load cached injury statuses");
       const existingRows=await existingResponse.json() as ExistingInjury[];
       const existingById=new Map(existingRows.filter(row=>row.api_football_id).map(row=>[row.api_football_id,row]));
       const currentByPlayer=[...new Map(injuryBody.response.filter(entry=>isApiFootballUnavailable(entry.player.type,entry.player.reason)).map(entry=>[entry.player.id,entry])).values()];
       const currentIds=new Set(currentByPlayer.map(entry=>entry.player.id));
       const observedAt=new Date().toISOString();
-      playersCleared+=existingRows.filter(row=>row.injured&&!currentIds.has(row.api_football_id)).length;
-      const excludedIds=currentIds.size?`&api_football_id=not.in.(${[...currentIds].join(",")})`:"";
+      const staleApiIds=existingRows.filter(row=>row.api_football_id&&row.injured&&!currentIds.has(row.api_football_id)&&!isFotmobBackup(row)).map(row=>row.api_football_id);
+      playersCleared+=staleApiIds.length;
 
-      const clearResponse=await fetch(`${supabaseUrl}/rest/v1/players?competition=eq.${encodeURIComponent(competition.name)}&or=(injured.eq.true,injury_type.not.is.null)${excludedIds}`,{
-        method:"PATCH",
-        headers:{...adminHeaders,Prefer:"return=minimal"},
-        body:JSON.stringify({injured:false,injury_type:null,injury_reason:null,expected_return:null,injury_updated_at:observedAt,sidelined_checked_at:null}),
-        cache:"no-store",
-      });
-      if(!clearResponse.ok)throw new Error((await clearResponse.text())||"Could not clear stale injury statuses");
+      if(staleApiIds.length){
+        const clearResponse=await fetch(`${supabaseUrl}/rest/v1/players?api_football_id=in.(${staleApiIds.join(",")})`,{
+          method:"PATCH",
+          headers:{...adminHeaders,Prefer:"return=minimal"},
+          body:JSON.stringify({injured:false,injury_type:null,injury_reason:null,expected_return:null,injury_updated_at:observedAt,sidelined_checked_at:null}),
+          cache:"no-store",
+        });
+        if(!clearResponse.ok)throw new Error((await clearResponse.text())||"Could not clear stale injury statuses");
+      }
 
       for(const injury of currentByPlayer){
         const injuryType=injury.player.type??"Injury";
