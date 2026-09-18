@@ -63,19 +63,6 @@ export async function fetchProviderOwnGoals(fixtureIds: number[]): Promise<Provi
   };
 }
 
-export async function fetchProviderLineups(fixtureIds: number[]): Promise<ProviderLineupSnapshot> {
-  const pages = await Promise.all(
-    fixtureIds.map(async (fixtureId) => {
-      const body = await apiFootball<LineupPage>(`fixtures/lineups?fixture=${fixtureId}`);
-      return { fixtureId, lineups: body.response };
-    }),
-  );
-  return {
-    byFixtureId: new Map(pages.map((page) => [page.fixtureId, page.lineups])),
-    requestsUsed: pages.length,
-  };
-}
-
 export async function fetchProviderSnapshot(candidates: CachedFixture[]): Promise<ProviderSnapshot> {
   const livePage = await apiFootball<FixturePage>("fixtures?live=all");
   const { liveFixtures, droppedCandidates } = partitionProviderFixtures(candidates, livePage.response);
@@ -107,4 +94,12 @@ export async function fetchProviderSnapshot(candidates: CachedFixture[]): Promis
     playerPages,
     requestsUsed: 1 + droppedCandidates.length + fixtures.length,
   };
+}
+
+export async function fetchProviderLineups(fixtureIds:number[]){
+  const pages=await Promise.all(fixtureIds.map(async fixtureId=>({
+    fixtureId,
+    body:await apiFootball<{response:import('./fixture-completeness').ProviderLineup[]}>(`fixtures/lineups?fixture=${fixtureId}`),
+  })));
+  return new Map(pages.map(page=>[page.fixtureId,page.body.response]));
 }

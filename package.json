@@ -9,7 +9,10 @@
     "test": "vitest run",
     "test:draft": "node scripts/regression-draft.mjs",
     "test:auction": "node scripts/regression-auction.mjs",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:db": "node scripts/regression-market-db.mjs",
+    "test:scoring:db": "node scripts/regression-scoring-db.mjs",
+    "test:scoring:concurrency": "node scripts/regression-scoring-concurrency.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.95.0",
@@ -18,9 +21,11 @@
     "react-dom": "19.2.4"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "0.3.14",
     "@types/node": "24.10.1",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
+    "pg": "8.16.3",
     "typescript": "5.9.3",
     "vitest": "4.0.18"
   }

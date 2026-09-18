@@ -1,5 +1,5 @@
 import { completedPassesFromApi } from "./api-football-stats";
-import { resolvePlayerScoreStatus, type LedgerEntry } from "./scoring";
+import { type LedgerEntry } from "./scoring";
 
 export const TERMINAL_FIXTURE_STATUSES = new Set([
   "FT",
@@ -97,6 +97,9 @@ export type WeekFixture = {
   gameweek: number;
   home_team?: string;
   away_team?: string;
+  data_complete?: boolean;
+  evidence_version?: string | null;
+  expected_player_ids?: number[];
 };
 
 export type LeaguePlayerScoreRow = {
@@ -123,6 +126,7 @@ export type LeaguePlayerScoreRow = {
   own_goals: number;
   man_of_the_match: false;
   stats_received: boolean;
+  data_complete: boolean;
   status: "live" | "final";
   source: "api-football-fixture-sum";
   source_updated_at: string;
@@ -279,34 +283,31 @@ export function buildLeaguePlayerScoreRows({
   updatedAt: string;
 }): LeaguePlayerScoreRow[] {
   const gameweekIsFinal = weekFixtures.length > 0
-    && weekFixtures.every((fixture) => TERMINAL_FIXTURE_STATUSES.has(fixture.status));
-  const fixtureStatusById = new Map(
-    weekFixtures.map((fixture) => [fixture.fixture_id, fixture.status]),
-  );
-  // A repeated REST page must not award a second copy of a fixture. Keep the
-  // latest observation for that player/fixture, including downward corrections.
-  const uniqueStats=new Map<string,FixturePlayerStatRow>();
+    && weekFixtures.every(fixture => fixture.data_complete===true
+      && (fixture.status==='EXCLUDED'||(['FT','AET','PEN'].includes(fixture.status)
+        && (fixture.expected_player_ids??[]).every(id=>fixtureStats.some(stat=>stat.fixture_id===fixture.fixture_id
+          &&stat.player_id===id&&new Date(String(stat.source_updated_at)).getTime()===new Date(fixture.evidence_version??'').getTime())))));
+  const fixturesById=new Map(weekFixtures.map(fixture=>[fixture.fixture_id,fixture]));
+  const statsByPlayer=new Map<number,FixturePlayerStatRow[]>();
+  // REST pagination/retries must never count a fixture-player twice.
+  const unique=new Map<string,FixturePlayerStatRow>();
   for(const stat of fixtureStats){
-    if(!fixtureStatusById.has(stat.fixture_id))continue;
     const key=`${stat.fixture_id}:${stat.player_id}`;
-    const previous=uniqueStats.get(key);
-    const timestamp=(row:FixturePlayerStatRow)=>{
-      const parsed=Date.parse(String(row.source_updated_at??""));
-      return Number.isFinite(parsed)?parsed:0;
-    };
-    if(!previous||timestamp(stat)>=timestamp(previous))uniqueStats.set(key,stat);
+    const prior=unique.get(key);
+    const time=(row:FixturePlayerStatRow)=>Date.parse(String(row.source_updated_at??''))||0;
+    if(!prior||time(stat)>=time(prior))unique.set(key,stat);
   }
-
+  for(const stat of unique.values()){
+    const fixture=fixturesById.get(stat.fixture_id);
+    if(!fixture||fixture.status==='EXCLUDED')continue;
+    // Drop rows left over from older provider responses, including withdrawn stats.
+    if(fixture.evidence_version&&new Date(String(stat.source_updated_at)).getTime()!==new Date(fixture.evidence_version).getTime())continue;
+    const rows=statsByPlayer.get(stat.player_id)??[];
+    rows.push(stat);statsByPlayer.set(stat.player_id,rows);
+  }
   return playerIds.map((playerId) => {
-    const playerStats = [...uniqueStats.values()].filter((stat) => stat.player_id === playerId);
-    const ratings = playerStats.map((stat) => Number(stat.rating)).filter(Boolean);
-    const playerFixtureStatuses = [
-      ...new Set(
-        playerStats
-          .map((stat) => fixtureStatusById.get(stat.fixture_id))
-          .filter((status): status is string => Boolean(status)),
-      ),
-    ];
+    const playerStats=statsByPlayer.get(playerId)??[];
+    const ratings=playerStats.map(stat=>Number(stat.rating)).filter(Boolean);
     return {
       league_id: leagueId,
       gameweek,
@@ -331,7 +332,8 @@ export function buildLeaguePlayerScoreRows({
       own_goals: sum(playerStats, "own_goals"),
       man_of_the_match: false,
       stats_received: playerStats.length > 0,
-      status: resolvePlayerScoreStatus(playerFixtureStatuses, gameweekIsFinal),
+      data_complete: gameweekIsFinal,
+      status: gameweekIsFinal ? "final" : "live",
       source: "api-football-fixture-sum",
       source_updated_at: updatedAt,
       updated_at: updatedAt,

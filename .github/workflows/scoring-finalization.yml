@@ -1,0 +1,33 @@
+name: Scoring finalization
+on:
+  pull_request:
+  push:
+    branches: [fix/scoring-finalization]
+permissions:
+  contents: read
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: testing-only
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready --health-interval 5s
+          --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run test:db && npm run test:scoring:db
+      - run: npm run test:scoring:concurrency
+        env:
+          TEST_DATABASE_URL: postgres://postgres:testing-only@localhost:5432/postgres
+      - run: npm run typecheck
+      - run: npm run build
