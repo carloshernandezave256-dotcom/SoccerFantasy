@@ -15,7 +15,7 @@ type PlayerHeadshotProps = {
 export function PlayerHeadshot({ name, position, photoUrl, className = "", decorative = false }: PlayerHeadshotProps) {
   const [failed, setFailed] = useState(false);
   const availability=usePlayerAvailability(undefined,name);
-  const classes = `player-headshot ${className} ${hasDoubtfulWarning(availability)?"doubtful-outline":""}`.trim();
+  const classes = `player-headshot ${className}`.trim();
   const suspension=/susp|red card/i.test(`${availability?.injury_type??''} ${availability?.injury_reason??''}`);
   const badge=availability?.injured?<span className={`player-availability-badge ${suspension?'suspension':'injury'}`} title={availability.injury_reason??availability.injury_type??'Unavailable'} aria-label={suspension?'Player suspended':'Player injured'}>{suspension?'':'✚'}</span>:null;
 

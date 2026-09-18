@@ -1,4 +1,5 @@
 "use client";
+import {hasDoubtfulWarning} from "@/lib/doubtful-status";
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
@@ -13,7 +14,7 @@ import {fixturesForFantasyWeek} from "@/lib/fantasy-week-window";
 import {fixtureForClub,fixtureOpponent,fixtureVenue,type PlayerFixture} from "@/lib/player-fixtures";
 
 type League = { league_id: string; league_name: string; team_name: string; is_commissioner: boolean; game_format?: string; player_pool?: string; calendar_competition:string };
-type Player = { id: number; full_name: string; position: string; club: string; competition: string; draft_rank?: number; photo_url?:string|null; injured?:boolean; injury_type?:string|null; injury_reason?:string|null; expected_return?:string|null };
+type Player = { id: number; full_name: string; position: string; club: string; competition: string; draft_rank?: number; photo_url?:string|null; injured?:boolean; doubtful_until?:string|null; injury_type?:string|null; injury_reason?:string|null; expected_return?:string|null };
 type Pick = { user_id: string; player_id: number; players: Player | null };
 type Claim = { id: string; user_id: string; add_player_id: number; drop_player_id: number | null; gameweek:number; claim_rank:number; status: string; created_at: string; processed_at: string | null; note: string | null };
 type ContractOffer = { id:string;user_id:string;add_player_id:number;release_player_id:number;gameweek:number;offer_rank:number;amount:number;status:string;created_at:string;processed_at:string|null;note:string|null };
@@ -56,7 +57,7 @@ export default function WaiversPage() {
     setLoading(true);
     const [playerResult, pickResult, claimResult, priorityResult, scoreResult,windowResult,offerResult,budgetResult,watchResult] = await Promise.all([
       loadActivePlayerPool(active.player_pool),
-      supabase.from("draft_picks").select("user_id,player_id,players(id,full_name,position,club,competition,draft_rank,photo_url,injured,injury_type,injury_reason,expected_return)").eq("league_id", active.league_id),
+      supabase.from("draft_picks").select("user_id,player_id,players(id,full_name,position,club,competition,draft_rank,photo_url,injured,doubtful_until,injury_type,injury_reason,expected_return)").eq("league_id", active.league_id),
       supabase.from("waiver_claims").select("id,user_id,add_player_id,drop_player_id,gameweek,claim_rank,status,created_at,processed_at,note").eq("league_id", active.league_id).eq("user_id",currentUser).order("created_at", { ascending: false }),
       supabase.rpc("waiver_priority", { p_league_id: active.league_id }),
       loadPlayerSeasonTotals(),
@@ -235,7 +236,8 @@ export default function WaiversPage() {
             const fixture=fixtureForClub(weekFixtures,player.club);
             const watching=watchlist.has(player.id);
             const currentLabel=current?.status==="live"?"LIVE":current?.status==="final"?"FINAL":current?"UPCOMING":"NO WEEK DATA";
-            return <article className={`market-player-card ${owner?"owned":"available"} ${player.injured?"unavailable":""}`} key={player.id} role="button" tabIndex={0} onClick={()=>setStatsPlayer(player)} onKeyDown={event=>{if(event.key==="Enter"||event.key===" ")setStatsPlayer(player)}}>
+            const doubtful=hasDoubtfulWarning({injured:Boolean(player.injured),doubtful_until:player.doubtful_until??null});
+            return <article className={`market-player-card ${owner?"owned":"available"} ${player.injured?"unavailable":doubtful?"doubtful":""}`} key={player.id} role="button" tabIndex={0} onClick={()=>setStatsPlayer(player)} onKeyDown={event=>{if(event.key==="Enter"||event.key===" ")setStatsPlayer(player)}}>
               <div className="market-player-primary">
                 <PlayerHeadshot name={player.full_name} position={player.position} photoUrl={player.photo_url}/>
                 <div><span className={`position ${player.position.toLowerCase()}`}>{player.position}</span><strong>{player.full_name}</strong><small>{player.club} · {player.competition}</small>{fixture?<span className="market-player-fixture"><b>{fixtureVenue(fixture,player.club)==="Home"?"vs":"@"} {fixtureOpponent(fixture,player.club)}</b> · {new Date(fixture.kickoff).toLocaleString([], {weekday:"short",hour:"numeric",minute:"2-digit"})}</span>:<span className="market-player-fixture pending">This week&apos;s fixture unavailable</span>}</div>
@@ -247,7 +249,7 @@ export default function WaiversPage() {
                 <span><small>RANK</small><strong>#{player.draft_rank??"—"}</strong><i>{currentLabel}</i></span>
               </div>
               <div className="market-player-footer">
-                <span className={player.injured?"market-injury":owner?"market-owned":"market-available"}>{player.injured?(player.injury_type??"Unavailable"):owner?`${isAuction?"Signed by":"Owned by"} ${owner}`:"Available"}</span>
+                <span className={player.injured?"market-injury":doubtful?"market-doubtful":owner?"market-owned":"market-available"}>{player.injured?(player.injury_type??"Unavailable"):doubtful?"Doubtful":owner?`${isAuction?"Signed by":"Owned by"} ${owner}`:"Available"}</span>
                 {owner?<span className="owned-chip">{isAuction?"SIGNED":"OWNED"}</span>:<button className="claim-button" disabled={!windowState||windowState.phase==="locked"||(isAuction&&windowState.phase!=="waivers")} onClick={event=>{event.stopPropagation();setSelected(player);setDropId("");setOfferAmount("")}}>{isAuction?windowState?.phase==="waivers"?"MAKE OFFER":"WINDOW CLOSED":windowState?.phase==="free_agency"?"ADD NOW":"CLAIM PLAYER"}</button>}
               </div>
             </article>;
