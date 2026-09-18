@@ -14,7 +14,11 @@ export async function GET(request:NextRequest){
  try{
   const leagues=await store.excludedScoringLeagueIds();
   await refreshAffectedLeagueScores(store,[],now,leagues);
-  const candidates=await store.candidateFixtures(now);
+  const requested=request.nextUrl.searchParams.get('fixtureId');
+  const fixtureId=requested===null?undefined:Number(requested);
+  if(fixtureId!==undefined && (!Number.isSafeInteger(fixtureId)||fixtureId<=0))
+    return NextResponse.json({error:'Invalid fixtureId'},{status:400});
+  const candidates=await store.candidateFixtures(now,fixtureId);
   const results=[];const errors=[];
   // Isolate fixture/provider failures so one cannot starve every following retry.
   for(const fixture of candidates){

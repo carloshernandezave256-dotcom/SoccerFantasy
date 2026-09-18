@@ -93,7 +93,7 @@ export async function synchronizeFixtureScores(store:LiveScoreStore,candidates:C
   }
 
   for(const page of snapshot.playerPages){
-    const proof=fixtureCompleteness(page,lineups.get(page.fixture.fixture.id)??[],internalPlayerIdByApiId);
+    const proof=fixtureCompleteness(page,lineups.get(page.fixture.fixture.id)??[],internalPlayerIdByApiId,ownGoalSnapshot.eventsByFixture.get(page.fixture.fixture.id));
     await store.recordFixtureEvidence(page.fixture.fixture.id,ranAt,
       proof.complete&&COMPLETED_MATCH_STATUSES.has(reconciledStatuses.get(page.fixture.fixture.id)??''),
       proof.reason,normalized.rows.filter(row=>row.fixture_id===page.fixture.fixture.id).map(row=>row.player_id));

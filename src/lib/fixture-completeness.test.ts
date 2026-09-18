@@ -47,3 +47,27 @@ it('replaces corrected values and rejects stale cached data from earlier observa
  const fixed=buildLeaguePlayerScoreRows({...args,fixtureStats:[{fixture_id:1,player_id:100,minutes:31,source_updated_at:stamp}]});
  expect(fixed[0]).toMatchObject({status:'final',minutes:31});
 });
+
+it('accepts null minutes only for a confirmed unused bench player with reconciled final events',()=>{
+ const {page,lineups,mapping}=sample();
+ const bench=page.teams[0].players[11].statistics[0].games;
+ bench.minutes=null;bench.substitute=true;
+ expect(fixtureCompleteness(page,lineups,mapping,[]).complete).toBe(true);
+ expect(fixtureCompleteness(page,lineups,mapping).complete).toBe(false);
+ bench.substitute=false;
+ expect(fixtureCompleteness(page,lineups,mapping,[]).complete).toBe(false);
+});
+it('substitution evidence contradicting a blank bench stat blocks finalization',()=>{
+ const {page,lineups,mapping}=sample();
+ page.teams[0].players[11].statistics[0].games={minutes:null,substitute:true,rating:null,position:null};
+ expect(fixtureCompleteness(page,lineups,mapping,[{team:{id:1},type:'subst',detail:'Substitution',player:{id:100,name:null},assist:{id:120}}]).complete).toBe(false);
+});
+it('a played substitute without a matching substitution event keeps null bench rows pending',()=>{
+ const {page,lineups,mapping}=sample();
+ page.teams[0].players[11].statistics[0].games.minutes=20;
+ page.teams[1].players[11].statistics[0].games={minutes:null,substitute:true,rating:null,position:null};
+ // Explicit stats alone remain sufficient for the first team; unknown bench rows
+ // require reconciliation of that team's participation timeline.
+ page.teams[0].players[0].statistics[0].games.minutes=null;
+ expect(fixtureCompleteness(page,lineups,mapping,[]).complete).toBe(false);
+});

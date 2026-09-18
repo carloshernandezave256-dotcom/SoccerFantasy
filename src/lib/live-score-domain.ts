@@ -20,6 +20,8 @@ export type CachedFixture = {
 };
 
 export type ProviderFixtureEvent = {
+  assist?: { id: number | null; name?: string | null };
+  team?: { id: number };
   player: { id: number | null; name: string | null };
   type: string;
   detail: string;
@@ -35,7 +37,7 @@ export type ProviderFixture = {
 export type ProviderPlayer = {
   player: { id: number; name: string };
   statistics: Array<{
-    games: { minutes: number | null; rating: string | null; position: string | null };
+    games: { substitute?: boolean; minutes: number | null; rating: string | null; position: string | null };
     shots: { on: number | null };
     goals: { total: number | null; assists: number | null; conceded: number | null; saves: number | null };
     passes: { total: number | null; accuracy: number | string | null };
