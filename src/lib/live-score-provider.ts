@@ -28,6 +28,7 @@ export type ProviderSnapshot = {
 };
 
 export type ProviderOwnGoalSnapshot = {
+  eventsByFixture: Map<number, ProviderFixtureEvent[]>;
   byFixtureAndApiPlayer: Map<number, Map<number, number>>;
   fixtureIdsSynced: number[];
   requestsUsed: number;
@@ -57,6 +58,7 @@ export async function fetchProviderOwnGoals(fixtureIds: number[]): Promise<Provi
     byFixtureAndApiPlayer.set(fixtureId, ownGoals);
   }
   return {
+    eventsByFixture: new Map(pages.map(({fixtureId,body})=>[fixtureId,body.response])),
     byFixtureAndApiPlayer,
     fixtureIdsSynced: pages.map((page) => page.fixtureId),
     requestsUsed: pages.length,
