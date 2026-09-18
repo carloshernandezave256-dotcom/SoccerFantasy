@@ -25,10 +25,10 @@ export function usePlayerAvailability(id?:number,name?:string){
 }
 export function DoubtfulBadge({playerId}:{playerId:number}){
  const player=usePlayerAvailability(playerId);
- return hasDoubtfulWarning(player)?<span className="doubtful-badge" title="Doubtful — may miss the next match" aria-label="Doubtful — may miss the next match">? Doubtful</span>:null;
+ return hasDoubtfulWarning(player)?<span className="doubtful-marker" title="Doubtful — may miss the next match" aria-label="Doubtful — may miss the next match">Doubtful</span>:null;
 }
 export function DoubtfulNotice({playerId}:{playerId:number}){
  const player=usePlayerAvailability(playerId);
  if(!hasDoubtfulWarning(player))return null;
- return <section className="doubtful-notice"><strong>? Doubtful</strong><span>May miss the next match.</span>{player?.doubtful_checked_at?<small>Checked {new Date(player.doubtful_checked_at).toLocaleString()}</small>:null}</section>;
+ return <section className="doubtful-notice"><strong>Doubtful</strong><span>May miss the next match.</span>{player?.doubtful_checked_at?<small>Checked {new Date(player.doubtful_checked_at).toLocaleString()}</small>:null}</section>;
 }
