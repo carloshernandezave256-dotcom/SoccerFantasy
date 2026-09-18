@@ -1,6 +1,6 @@
 import {createClient} from '@supabase/supabase-js';
 import {sportmonks} from './sportmonks-server';
-import type {SportMonksFixture} from './sportmonks-scoring';
+import {unusedSportMonksSubstitute,type SportMonksFixture} from './sportmonks-scoring';
 export const competitions=[{id:8,legacyId:39,name:'Premier League'},{id:564,legacyId:140,name:'La Liga'},{id:384,legacyId:135,name:'Serie A'},{id:82,legacyId:78,name:'Bundesliga'},{id:301,legacyId:61,name:'Ligue 1'}];
 export const fixtureInclude='participants;scores;state;lineups.player;lineups.details.type;events';
 export type SMPlayer={id:number;name?:string;display_name?:string;common_name?:string;image_path?:string;position_id?:number};
@@ -37,7 +37,10 @@ export function fixtureSides(f:SMFixture){
  return {home,away,homeScore:score(home.id),awayScore:score(away.id)};
 }
 export async function profileMap(f:SMFixture,teams:SMTeam[],namesOnly=true){
- const db=adminDb();const profiles=f.lineups.map(l=>{
+ const db=adminDb();const profiles=f.lineups.filter(l=>{
+  if(!l.player&&unusedSportMonksSubstitute(f,l))return false;
+  return true;
+ }).map(l=>{
   const team=teams.find(t=>t.sportmonks_id===l.team_id);
   if(!team||!l.player||l.player.id!==l.player_id)throw new Error(`Missing SportMonks profile or team for ${l.player_name}`);
   return {player:l.player,club:team.club,competition:team.competition};

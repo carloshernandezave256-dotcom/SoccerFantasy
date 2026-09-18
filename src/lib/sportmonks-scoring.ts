@@ -8,6 +8,14 @@ export type SportMonksFixture = {
  lineups:Array<{player_id:number;team_id:number;type_id:number;player_name:string;
  details:Array<{type_id:number;data:{value:number|null};type?:{code:string}}> | null}>;
 };
+/** An unknown unused bench player must not block scoring the known participants.
+ * Empty stats alone are insufficient if any non-rescinded event references them. */
+export function unusedSportMonksSubstitute(f:SportMonksFixture,l:SportMonksFixture['lineups'][number]){
+ return l.type_id===12 && Array.isArray(l.details) && l.details.length===0
+  && Array.isArray(f.events) && !f.events.some(e=>e.rescinded!==true
+   && (e.player_id===l.player_id||e.related_player_id===l.player_id
+    ||e.player_name===l.player_name||e.related_player_name===l.player_name));
+}
 export type SportMonksSource={fixture_id:number;sportmonks_id:number;raw_data:SportMonksFixture;player_map:Record<string,number>};
 export type FixtureContext={fixture_id:number;kickoff:string;competition_id:number;home_score:number;away_score:number};
 const leagues:Record<number,number>={8:39,82:78,301:61,384:135,564:140};
@@ -43,6 +51,10 @@ export function normalizeSportMonks(source:SportMonksSource,context:FixtureConte
   if(subs.some(e=>!squad.some(l=>l.player_id===e.player_id)||!squad.some(l=>l.player_id===e.related_player_id)))fail('unreconciled substitution');
   for(const l of squad){
    const playerId=Number(source.player_map[l.player_id]);
+   if(!source.player_map[l.player_id]&&unusedSportMonksSubstitute(f,l)){
+    if(seen.has(l.player_id))fail(`duplicate player mapping: ${l.player_name}`);
+    seen.add(l.player_id);continue;
+   }
    if(!Number.isSafeInteger(playerId)||playerId<=0||mapped.has(playerId)||seen.has(l.player_id))fail(`missing or duplicate player mapping: ${l.player_name}`);
    mapped.add(playerId);seen.add(l.player_id);
    const details=l.details??[];
