@@ -36,3 +36,18 @@ it('keeps missing live minutes unknown but rejects the same gap at full time',()
  s.raw_data.state.state='FT';
  expect(()=>normalizeSportMonks(s,context,'2026-09-12T16:00:00Z',{live:true})).toThrow('minutes');
 });
+
+it('does not block known scorers for an unmapped unused substitute',()=>{
+ const s=source();delete s.player_map[23];
+ expect(normalize(s)).toHaveLength(22);
+ s.raw_data.state.state='INPLAY_2ND_HALF';
+ expect(normalizeSportMonks(s,context,'2026-09-12T15:20:00Z',{live:true})).toHaveLength(22);
+});
+it('still rejects an unmapped substitute with appearance or event evidence',()=>{
+ const s=source();delete s.player_map[23];
+ s.raw_data.lineups[22].details=[{type_id:119,data:{value:1}}];
+ expect(()=>normalize(s)).toThrow('mapping');
+ s.raw_data.lineups[22].details=[];
+ s.raw_data.events=[{id:1,type_id:18,player_id:23,related_player_id:1,participant_id:10,rescinded:false}];
+ expect(()=>normalize(s)).toThrow('mapping');
+});

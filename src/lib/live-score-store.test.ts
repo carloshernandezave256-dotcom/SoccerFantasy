@@ -58,3 +58,16 @@ describe("LiveScoreStore player mappings", () => {
   });
 
 });
+
+it.each(['snake','pack'])('includes owned players missing from both first snapshot and editable lineup (%s)',async(format)=>{
+ vi.stubGlobal('fetch',vi.fn(async(url:string)=>{
+  const data=url.includes('/leagues?')?[{game_format:format}]
+   :url.includes('/lineup_players?')?[{player_id:1}]
+   :url.includes('/lineup_gameweek_players?')?[]
+   :url.includes(format==='pack'?'/pack_cards?':'/draft_picks?')?[{player_id:1},{player_id:99}]:[];
+  if(format==='pack'&&url.includes('/pack_cards?'))expect(url).toContain('active_slot=not.is.null');
+  return new Response(JSON.stringify(data));
+ }));
+ try{expect(await new LiveScoreStore('https://example.test','test').lineupPlayerIds('league',5)).toEqual([1,99]);}
+ finally{vi.unstubAllGlobals();}
+});

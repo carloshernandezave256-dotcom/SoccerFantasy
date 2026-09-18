@@ -320,7 +320,15 @@ export class LiveScoreStore {
     const snapshots=gameweek===undefined?[]:await this.read<Array<{player_id:number}>>(
       `lineup_gameweek_players?league_id=eq.${leagueId}&gameweek=eq.${gameweek}&select=player_id`,
       'Could not read locked lineup players.');
-    return [...new Set([...rows,...snapshots].map(row=>row.player_id))];
+    // The first publication creates the snapshot and includes owned bench players
+    // absent from editable lineups, including inactive players outside the pool.
+    const leagues=await this.read<Array<{game_format:string}>>(
+      `leagues?id=eq.${leagueId}&select=game_format`,'Could not read league format.');
+    const ownedTable=leagues[0]?.game_format==='pack'
+      ? `pack_cards?league_id=eq.${leagueId}&active_slot=not.is.null&select=player_id&order=player_id.asc`
+      : `draft_picks?league_id=eq.${leagueId}&select=player_id&order=player_id.asc`;
+    const owned=await fetchAllRestRows<{player_id:number}>(`${this.baseUrl}/rest/v1/${ownedTable}`,this.headers());
+    return [...new Set([...rows,...snapshots,...owned].map(row=>row.player_id))];
   }
 
   async poolPlayerIds(playerPool: string) {
