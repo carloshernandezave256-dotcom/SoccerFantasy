@@ -14,6 +14,7 @@ try{
  await db.exec(await read('supabase/migrations/20260918050601_hardened_scoring_finalization.sql'));
  await db.exec(await read('supabase/migrations/20260918055758_isolate_late_week_settlement.sql'));
  await db.exec(await read('supabase/migrations/20260918094000_batch_scoring_settlement.sql'));
+ await db.exec(await read('supabase/migrations/20260918095000_refresh_complete_dnp_evidence.sql'));
  await db.exec(`create trigger apply_final_score_auto_substitutions after insert or update of status,minutes,fantasy_points on public.league_player_scores for each row execute function private.apply_final_score_auto_substitutions();`);
  await db.exec(`select set_config('request.jwt.claim.role','service_role',false);
  insert into leagues values('${L}','draft','Premier League','All Top Five');
@@ -117,6 +118,13 @@ try{
  verify((await query(`select fixture_id from public.scoring_week_fixtures('${L2}',4::smallint) order by fixture_id`)).rows.map(r=>Number(r.fixture_id)),[1001,1002,1003,1004,1005,1006]);
  const diagnostic=await scalar(`select public.gameweek_reconciliation_status('${L2}',4::smallint)`);
  verify(diagnostic.state,'pending');verify(diagnostic.membershipFrozen,true);verify(diagnostic.fixtures.length,6);
+ await db.exec(`insert into league_player_scores(league_id,gameweek,player_id,status,source,source_updated_at,minutes,stats_received,data_complete)
+ values('${L}',99,100,'final','api-football-verified-not-in-matchday-squad','2026-01-01',0,false,false);
+ update league_player_scores set source='api-football-fixture-sum',source_updated_at='2026-02-01',data_complete=false where gameweek=99;`);
+ verify(await scalar('select source from league_player_scores where gameweek=99'),'api-football-verified-not-in-matchday-squad');
+ await db.exec(`update league_player_scores set source='api-football-fixture-sum',source_updated_at='2026-02-01',data_complete=true where gameweek=99;`);
+ verify(await scalar('select source from league_player_scores where gameweek=99'),'api-football-fixture-sum');
+ verify(await scalar("select source_updated_at='2026-02-01'::timestamptz from league_player_scores where gameweek=99"),true);
  await db.exec('set role authenticated');
  await assert.rejects(query(`select public.scoring_week_fixtures('${L}',2::smallint)`),/permission denied/);checks++;
  console.log(`${checks} actual PostgreSQL scoring/finalization checks passed.`);
