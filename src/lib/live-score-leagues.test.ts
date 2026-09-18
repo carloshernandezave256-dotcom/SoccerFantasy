@@ -3,7 +3,7 @@ import {refreshAffectedLeagueScores} from './live-score-leagues';
 import type {LiveScoreStore} from './live-score-store';
 function mockStore(){return {
  affectedLeagueIds:async()=>['league-1'],
- leagueContext:async()=>({league:{calendar_competition:'La Liga',player_pool:'La Liga'},window:{gameweek:1,roster_lock_at:'2026-08-23T00:00:00Z'}}),
+ scoringLeagueContexts:vi.fn(async()=>[{league:{calendar_competition:'La Liga',player_pool:'La Liga'},window:{gameweek:1,roster_lock_at:'2026-08-23T00:00:00Z'}}]),
  gameweekFinalized:vi.fn(async()=>false),
  scoringWeekFixtures:vi.fn(async()=>[{fixture_id:10,status:'FT',kickoff:'2026-08-23T18:00:00Z',competition:'La Liga',gameweek:1,data_complete:false}]),
  fixtureStats:vi.fn(async()=>[]),lineupPlayerIds:async()=>[100],poolPlayerIds:async()=>[100,101],
@@ -31,4 +31,15 @@ it('only the explicit scheduler path can settle an all-excluded week',async()=>{
  expect(store.publishLeagueScores).not.toHaveBeenCalled();
  await refreshAffectedLeagueScores(store as unknown as LiveScoreStore,[],now,['league-1']);
  expect(store.fixtureStats).not.toHaveBeenCalled();expect(store.publishLeagueScores).toHaveBeenCalledTimes(1);
+});
+
+it('continues the old locked week after the next transaction window opens',async()=>{
+ const store=mockStore();
+ store.scoringLeagueContexts.mockResolvedValue([
+  {league:{calendar_competition:'La Liga',player_pool:'La Liga'},window:{gameweek:1,roster_lock_at:'2026-08-23T00:00:00Z'}},
+  {league:{calendar_competition:'La Liga',player_pool:'La Liga'},window:{gameweek:2,roster_lock_at:'2026-08-30T00:00:00Z'}},
+ ]);
+ await refreshAffectedLeagueScores(store as unknown as LiveScoreStore,[10],now);
+ expect(store.publishLeagueScores).toHaveBeenCalledTimes(1);
+ expect((store.publishLeagueScores.mock.calls as unknown as Array<unknown[]>)[0][1]).toBe(1);
 });

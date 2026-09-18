@@ -277,6 +277,24 @@ export class LiveScoreStore {
     return { league: leagues[0] ?? null, window: windows[0] ?? null };
   }
 
+  /** Continue reconciling locked historical weeks after a recovery window opens. */
+  async scoringLeagueContexts(leagueId: string) {
+    const [context, windows, finalized] = await Promise.all([
+      this.leagueContext(leagueId),
+      this.read<TransactionWindow[]>(
+        `league_transaction_windows?league_id=eq.${leagueId}&select=gameweek,roster_lock_at&order=gameweek.asc`,
+        'Could not read scoring windows.',
+      ),
+      this.read<Array<{gameweek:number}>>(
+        `finalized_gameweek_locks?league_id=eq.${leagueId}&select=gameweek`,
+        'Could not read settled weeks.',
+      ),
+    ]);
+    const settled = new Set(finalized.map(row => row.gameweek));
+    return windows.filter(window => !settled.has(window.gameweek))
+      .map(window => ({league: context.league, window}));
+  }
+
   async fixtureStats(fixtureIds: number[]) {
     return fetchAllRestRows<FixturePlayerStatRow>(
       `${this.baseUrl}/rest/v1/football_fixture_player_stats?fixture_id=in.(${fixtureIds.join(",")})&select=*&order=fixture_id.asc,player_id.asc`,

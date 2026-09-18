@@ -45,4 +45,16 @@ describe("LiveScoreStore player mappings", () => {
       }),
     );
   });
+  it("includes pending historical and current windows, excluding settled ones", async () => {
+    const windows = [2, 3, 4].map(gameweek => ({gameweek, roster_lock_at: '2026-09-18T19:00Z'}));
+    vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+      const data = url.includes('finalized_gameweek_locks') ? [{gameweek:2}]
+        : url.includes('league_transaction_windows') ? windows
+        : [{calendar_competition:'Premier League',player_pool:'All Top Five'}];
+      return new Response(JSON.stringify(data), {status:200});
+    }));
+    const contexts = await new LiveScoreStore('https://example.test','test-key').scoringLeagueContexts('league');
+    expect(contexts.map(context => context.window.gameweek)).toEqual([3,4]);
+  });
+
 });
