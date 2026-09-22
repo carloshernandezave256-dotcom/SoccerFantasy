@@ -51,3 +51,26 @@ it('still rejects an unmapped substitute with appearance or event evidence',()=>
  s.raw_data.events=[{id:1,type_id:18,player_id:23,related_player_id:1,participant_id:10,rescinded:false}];
  expect(()=>normalize(s)).toThrow('mapping');
 });
+
+it('ignores missing IDs on unrelated events for an unidentified unused bench player',()=>{
+ const s=source();delete s.player_map[23];s.raw_data.lineups[22].player_id=null;
+ s.raw_data.events=[{id:1,type_id:19,player_id:1,related_player_id:null,participant_id:10,rescinded:false}];
+ expect(normalize(s)).toHaveLength(22);
+ s.raw_data.events[0].player_name='Player 23';
+ expect(()=>normalize(s)).toThrow('mapping');
+});
+it('preserves a confirmed bench yellow without inventing an appearance',()=>{
+ const s=source();s.raw_data.lineups[22].details=[{type_id:84,data:{value:1}}];
+ s.raw_data.events=[{id:1,type_id:19,player_id:23,related_player_id:null,participant_id:10,rescinded:false,on_bench:true}];
+ expect(normalize(s).find(r=>r.player_id===1022)).toMatchObject({minutes:0,yellow_cards:1});
+ delete s.raw_data.events[0].on_bench;
+ expect(()=>normalize(s)).toThrow('minutes');
+});
+it('does not treat other stats or a substitution as an unused bench booking',()=>{
+ const s=source();s.raw_data.lineups[22].details=[{type_id:84,data:{value:1}},{type_id:80,data:{value:2}}];
+ s.raw_data.events=[{id:1,type_id:19,player_id:23,related_player_id:null,participant_id:10,rescinded:false,on_bench:true}];
+ expect(()=>normalize(s)).toThrow('minutes');
+ s.raw_data.lineups[22].details!.pop();
+ s.raw_data.events.push({id:2,type_id:18,player_id:23,related_player_id:1,participant_id:10,rescinded:false});
+ expect(()=>normalize(s)).toThrow('minutes');
+});

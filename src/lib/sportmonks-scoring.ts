@@ -4,17 +4,24 @@ export type SportMonksFixture = {
  id:number; league_id:number; starting_at:string; state:{state:string};
  participants:Array<{id:number;name:string;meta:{location:string}}>;
  scores:Array<{description:string;participant_id:number;score:{goals:number}}>;
- events:Array<{id:number;type_id:number;player_id:number|null;related_player_id:number|null;participant_id:number;player_name?:string;related_player_name?:string;rescinded:boolean|null}>;
- lineups:Array<{player_id:number;team_id:number;type_id:number;player_name:string;
+ events:Array<{id:number;type_id:number;player_id:number|null;related_player_id:number|null;participant_id:number;player_name?:string;related_player_name?:string;rescinded:boolean|null;on_bench?:boolean}>;
+ lineups:Array<{player_id:number|null;team_id:number;type_id:number;player_name:string;
  details:Array<{type_id:number;data:{value:number|null};type?:{code:string}}> | null}>;
 };
-/** An unknown unused bench player must not block scoring the known participants.
- * Empty stats alone are insufficient if any non-rescinded event references them. */
+/** Match only real IDs or nonempty exact names, never two missing IDs. */
+function referencesPlayer(e:SportMonksFixture['events'][number],l:SportMonksFixture['lineups'][number]){
+ return e.participant_id===l.team_id && (
+  (l.player_id!=null&&(e.player_id===l.player_id||e.related_player_id===l.player_id))
+  ||(!!l.player_name?.trim()&&(e.player_name?.trim()===l.player_name.trim()||e.related_player_name?.trim()===l.player_name.trim())));
+}
+/** A bench disciplinary event explicitly marked on_bench does not prove an appearance. */
 export function unusedSportMonksSubstitute(f:SportMonksFixture,l:SportMonksFixture['lineups'][number]){
- return l.type_id===12 && Array.isArray(l.details) && l.details.length===0
-  && Array.isArray(f.events) && !f.events.some(e=>e.rescinded!==true
-   && (e.player_id===l.player_id||e.related_player_id===l.player_id
-    ||e.player_name===l.player_name||e.related_player_name===l.player_name));
+ if(l.type_id!==12||!Array.isArray(l.details)||!Array.isArray(f.events))return false;
+ const events=f.events.filter(e=>e.rescinded!==true&&referencesPlayer(e,l));
+ if(events.some(e=>![19,20,21].includes(e.type_id)||e.on_bench!==true))return false;
+ const cards=new Map([[84,19],[83,20],[85,21]]);
+ return l.details.every(d=>cards.has(d.type_id)&&typeof d.data.value==='number'&&d.data.value>=0
+  &&d.data.value===events.filter(e=>e.type_id===cards.get(d.type_id)).length);
 }
 export type SportMonksSource={fixture_id:number;sportmonks_id:number;raw_data:SportMonksFixture;player_map:Record<string,number>};
 export type FixtureContext={fixture_id:number;kickoff:string;competition_id:number;home_score:number;away_score:number};
@@ -42,7 +49,7 @@ export function normalizeSportMonks(source:SportMonksSource,context:FixtureConte
   return {...e,player_id:resolve(e.player_id,e.player_name),related_player_id:resolve(e.related_player_id,e.related_player_name)};
  });
  if(new Set(events.map(e=>e.id)).size!==events.length)fail('duplicate events');
- const seen=new Set<number>();const mapped=new Set<number>(); const rows:FixturePlayerStatRow[]=[];
+ const seen=new Set<string>();const mapped=new Set<number>(); const rows:FixturePlayerStatRow[]=[];
  for(const team of f.participants){
   const squad=f.lineups.filter(l=>l.team_id===team.id);
   if(squad.filter(l=>l.type_id===11).length!==11||squad.some(l=>![11,12].includes(l.type_id)))fail('starting eleven incomplete');
@@ -50,13 +57,14 @@ export function normalizeSportMonks(source:SportMonksSource,context:FixtureConte
   const subIds=new Set(subs.flatMap(e=>[e.player_id,e.related_player_id]));
   if(subs.some(e=>!squad.some(l=>l.player_id===e.player_id)||!squad.some(l=>l.player_id===e.related_player_id)))fail('unreconciled substitution');
   for(const l of squad){
-   const playerId=Number(source.player_map[l.player_id]);
-   if(!source.player_map[l.player_id]&&unusedSportMonksSubstitute(f,l)){
-    if(seen.has(l.player_id))fail(`duplicate player mapping: ${l.player_name}`);
-    seen.add(l.player_id);continue;
+   const identity=l.player_id==null?`${l.team_id}:${l.player_name}`:String(l.player_id);
+   const playerId=Number(source.player_map[String(l.player_id)]);
+   if(!source.player_map[String(l.player_id)]&&unusedSportMonksSubstitute(f,l)){
+    if(seen.has(identity))fail(`duplicate player mapping: ${l.player_name}`);
+    seen.add(identity);continue;
    }
-   if(!Number.isSafeInteger(playerId)||playerId<=0||mapped.has(playerId)||seen.has(l.player_id))fail(`missing or duplicate player mapping: ${l.player_name}`);
-   mapped.add(playerId);seen.add(l.player_id);
+   if(!Number.isSafeInteger(playerId)||playerId<=0||mapped.has(playerId)||seen.has(identity))fail(`missing or duplicate player mapping: ${l.player_name}`);
+   mapped.add(playerId);seen.add(identity);
    const details=l.details??[];
    if(new Set(details.map(d=>d.type_id)).size!==details.length)fail(`duplicate stats: ${l.player_name}`);
    const stats=new Map(details.map(d=>[d.type_id,d.data.value]));
@@ -66,7 +74,7 @@ export function normalizeSportMonks(source:SportMonksSource,context:FixtureConte
    if(minutes==null&&value(117172)>0&&value(117172)<10)minutes=value(117172);
    if(minutes===null||minutes===undefined){
     if(!final)continue;
-    if(l.type_id!==12||subIds.has(l.player_id)||details.length||events.some(e=>[14,15,16,17].includes(e.type_id)&&(e.player_id===l.player_id||e.related_player_id===l.player_id)))fail(`missing appearance minutes: ${l.player_name}`);
+    if(subIds.has(l.player_id)||!unusedSportMonksSubstitute(f,l))fail(`missing appearance minutes: ${l.player_name}`);
     minutes=0;
    }
    if(typeof minutes!=='number'||!Number.isFinite(minutes)||minutes<0||minutes>130||(final&&l.type_id===11&&minutes<=0))fail(`invalid minutes: ${l.player_name}`);
@@ -98,7 +106,7 @@ export function normalizeSportMonks(source:SportMonksSource,context:FixtureConte
  if(seen.size!==f.lineups.length)fail('unrecognized lineup team');
  // Aggregate player stats are authoritative for scorer attribution; events can retain stale attribution.
  if(final)for(const team of f.participants){
-  const ownIds=new Set(f.lineups.filter(l=>l.team_id===team.id).map(l=>Number(source.player_map[l.player_id])));
+  const ownIds=new Set(f.lineups.filter(l=>l.team_id===team.id).map(l=>Number(source.player_map[String(l.player_id)])));
   const total=rows.reduce((n,r)=>n+(ownIds.has(r.player_id)?Number(r.goals):Number(r.own_goals)),0);
   if(total!==scores.get(team.id))fail('player goals and own goals do not reconcile to final team score');
  }

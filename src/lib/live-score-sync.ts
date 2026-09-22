@@ -43,7 +43,7 @@ export async function synchronizeFixtureScores(store:LiveScoreStore,candidates:C
    const appeared=rows.filter(r=>Number(r.minutes)>0);
    injuriesCleared+=await store.reconcilePlayerAvailability(appeared.map(r=>({player_id:r.player_id,kickoff:kickoff(f.starting_at)})));
    clubsUpdated+=await store.reconcilePlayerClubs(appeared.map(r=>{
-    const l=f.lineups.find(l=>playerMap[l.player_id]===r.player_id)!;const t=teams.find(t=>t.sportmonks_id===l.team_id)!;
+    const l=f.lineups.find(l=>playerMap[String(l.player_id)]===r.player_id)!;const t=teams.find(t=>t.sportmonks_id===l.team_id)!;
     return {fixture_id:id,player_id:r.player_id,club:t.club,competition:t.competition,kickoff:kickoff(f.starting_at),observed_at:ranAt};
    }));
   }catch(error){
