@@ -23,6 +23,22 @@ export function unusedSportMonksSubstitute(f:SportMonksFixture,l:SportMonksFixtu
  return l.details.every(d=>cards.has(d.type_id)&&typeof d.data.value==='number'&&d.data.value>=0
   &&d.data.value===events.filter(e=>e.type_id===cards.get(d.type_id)).length);
 }
+/** Reviewed provider correction: Napoli–Frosinone, 10 October 2026.
+ * Højlund's saved kick was voided for goalkeeper encroachment; De Bruyne scored
+ * the retake. SportMonks leaves the original miss unrescinded in its timeline
+ * while correctly omitting it from aggregate penalty-miss statistics.
+ * Evidence: https://www.reuters.com/sports/soccer/inter-rout-parma-de-bruyne-double-lifts-napoli-2026-10-10/
+ * Scope every identity and the replacement event; never infer voiding from VAR alone.
+ * Keep the raw provider payload unchanged for audit.
+ */
+function reviewedVoidedPenalty(f:SportMonksFixture,e:SportMonksFixture['events'][number]){
+ return f.id===19713560 && e.id===158169454 && e.type_id===17
+  && e.player_id===37325012 && e.participant_id===597
+  && f.events.some(r=>r.id===158169510&&r.type_id===16&&r.player_id===1371
+   &&r.participant_id===597&&r.rescinded!==true)
+  && f.lineups.some(l=>l.player_id===37325012&&l.team_id===597
+   &&Array.isArray(l.details)&&!l.details.some(d=>d.type_id===112&&d.data.value!==0));
+}
 export type SportMonksSource={fixture_id:number;sportmonks_id:number;raw_data:SportMonksFixture;player_map:Record<string,number>};
 export type FixtureContext={fixture_id:number;kickoff:string;competition_id:number;home_score:number;away_score:number};
 const leagues:Record<number,number>={8:39,82:78,301:61,384:135,564:140};
@@ -39,7 +55,7 @@ export function normalizeSportMonks(source:SportMonksSource,context:FixtureConte
  if(!home||!away||home.id===away.id)fail('invalid participants');
  const scores=new Map(f.scores.filter(s=>s.description==='CURRENT').map(s=>[s.participant_id,s.score.goals]));
  if(scores.get(home!.id)!==context.home_score||scores.get(away!.id)!==context.away_score)fail('final scores disagree with canonical fixture');
- const events=f.events.filter(e=>e.rescinded!==true).map(e=>{
+ const events=f.events.filter(e=>e.rescinded!==true&&!reviewedVoidedPenalty(f,e)).map(e=>{
   // Some event IDs lag the lineup identity; accept only a unique exact name on the same team.
   const resolve=(id:number|null,name?:string)=>{
    if(id===null||f.lineups.some(l=>l.player_id===id))return id;

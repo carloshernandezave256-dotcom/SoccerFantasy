@@ -74,3 +74,37 @@ it('does not treat other stats or a substitution as an unused bench booking',()=
  s.raw_data.events.push({id:2,type_id:18,player_id:23,related_player_id:1,participant_id:10,rescinded:false});
  expect(()=>normalize(s)).toThrow('minutes');
 });
+
+function reviewedRetake(){
+ const s=source();s.sportmonks_id=s.raw_data.id=19713560;
+ s.raw_data.participants[0].id=597;
+ s.raw_data.scores[0].participant_id=597;s.raw_data.scores[0].score.goals=1;
+ for(const l of s.raw_data.lineups)if(l.team_id===10)l.team_id=597;
+ s.raw_data.lineups[0].player_id=37325012;s.raw_data.lineups[1].player_id=1371;
+ delete s.player_map[1];delete s.player_map[2];s.player_map[37325012]=1000;s.player_map[1371]=1001;
+ s.raw_data.lineups[1].details!.push({type_id:52,data:{value:1}},{type_id:111,data:{value:1}});
+ s.raw_data.events=[
+  {id:158169454,type_id:17,player_id:37325012,related_player_id:null,participant_id:597,rescinded:null},
+  {id:158169510,type_id:16,player_id:1371,related_player_id:null,participant_id:597,rescinded:null},
+ ];
+ return s;
+}
+it('reconciles the reviewed voided Hojlund kick without charging a missed penalty',()=>{
+ const s=reviewedRetake();const before=JSON.stringify(s.raw_data);
+ const rows=normalize(s,{...context,home_score:1});
+ expect(rows.find(r=>r.player_id===1000)!.penalties_missed).toBe(0);
+ expect(rows.find(r=>r.player_id===1001)).toMatchObject({goals:1,penalty_goals:1});
+ expect(JSON.stringify(s.raw_data)).toBe(before);
+});
+it('does not extrapolate the reviewed correction to another fixture or event',()=>{
+ const s=reviewedRetake();s.sportmonks_id=s.raw_data.id=19713561;
+ expect(()=>normalize(s,{...context,home_score:1})).toThrow('events disagree');
+ s.sportmonks_id=s.raw_data.id=19713560;s.raw_data.events[0].id=999;
+ expect(()=>normalize(s,{...context,home_score:1})).toThrow('events disagree');
+});
+it('does not void a missed kick when the replacement penalty is rescinded',()=>{
+ const s=reviewedRetake();s.raw_data.events[1].rescinded=true;
+ s.raw_data.lineups[1].details=s.raw_data.lineups[1].details!.filter(d=>![52,111].includes(d.type_id));
+ s.raw_data.scores[0].score.goals=0;
+ expect(()=>normalize(s)).toThrow('events disagree');
+});
