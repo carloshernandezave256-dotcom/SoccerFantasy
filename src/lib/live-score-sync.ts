@@ -5,7 +5,8 @@ import {normalizeSportMonks} from './sportmonks-scoring';
 import {sportmonks} from './sportmonks-server';
 import {adminDb,checked,fixtureInclude,fixtureSides,fixtureStatus,kickoff,profileMap,type SMFixture,type SMTeam} from './sportmonks-data';
 
-/** SportMonks is the sole scoring provider. Canonical fixture/player IDs never change. */
+/** SportMonks is primary; reviewed field-level supplements retain explicit provenance.
+ * Canonical fixture/player IDs never change. */
 export async function synchronizeFixtureScores(store:LiveScoreStore,candidates:CachedFixture[],now:Date,options:{publish?:boolean;deadline?:number}={}){
  const db=adminDb(),ranAt=now.toISOString();let requestsUsed=0,sharedPlayerRowsUpdated=0,injuriesCleared=0,clubsUpdated=0,eventFixturesSynced=0;
  const teams=await checked(db.from('sportmonks_teams').select('*')) as SMTeam[];
@@ -38,12 +39,14 @@ export async function synchronizeFixtureScores(store:LiveScoreStore,candidates:C
    const source={fixture_id:id,sportmonks_id:f.id,raw_data:f,player_map:playerMap};
    await checked(db.from('sportmonks_fixture_sources').upsert({...source,captured_at:ranAt,imported_at:null},{onConflict:'fixture_id'}));
    if(sides.homeScore===null||sides.awayScore===null)throw new Error('SportMonks current score is missing');
-   const rows=normalizeSportMonks(source,{fixture_id:id,kickoff:kickoff(f.starting_at),competition_id:context.competition_id,home_score:sides.homeScore,away_score:sides.awayScore},ranAt,{live:true});
+   const reviewedEvidence: string[] = [];
+   const rows=normalizeSportMonks(source,{fixture_id:id,kickoff:kickoff(f.starting_at),competition_id:context.competition_id,home_score:sides.homeScore,away_score:sides.awayScore},ranAt,{live:true,onReviewedEvidence:note=>reviewedEvidence.push(note)});
    await store.upsertFixtureStats(rows,ranAt);sharedPlayerRowsUpdated+=rows.length;
    const final=['FT','AET','PEN'].includes(rawStatus)&&['FT','AET','PEN'].includes(status);
    if(final){await store.markFixtureEventsSynced([id],ranAt);eventFixturesSynced++;}
    await store.insertObservations([{fixture_id:id,observed_at:ranAt,status:rawStatus,home_score:sides.homeScore,away_score:sides.awayScore,provider_player_rows:f.lineups.length,mapped_player_rows:rows.length,unmapped_players:[]}]);
-   await store.recordFixtureEvidence(id,ranAt,final,final?'SportMonks lineup, minutes and events reconciled':'SportMonks live statistics; final proof pending',rows.map(r=>r.player_id));
+   const proofNote = final ? 'SportMonks lineup, minutes and events reconciled' : 'SportMonks live statistics; final proof pending';
+   await store.recordFixtureEvidence(id,ranAt,final,[proofNote,...reviewedEvidence].join('; '),rows.map(r=>r.player_id));
    await checked(db.from('sportmonks_fixture_sources').update({imported_at:ranAt}).eq('fixture_id',id));
    const appeared=rows.filter(r=>Number(r.minutes)>0);
    injuriesCleared+=await store.reconcilePlayerAvailability(appeared.map(r=>({player_id:r.player_id,kickoff:kickoff(f.starting_at)})));

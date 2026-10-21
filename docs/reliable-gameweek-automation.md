@@ -66,3 +66,25 @@ Recheck fixture evidence, finalization locks, lineup substitutions and next-week
 window/deadlines. Provider identity or statistical gaps must remain blocked until
 corroborated; never force finalization or move the waiver deadline to hide a delay.
 A successful software deployment is not proof the live week settled.
+
+## Reviewed Dovbyk core-stat supplement
+
+The Bologna–Inter match on 17 October 2026 has a separately reviewed, narrowly
+scoped supplement. SportMonks fixture 19713557 / player 205978 has 14 minutes,
+18 cumulative minutes and rating 6.46, but omits the core passing/touch records.
+[FotMob match 5749702](https://www.fotmob.com/match/5749702), player 655696,
+explicitly records accurate passes `value: 0, total: 0` and touches `value: 0`.
+Evidence was captured at 2026-10-21T18:39:02Z; the captured page SHA-256 is
+`854b34b7b74bc3b08ae753abf3cc3165cf626536766bebab1c4e16a15eccc5db`.
+
+Only missing total-pass, completed-pass and touch fields are supplemented in
+memory. The raw source remains unchanged. Exact canonical/provider fixture and
+player IDs, kickoff, teams, score, lineup and minute-76 substitution must agree.
+Explicit nulls and conflicting partial values are not replaced. Later complete,
+valid provider core statistics remain authoritative. This is not a general
+missing-equals-zero policy, and zero touches do not establish every other category
+as zero. Existing scoring and sparse-event handling are unchanged. Successful
+reconciliation records the supplemental source in fixture evidence.
+
+This source correction requires explicit approval with deployment. Its local
+validation is not permission to alter production evidence or finalized scores.
