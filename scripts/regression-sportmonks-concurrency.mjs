@@ -21,12 +21,13 @@ try{
  create schema auth;
  create function auth.jwt() returns jsonb language sql as $$select '{"role":"service_role"}'::jsonb$$;
  create table public.players(id bigint primary key,full_name text,club text,competition text,
-  photo_url text,api_football_id bigint,provider_id text,sportmonks_id bigint unique);
+  photo_url text,api_football_id bigint,provider_id text,nationality text,sportmonks_id bigint unique);
  create table public.sportmonks_player_profiles(sportmonks_id bigint primary key,player_id bigint references public.players(id),
   club text not null,competition text not null,raw_data jsonb not null,observed_at timestamptz not null default now());
  insert into public.players(id,full_name,club,competition,api_football_id,provider_id)
  values(1,'Concurrent Player','Home','Premier League',1001,'api-football:1001');`);
  await setup.query(await readFile(new URL('../supabase/migrations/20261021180735_harden_sportmonks_identity_mapping.sql',import.meta.url),'utf8'));
+ await setup.query(await readFile(new URL('../supabase/migrations/20261021193443_qualify_sportmonks_profile_nationality.sql',import.meta.url),'utf8'));
  const a=await make(),b=await make();
  for(const c of [a,b])await c.query("set statement_timeout='10s'");
  const sql='select public.sync_sportmonks_profiles($1::jsonb) result';

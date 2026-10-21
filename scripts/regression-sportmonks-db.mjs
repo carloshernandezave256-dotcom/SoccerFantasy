@@ -7,7 +7,14 @@ try{
  create schema auth;create schema private;
  create function auth.jwt() returns jsonb language sql as $$select '{"role":"service_role"}'::jsonb$$;
  create type public.player_position as enum('GK','DEF','MID','FWD');
- create table players(id bigint primary key,full_name text,club text,competition text,position player_position,photo_url text,api_football_id bigint,provider_id text);
+ -- Keep all production player column names: PL/pgSQL can otherwise compile in
+ -- this harness while ambiguous unqualified locals fail against the real table.
+ create table players(id bigint primary key,full_name text,club text,competition text,position player_position,
+  photo_url text,api_football_id bigint,provider_id text,nationality text,active boolean default true,draft_rank integer,
+  is_club_captain boolean default false,injured boolean default false,injury_type text,injury_reason text,
+  expected_return text,injury_updated_at timestamptz,sidelined_checked_at timestamptz,fotmob_id bigint,
+  fotmob_expected_return text,fotmob_return_checked_at timestamptz,availability_last_appearance_at timestamptz,
+  injury_source text,injury_started_at date,injury_provider_record jsonb,doubtful_checked_at timestamptz,doubtful_until timestamptz);
  create table football_fixture_cache(fixture_id bigint primary key,home_team text,away_team text,competition text);
  create table sportmonks_fixture_sources(fixture_id bigint,sportmonks_id bigint,player_map jsonb,raw_data jsonb);
  create function private.calculate_league_player_row() returns trigger language plpgsql as $$begin if new.source='api-football-fixture-sum' then return new;end if;return new;end$$;
@@ -18,7 +25,18 @@ try{
  await db.exec(await readFile(new URL('../supabase/migrations/20260918131015_sportmonks_primary_provider.sql',import.meta.url),'utf8'));
  await db.exec(await readFile(new URL('../supabase/migrations/20260918133002_prefer_canonical_sportmonks_players.sql',import.meta.url),'utf8'));
  await db.exec(await readFile(new URL('../supabase/migrations/20260918133548_retain_reviewed_sportmonks_aliases.sql',import.meta.url),'utf8'));
- await db.exec(await readFile(new URL('../supabase/migrations/20261021180735_harden_sportmonks_identity_mapping.sql',import.meta.url),'utf8'));
+ const originalIdentitySql=await readFile(new URL('../supabase/migrations/20261021180735_harden_sportmonks_identity_mapping.sql',import.meta.url),'utf8');
+ const qualifiedIdentitySql=await readFile(new URL('../supabase/migrations/20261021193443_qualify_sportmonks_profile_nationality.sql',import.meta.url),'utf8');
+ await db.exec(originalIdentitySql);
+ await db.exec(qualifiedIdentitySql);
+ // This follow-up intentionally changes only a local identifier, not identity
+ // semantics. Audit every local against all real production column names.
+ const functionSql=sql=>sql.slice(sql.indexOf('create or replace function public.sync_sportmonks_profiles'));
+ assert.equal(functionSql(qualifiedIdentitySql).replace(/\bv_nationality\b/g,'nationality'),functionSql(originalIdentitySql));
+ const localNames=sql=>[...functionSql(sql).match(/\bdeclare\s*\n([\s\S]*?)\nbegin\b/)[1].matchAll(/\b([a-z_][a-z_0-9]*)\s+(?:jsonb|bigint(?:\[\])?|text(?:\[\])?|integer)\b/g)].map(m=>m[1]);
+ const columns=new Set((await db.query("select column_name from information_schema.columns where table_schema='public' and table_name in ('players','sportmonks_player_profiles')")).rows.map(r=>r.column_name));
+ assert.deepEqual(localNames(originalIdentitySql).filter(name=>columns.has(name)),['nationality']);
+ assert.deepEqual(localNames(qualifiedIdentitySql).filter(name=>columns.has(name)),[]);
  const q=async sql=>(await db.query(sql)).rows;
  assert.equal((await q('select sportmonks_id from players where id=1'))[0].sportmonks_id,101);
  assert.equal((await q('select sportmonks_id from football_fixture_cache'))[0].sportmonks_id,100);
@@ -175,6 +193,28 @@ try{
  const partial=await sync([observation(null,'Missing ID'),observation(132,null)]);
  assert.equal(partial.mapped,1);assert.equal(partial.unresolved,1);
  assert.equal(partial.playerMap['132'],16);assert.equal(partial.issues[0].sportmonksId,null);
+ // Production-schema regression: prove the applied predecessor fails for both
+ // unlinked exact-club and corroborated-transfer paths, then the additive fix
+ // succeeds. The human-readable players.nationality must not shadow provider ID.
+ await db.exec(`insert into players(id,full_name,club,competition,position,api_football_id,provider_id,sportmonks_id,nationality) values
+  (50,'Schema Collision Exact','Home','Premier League','MID',1050,'api-football:1050',null,'Canada'),
+  (51,'Schema Collision Transfer','Old Club','La Liga','DEF',1051,'api-football:1051',451,'Spain');`);
+ await link(451,51,'Schema Collision Transfer');
+ const exactInput=[observation(350,'Schema Collision Exact',evidence)];
+ const transferInput=[observation(351,'Schema Collision Transfer',evidence)];
+ const exactBefore=await row(50),transferBefore=await row(51);
+ await db.exec(originalIdentitySql);
+ for(const input of [exactInput,transferInput]){
+  await assert.rejects(sync(input),/column reference "nationality" is ambiguous/);
+ }
+ assert.deepEqual(await row(50),exactBefore);assert.deepEqual(await row(51),transferBefore);
+ assert.equal(await profileRow(350),undefined);assert.equal(await profileRow(351),undefined);
+ await db.exec(qualifiedIdentitySql);
+ assert.equal((await sync(exactInput)).playerMap['350'],50);
+ assert.equal((await sync(transferInput)).playerMap['351'],51);
+ assert.equal((await row(50)).nationality,'Canada');assert.equal((await row(51)).nationality,'Spain');
+ assert.equal((await row(51)).sportmonks_id,451);assert.equal((await row(51)).club,'Home');
+
  // A real service role, not just a mocked role claim, can take the serialization
  // locks using the existing SELECT/INSERT/UPDATE grants, with no security definer.
  await db.exec('grant usage on schema auth to service_role; grant select,update on players to service_role; set role service_role');
