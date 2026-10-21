@@ -15,6 +15,7 @@ export type LeagueConfig = { calendar_competition: string; player_pool: string }
 export type TransactionWindow = { gameweek: number; roster_lock_at: string };
 export type PlayerAppearance = { player_id: number; kickoff: string };
 export type FixtureClubContext = { fixture_id: number; kickoff: string; competition: string };
+export type PendingGameweek = {league_id:string;gameweek:number;fixtures_ready:boolean;settlement_ready:boolean;diagnostics:unknown};
 
 const TOP_FIVE_COMPETITIONS = [
   "Premier League",
@@ -69,6 +70,20 @@ export class LiveScoreStore {
     return (await response.json() as Array<{league_id:string}>).map(row=>row.league_id);
   }
 
+  async pendingGameweeks():Promise<PendingGameweek[]> {
+    const response=await this.write('rpc/pending_gameweek_settlements','POST',{},'Could not discover pending settlements.','return=representation');
+    return response.json();
+  }
+
+  async startScoringRun(jobName:'scores'|'wrap-gameweeks',runId?:string):Promise<string> {
+    const response=await this.write('rpc/start_scoring_run','POST',{p_job_name:jobName,p_run_id:runId??null},'Could not start scoring run.','return=representation');
+    return response.json();
+  }
+
+  async finishScoringRun(runId:string,status:'completed'|'failed'|'skipped',summary:unknown,error?:string) {
+    await this.write('rpc/finish_scoring_run','POST',{p_run_id:runId,p_status:status,p_summary:summary,p_error:error??null},'Could not persist scoring outcome.');
+  }
+
   async recordFixtureEvidence(fixtureId:number,observedAt:string,complete:boolean,reason:string,playerIds:number[]){
     await this.write('rpc/record_fixture_stat_evidence','POST',{
       p_fixture_id:fixtureId,p_observed_at:observedAt,p_complete:complete,p_reason:reason,p_player_ids:playerIds,
@@ -102,7 +117,9 @@ export class LiveScoreStore {
       `football_sync_state?singleton_id=eq.1&live_claimed_until=lt.${now.toISOString()}`,
       "PATCH",
       {
-        live_claimed_until: new Date(now.getTime() + 105_000).toISOString(),
+        // Cover the route's 300-second execution limit, including publication.
+        // A crashed worker becomes reclaimable after this bounded grace period.
+        live_claimed_until: new Date(now.getTime() + 330_000).toISOString(),
         updated_at: now.toISOString(),
       },
       "Could not claim the shared synchronization lock.",
@@ -114,7 +131,7 @@ export class LiveScoreStore {
 
   async renewSync(owner:Date){
     const response=await this.write(`football_sync_state?singleton_id=eq.1&updated_at=eq.${owner.toISOString()}`,'PATCH',
-      {live_claimed_until:new Date(Date.now()+105_000).toISOString()},'Could not renew sync lease.','return=representation');
+      {live_claimed_until:new Date(Date.now()+330_000).toISOString()},'Could not renew sync lease.','return=representation');
     if(!(await response.json()).length)throw new Error('Shared scoring lease was lost.');
   }
   async releaseSync(owner:Date){

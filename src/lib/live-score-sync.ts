@@ -6,7 +6,7 @@ import {sportmonks} from './sportmonks-server';
 import {adminDb,checked,fixtureInclude,fixtureSides,fixtureStatus,kickoff,profileMap,type SMFixture,type SMTeam} from './sportmonks-data';
 
 /** SportMonks is the sole scoring provider. Canonical fixture/player IDs never change. */
-export async function synchronizeFixtureScores(store:LiveScoreStore,candidates:CachedFixture[],now:Date){
+export async function synchronizeFixtureScores(store:LiveScoreStore,candidates:CachedFixture[],now:Date,options:{publish?:boolean;deadline?:number}={}){
  const db=adminDb(),ranAt=now.toISOString();let requestsUsed=0,sharedPlayerRowsUpdated=0,injuriesCleared=0,clubsUpdated=0,eventFixturesSynced=0;
  const teams=await checked(db.from('sportmonks_teams').select('*')) as SMTeam[];
  const contexts=await checked(db.from('football_fixture_cache').select('*').in('fixture_id',candidates.map(f=>f.fixture_id)));
@@ -14,6 +14,9 @@ export async function synchronizeFixtureScores(store:LiveScoreStore,candidates:C
  const touched:number[]=[],errors:Array<{fixtureId:number;error:string}>=[];
  for(const context of contexts){
   const id=context.fixture_id;
+  if(options.deadline!==undefined&&Date.now()>=options.deadline){
+   errors.push({fixtureId:id,error:'Deferred to the next run: execution budget reached.'});continue;
+  }
   await store.renewSync(now);
   try{
    await store.recordFixtureEvidence(id,ranAt,false,'SportMonks refresh in progress',[]);
@@ -29,9 +32,11 @@ export async function synchronizeFixtureScores(store:LiveScoreStore,candidates:C
    touched.push(id);
    if(['NS','TBD','PST','CANC','ABD','AWD','WO'].includes(rawStatus))continue;
    if(!Array.isArray(f.lineups)||!f.lineups.length)throw new Error('SportMonks lineup statistics not yet available');
+   // Keep the exact failed provider payload too, not only successful imports.
+   await checked(db.from('sportmonks_fixture_sources').upsert({fixture_id:id,sportmonks_id:f.id,raw_data:f,player_map:{},captured_at:ranAt,imported_at:null},{onConflict:'fixture_id'}));
    const playerMap=await profileMap(f,teams);
    const source={fixture_id:id,sportmonks_id:f.id,raw_data:f,player_map:playerMap};
-   await checked(db.from('sportmonks_fixture_sources').upsert({...source,captured_at:ranAt},{onConflict:'fixture_id'}));
+   await checked(db.from('sportmonks_fixture_sources').upsert({...source,captured_at:ranAt,imported_at:null},{onConflict:'fixture_id'}));
    if(sides.homeScore===null||sides.awayScore===null)throw new Error('SportMonks current score is missing');
    const rows=normalizeSportMonks(source,{fixture_id:id,kickoff:kickoff(f.starting_at),competition_id:context.competition_id,home_score:sides.homeScore,away_score:sides.awayScore},ranAt,{live:true});
    await store.upsertFixtureStats(rows,ranAt);sharedPlayerRowsUpdated+=rows.length;
@@ -52,6 +57,8 @@ export async function synchronizeFixtureScores(store:LiveScoreStore,candidates:C
    errors.push({fixtureId:id,error:message});
   }
  }
- const summary=await refreshAffectedLeagueScores(store,touched,now);
- return {ok:errors.length===0,provider:'sportmonks',ranAt,requestsUsed,fixturesEligible:candidates.length,fixturesLive:touched.length,sharedPlayerRowsUpdated,fantasyLeagueGameweeksUpdated:summary.leagueGameweeksUpdated,leaguePlayerRowsUpdated:summary.leagueRowsUpdated,injuriesCleared,clubsUpdated,eventFixturesSynced,errors};
+ const missing=candidates.filter(c=>!contexts.some((f:{fixture_id:number})=>f.fixture_id===c.fixture_id));
+ errors.push(...missing.map(c=>({fixtureId:c.fixture_id,error:'Fixture context is missing from the canonical cache.'})));
+ const summary=options.publish===false?{leagueRowsUpdated:0,leagueGameweeksUpdated:0,errors:[]}:await refreshAffectedLeagueScores(store,touched,now);
+ return {ok:errors.length===0&&summary.errors.length===0,provider:'sportmonks',ranAt,requestsUsed,fixturesEligible:candidates.length,fixturesLive:touched.length,sharedPlayerRowsUpdated,fantasyLeagueGameweeksUpdated:summary.leagueGameweeksUpdated,leaguePlayerRowsUpdated:summary.leagueRowsUpdated,injuriesCleared,clubsUpdated,eventFixturesSynced,errors,publicationErrors:summary.errors};
 }

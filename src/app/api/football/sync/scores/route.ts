@@ -65,6 +65,6 @@ export async function POST(request:NextRequest){
     return NextResponse.json({...result,competition,gameweek:activeWeek,round:`Regular Season - ${activeWeek}`,
       fixturesStarted:candidates.length,fixturesTotal:scoringFixtures.length,
       playersUpdated:'leaguePlayerRowsUpdated' in result?result.leaguePlayerRowsUpdated:0,
-      seasonFixturesCached:fixtureRows.length,requestsUsed:result.requestsUsed+scheduleBodies.length});
+      seasonFixturesCached:fixtureRows.length,requestsUsed:result.requestsUsed+scheduleBodies.length},{status:result.ok?200:502});
   }catch(error){return NextResponse.json({error:error instanceof Error?error.message:"Live score synchronization failed."},{status:502})}finally{await store.releaseSync(now)}
 }

@@ -108,3 +108,12 @@ it('does not void a missed kick when the replacement penalty is rescinded',()=>{
  s.raw_data.scores[0].score.goals=0;
  expect(()=>normalize(s)).toThrow('events disagree');
 });
+
+it.each([118,80])('rejects null core evidence instead of certifying a final result (%s)',type=>{
+ const s=source();s.raw_data.lineups[0].details!.find(d=>d.type_id===type)!.data.value=null;
+ expect(()=>normalize(s)).toThrow('incomplete scoring statistics');
+});
+it('rejects explicitly null scoring statistics rather than silently replacing them with zero',()=>{
+ const s=source();s.raw_data.lineups[0].details!.find(d=>d.type_id===116)!.data.value=null;
+ expect(()=>normalize(s)).toThrow('invalid stat 116');
+});

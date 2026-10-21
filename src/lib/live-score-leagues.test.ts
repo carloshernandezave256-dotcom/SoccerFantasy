@@ -11,7 +11,7 @@ function mockStore(){return {
 };}
 const now=new Date('2026-08-23T21:00:00Z');
 it('uses one atomic publication for the authoritative week',async()=>{
- const store=mockStore();expect(await refreshAffectedLeagueScores(store as unknown as LiveScoreStore,[10],now)).toEqual({leagueRowsUpdated:2,leagueGameweeksUpdated:1});
+ const store=mockStore();expect(await refreshAffectedLeagueScores(store as unknown as LiveScoreStore,[10],now)).toEqual({leagueRowsUpdated:2,leagueGameweeksUpdated:1,errors:[]});
  expect(store.publishLeagueScores).toHaveBeenCalledTimes(1);
  expect(store.publishLeagueScores.mock.calls[0]).toBeDefined();
 });
@@ -42,4 +42,22 @@ it('continues the old locked week after the next transaction window opens',async
  await refreshAffectedLeagueScores(store as unknown as LiveScoreStore,[10],now);
  expect(store.publishLeagueScores).toHaveBeenCalledTimes(1);
  expect((store.publishLeagueScores.mock.calls as unknown as Array<unknown[]>)[0][1]).toBe(1);
+});
+
+it('retries publication without any provider fixture when complete evidence already exists',async()=>{
+ const store=mockStore();store.scoringWeekFixtures.mockResolvedValue([{fixture_id:10,status:'FT',kickoff:'2026-08-23T18:00:00Z',competition:'La Liga',gameweek:1,data_complete:true}]);
+ await refreshAffectedLeagueScores(store as unknown as LiveScoreStore,[],now,['league-1']);
+ expect(store.publishLeagueScores).toHaveBeenCalledTimes(1);
+});
+it('does not turn a provider-free retry with incomplete proof into DNPs',async()=>{
+ const store=mockStore();await refreshAffectedLeagueScores(store as unknown as LiveScoreStore,[],now,['league-1']);
+ expect(store.publishLeagueScores).not.toHaveBeenCalled();
+});
+it('isolates publication errors so a broken league cannot starve another',async()=>{
+ const store=mockStore();store.affectedLeagueIds=async()=>['league-1','league-2'];
+ store.publishLeagueScores.mockRejectedValueOnce(Error('publication failed'));
+ const result=await refreshAffectedLeagueScores(store as unknown as LiveScoreStore,[10],now);
+ expect(result.leagueGameweeksUpdated).toBe(1);
+ expect(result.errors).toEqual([{leagueId:'league-1',gameweek:1,error:'publication failed'}]);
+ expect(store.publishLeagueScores).toHaveBeenCalledTimes(2);
 });

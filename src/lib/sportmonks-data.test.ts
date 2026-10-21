@@ -29,3 +29,12 @@ it('ignores absent profiles only for unused bench players without events',async(
  fixture.lineups[1].type_id=11;
  await expect(profileMap(fixture as never,[{sportmonks_id:10,club:'Home',competition:'Premier League'}])).rejects.toThrow('Missing SportMonks profile');
 });
+
+it('exposes explicit ambiguity rather than choosing a canonical player',async()=>{
+ vi.stubEnv('SUPABASE_SERVICE_ROLE_KEY','test');vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL','https://example.test');
+ vi.stubGlobal('fetch',vi.fn(async()=>new Response(JSON.stringify({playerMap:{},issues:[{sportmonksId:2,name:'Same Name',reason:'ambiguous_identity',candidateIds:[10,20]}]}),{headers:{'Content-Type':'application/json'}})));
+ const fixture={events:[],lineups:[{player_id:2,player_name:'Same Name',team_id:10,type_id:11,details:[],player:{id:2}}]};
+ await expect(profileMap(fixture as never,[{sportmonks_id:10,club:'Home',competition:'Premier League'}])).rejects.toThrow('canonical candidates 10, 20');
+ fixture.lineups[0].type_id=12;
+ expect(await profileMap(fixture as never,[{sportmonks_id:10,club:'Home',competition:'Premier League'}])).toEqual({});
+});

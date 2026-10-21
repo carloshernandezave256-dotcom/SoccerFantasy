@@ -84,7 +84,7 @@ export function normalizeSportMonks(source:SportMonksSource,context:FixtureConte
    const details=l.details??[];
    if(new Set(details.map(d=>d.type_id)).size!==details.length)fail(`duplicate stats: ${l.player_name}`);
    const stats=new Map(details.map(d=>[d.type_id,d.data.value]));
-   const value=(id:number)=>{const n=stats.get(id);if(n===null||n===undefined)return 0;if(typeof n!=='number'||!Number.isFinite(n)||n<0)fail(`invalid stat ${id}: ${l.player_name}`);return n;};
+   const value=(id:number)=>{const n=stats.get(id);if(n===undefined)return 0;if(typeof n!=='number'||!Number.isFinite(n)||n<0)return fail(`invalid stat ${id}: ${l.player_name}`);return n;};
    let minutes=stats.get(119);
    // Cumulative minutes include stoppage time and still prove a short late appearance.
    if(minutes==null&&value(117172)>0&&value(117172)<10)minutes=value(117172);
@@ -96,7 +96,8 @@ export function normalizeSportMonks(source:SportMonksSource,context:FixtureConte
    if(typeof minutes!=='number'||!Number.isFinite(minutes)||minutes<0||minutes>130||(final&&l.type_id===11&&minutes<=0))fail(`invalid minutes: ${l.player_name}`);
    
    // Core fields must be present for everyone who played; sparse exceptional events may be absent at zero.
-   if(final&&minutes>=10&&(!stats.has(118)||(!stats.has(80)&&!stats.has(120))))fail(`incomplete scoring statistics: ${l.player_name}`);
+   const numeric=(id:number)=>typeof stats.get(id)==='number'&&Number.isFinite(stats.get(id))&&Number(stats.get(id))>=0;
+   if(final&&minutes>=10&&(!numeric(118)||(!numeric(80)&&!numeric(120))))fail(`incomplete scoring statistics: ${l.player_name}`);
    const count=(type:number)=>events.filter(e=>e.type_id===type&&e.player_id===l.player_id).length;
    const penalties=value(111);const own=value(324);
    let goals=value(52);

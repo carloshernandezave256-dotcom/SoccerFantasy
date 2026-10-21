@@ -46,6 +46,9 @@ export async function profileMap(f:SMFixture,teams:SMTeam[],namesOnly=true){
   return {player:l.player,club:team.club,competition:team.competition};
  });
  const result=await checked(db.rpc('sync_sportmonks_profiles',{p_profiles:profiles,p_names_only:namesOnly}));
+ const issues=(result.issues??[]) as Array<{sportmonksId:number|null;name:string|null;reason:string;candidateIds:number[]}>;
+ const required=issues.filter(issue=>f.lineups.some(l=>l.player_id===issue.sportmonksId&&!unusedSportMonksSubstitute(f,l)));
+ if(required.length)throw new Error(`Unresolved SportMonks identities: ${required.map(issue=>`${issue.name??issue.sportmonksId}: ${issue.reason}${issue.candidateIds.length?` (canonical candidates ${issue.candidateIds.join(', ')})`:''}`).join('; ')}`);
  return result.playerMap as Record<string,number>;
 }
 export async function currentSeasons(){

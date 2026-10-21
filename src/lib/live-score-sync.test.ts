@@ -11,7 +11,7 @@ beforeEach(()=>{
  vi.clearAllMocks();
  const context={...candidates[0],sportmonks_id:100};
  db.from.mockImplementation(table=>table==='sportmonks_teams'?{select:()=>Promise.resolve({data:[],error:null})}:{select:()=>({in:()=>Promise.resolve({data:[context],error:null})})});
- refresh.mockResolvedValue({leagueGameweeksUpdated:0,leagueRowsUpdated:0});
+ refresh.mockResolvedValue({leagueGameweeksUpdated:0,leagueRowsUpdated:0,errors:[]});
 });
 it('a failed SportMonks request withdraws final proof and reports the failure',async()=>{
  const store={renewSync:vi.fn(),priorProviderStatuses:vi.fn(async()=>new Map()),recordFixtureEvidence:vi.fn()};
