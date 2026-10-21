@@ -134,6 +134,32 @@ try{
  issue(await sync([observation(214,'Other Person')]),'identity_mapping_conflict',[13,14]);
  assert.equal((await profileRow(214)).player_id,13);assert.equal((await row(14)).sportmonks_id,214);
 
+ // Nationality can legitimately differ across reviewed aliases (for example,
+ // dual-nationality profiles). It must not override an established provider ID.
+ // Same-ID nationality changes and any linked DOB contradiction still fail closed.
+ await db.exec(`insert into players(id,full_name,club,competition,position,api_football_id,provider_id,sportmonks_id)
+  values(24,'Nationality Alias','Home','Premier League','MID',1024,'api-football:1024',224)`);
+ await link(224,24,'Nationality Alias');
+ await link(225,24,'Nationality Alias',{nationality_id:86});
+ const otherNationality=await profileRow(225);
+ const directNationality=await sync([observation(224,'Nationality Alias',evidence)]);
+ assert.equal(directNationality.playerMap['224'],24);assert.deepEqual(directNationality.issues,[]);
+ assert.deepEqual(await profileRow(225),otherNationality,'Direct refresh must not rewrite a reviewed alias');
+ const reviewedNationality=await sync([observation(225,'Nationality Alias',{...evidence,nationality_id:86})]);
+ assert.equal(reviewedNationality.playerMap['225'],24);assert.deepEqual(reviewedNationality.issues,[]);
+ assert.equal((await row(24)).sportmonks_id,224,'Reviewed alias must not replace the primary ID');
+ const directKept=await profileRow(224),reviewedKept=await profileRow(225);
+ issue(await sync([observation(224,'Nationality Alias',{...evidence,nationality_id:86})]),'conflicting_profile_attributes',[24]);
+ issue(await sync([observation(225,'Nationality Alias',evidence)]),'conflicting_profile_attributes',[24]);
+ assert.deepEqual(await profileRow(224),directKept);assert.deepEqual(await profileRow(225),reviewedKept);
+ // The exception is ONLY for established IDs. A new/transfer match still needs
+ // matching nationality corroboration without contradictory stored attributes.
+ issue(await sync([{...observation(226,'Nationality Alias',evidence),club:'New Club'}]),'insufficient_identity_evidence',[24]);
+ await link(227,24,'Nationality Alias',{date_of_birth:'2007-01-01',nationality_id:86});
+ issue(await sync([observation(224,'Nationality Alias',evidence)]),'conflicting_profile_attributes',[24]);
+ issue(await sync([observation(225,'Nationality Alias',{...evidence,nationality_id:86})]),'conflicting_profile_attributes',[24]);
+ assert.deepEqual(await profileRow(224),directKept);assert.deepEqual(await profileRow(225),reviewedKept);
+
  // Neither contradictory duplicates nor colliding new IDs gets first-write wins.
  const duplicate=await sync([observation(213,'Corroborated Player'),{...observation(213,'Corroborated Player'),club:'Contradiction'}]);
  assert.equal(duplicate.unresolved,2);assert.equal(duplicate.mapped,0);

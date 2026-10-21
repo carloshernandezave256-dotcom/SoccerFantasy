@@ -92,13 +92,14 @@ begin
     select array_agg(x order by x) into candidates from unnest(array[direct_id,reviewed_id]) x;
    elsif coalesce(direct_id,reviewed_id) is not null then
     matched := coalesce(direct_id,reviewed_id); candidates := array[matched];
-    -- A stable provider ID is authoritative, but contradictory immutable profile
-    -- attributes need review instead of silently replacing our prior evidence.
+    -- Established IDs retain same-ID DOB/nationality conflict checks. DOB also
+    -- agrees across reviewed aliases; nationality alone may legitimately differ
+    -- between aliases (for example, dual nationality) and cannot revoke a mapping.
     if (dob is not null and nullif(prior_profile->>'date_of_birth','') is not null and prior_profile->>'date_of_birth' <> dob)
      or (nationality is not null and nullif(prior_profile->>'nationality_id','') is not null and prior_profile->>'nationality_id' <> nationality)
      or exists(select 1 from public.sportmonks_player_profiles evidence where evidence.player_id=matched
-      and ((dob is not null and nullif(evidence.raw_data->>'date_of_birth','') is not null and evidence.raw_data->>'date_of_birth' <> dob)
-       or (nationality is not null and nullif(evidence.raw_data->>'nationality_id','') is not null and evidence.raw_data->>'nationality_id' <> nationality))) then
+      and dob is not null and nullif(evidence.raw_data->>'date_of_birth','') is not null
+      and evidence.raw_data->>'date_of_birth' <> dob) then
      reason := 'conflicting_profile_attributes'; matched := null;
     else method := case when direct_id is not null then 'direct_id' else 'reviewed_mapping' end;
     end if;
