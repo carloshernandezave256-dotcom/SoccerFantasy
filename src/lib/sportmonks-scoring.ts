@@ -116,6 +116,35 @@ function reviewedCoreStats(
  return supplemented;
 }
 
+const REVIEWED_HAC_GOAL_NOTE = "Reviewed duplicate scorer correction: Rassoul Ndiaye 0, Mouhamed Lamine Ndiaye 1; Le Havre official report https://hac.football/fr/posts/om-hac-4-3-le-miroir-a-deux-faces (25 October 2026)";
+/** SportMonks assigns the 86th-minute goal to Lamine in the timeline and to
+ * both Ndiayes in aggregate stats. Rassoul left at 61 minutes. Correct only
+ * this reviewed duplicate; retain the provider payload and every other stat.
+ */
+function reviewedHacDuplicateGoal(source:SportMonksSource,context:FixtureContext,l:SportMonksFixture['lineups'][number],goals:number){
+ const f=source.raw_data;
+ const value=(player:SportMonksFixture['lineups'][number],type:number)=>(player.details??[]).find(d=>d.type_id===type)?.data.value;
+ const lamine=f.lineups.find(p=>p.player_id===37731194&&p.team_id===1055);
+ const maja=f.lineups.find(p=>p.player_id===5249&&p.team_id===1055);
+ const events=f.events.filter(e=>e.rescinded!==true);
+ return source.fixture_id===1552796&&source.sportmonks_id===19715570&&f.id===19715570
+  &&context.fixture_id===1552796&&context.competition_id===61&&f.league_id===301
+  &&f.state.state==='FT'&&f.starting_at==='2026-10-25 16:15:00'
+  &&Date.parse(context.kickoff)===Date.parse('2026-10-25T16:15:00Z')
+  &&context.home_score===4&&context.away_score===3
+  &&f.participants.some(t=>t.id===44&&t.meta.location==='home')
+  &&f.participants.some(t=>t.id===1055&&t.meta.location==='away')
+  &&l.id===14675070865&&l.player_id===22168918&&l.team_id===1055&&l.type_id===11
+  &&source.player_map['22168918']===3497&&value(l,119)===61&&goals===1
+  &&lamine?.type_id===12&&value(lamine,119)===13&&value(lamine,52)===1
+  &&maja!==undefined&&value(maja,52)===2&&value(maja,111)===1
+  &&events.filter(e=>[14,15,16].includes(e.type_id)).length===7
+  &&!events.some(e=>[14,15,16].includes(e.type_id)&&e.player_id===22168918)
+  &&events.some(e=>e.id===158406993&&e.type_id===18&&e.minute===61&&e.player_id===5249&&e.related_player_id===22168918&&e.participant_id===1055)
+  &&events.some(e=>e.id===158407584&&e.type_id===18&&e.minute===77&&e.player_id===37731194&&e.related_player_id===37715167&&e.participant_id===1055)
+  &&events.some(e=>e.id===158407774&&e.type_id===14&&e.minute===86&&e.player_id===37731194&&e.participant_id===1055);
+}
+
 /** Only reviewed identity maps are accepted. Missing appearance evidence never becomes a DNP by default. */
 export function normalizeSportMonks(source:SportMonksSource,context:FixtureContext,observedAt:string,options:{live?:boolean;onReviewedEvidence?:(note:string)=>void}={}){
  const f=source.raw_data;
@@ -184,7 +213,8 @@ export function normalizeSportMonks(source:SportMonksSource,context:FixtureConte
    if(final&&goals!==scoredEvents){
     const ownGoalEvents=count(15);
     const opposingOwnGoals=f.lineups.filter(p=>p.team_id!==team.id).reduce((n,p)=>n+(p.details??[]).filter(d=>d.type_id===324).reduce((a,d)=>a+Number(d.data.value??0),0),0);
-    if(ownGoalEvents>0&&goals===scoredEvents+ownGoalEvents&&opposingOwnGoals>=ownGoalEvents)goals=scoredEvents;
+    if(reviewedHacDuplicateGoal(source,context,l,goals)){goals=0;reviewedEvidence.add(REVIEWED_HAC_GOAL_NOTE);}
+    else if(ownGoalEvents>0&&goals===scoredEvents+ownGoalEvents&&opposingOwnGoals>=ownGoalEvents)goals=scoredEvents;
     else fail(`goal attribution does not reconcile: ${l.player_name}`);
    }
    if(final&&(penalties!==count(16)||value(112)!==count(17)))fail(`penalty or own-goal events disagree: ${l.player_name}`);
