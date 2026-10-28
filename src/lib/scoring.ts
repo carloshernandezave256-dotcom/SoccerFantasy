@@ -79,7 +79,7 @@ export function calculateScore(stats: PlayerMatchStats): ScoreResult {
   add("penalties-conceded", "Penalties conceded", `${countLabel(stats.penaltiesConceded ?? 0, "penalty")} conceded · −2 FP each`, -(stats.penaltiesConceded ?? 0) * 2);
 
   if (stats.position === "GK") {
-    add("saves", "Saves", `${countLabel(stats.saves ?? 0, "save")} · 1 FP for every 3`, Math.floor((stats.saves ?? 0) / 3));
+    add("saves", "Saves", `${countLabel(stats.saves ?? 0, "save")} · 1 FP at 3 saves, then +1 for every 2 more`, Math.max(0, Math.floor(((stats.saves ?? 0) - 1) / 2)));
     add("penalties-saved", "Penalties saved", `${countLabel(stats.penaltiesSaved ?? 0, "penalty")} saved · 2 FP each`, (stats.penaltiesSaved ?? 0) * 2);
   }
 

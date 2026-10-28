@@ -65,10 +65,19 @@ describe("custom scoring", () => {
     expect(result.entries.find((entry) => entry.code === "clean-sheet")).toBeUndefined();
   });
 
+  it.each([[0,0],[1,0],[2,0],[3,1],[4,1],[5,2],[6,2],[7,3],[8,3],[9,4],[10,4],[11,5]])("awards %i saves %i points", (saves, points) => {
+    const result = calculateScore({ position: "GK", minutes: 90, saves, status: "live" });
+    expect(result.entries.find(entry => entry.code === "saves")?.points ?? 0).toBe(points);
+  });
+
+  it("scores Maignan's five-save clean sheet at nine points", () => {
+    expect(calculateScore({ position: "GK", minutes: 90, completedPasses: 23, saves: 5, goalsConceded: 0, status: "final" }).total).toBe(9);
+  });
+
   it("keeps an itemized ledger that reconciles to the total", () => {
     const result = calculateScore({ position: "GK", minutes: 90, saves: 7, penaltiesSaved: 1, yellowCards: 1 });
     expect(result.entries.reduce((sum, item) => sum + item.points, 0)).toBe(result.total);
-    expect(result.total).toBe(8); // minutes 2 + saves 2 + pen save 2 + clean sheet 3 - yellow 1
+    expect(result.total).toBe(9); // minutes 2 + saves 3 + pen save 2 + clean sheet 3 - yellow 1
   });
 
   it("gives the captain exactly 50 percent additional fantasy points", () => {
