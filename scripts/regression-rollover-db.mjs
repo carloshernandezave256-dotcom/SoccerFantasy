@@ -67,8 +67,11 @@ export async function seedRolloverLeague(query, number, {delayed = false, pool =
     await query(`insert into lineup_players(league_id,user_id,player_id,is_starter,is_captain,pitch_order,bench_order)
       values($1,$2,$3,$4,$5,$6,$7)`, [league,manager,id,index<11,index===0,index<11?index+1:null,index>=11?index-10:null]);
   }
-  // Last Friday, or the preceding Friday when simulating a week-late provider.
-  const kickoff = (await query(`select date_trunc('week',now())-make_interval(days=>$1)+interval '15 hours' as kickoff`, [delayed?10:3])).rows[0].kickoff;
+  // Relative dates keep these scenarios valid on every weekday: the replay's
+  // second match (+2 days) is past, the ordinary next round (+7) is future,
+  // and a week-late provider leaves round 2 past but round 3 (+14) future.
+  // Provider kickoff strings have second precision, so preserve that precision.
+  const kickoff = (await query(`select date_trunc('second',now())-make_interval(days=>$1) as kickoff`, [delayed?10:3])).rows[0].kickoff;
   await query(`insert into league_transaction_windows(league_id,gameweek,waiver_process_at,roster_lock_at,processed_at)
     values($1,1,$2::timestamptz-interval '2 days',$2::timestamptz-interval '15 minutes',now()-interval '2 days')`, [league,kickoff]);
   const competitions = pool === 'All Top Five'
@@ -284,8 +287,10 @@ async function run() {
       from league_player_scores where league_id=$1 and gameweek=2`,[s.league]),true,'Next week seeded with pending zero scores');
     verify(await rowCount('league_player_scores',s.league,2),18,'Every eligible active player is seeded');
     verify(await scalar(`select roster_lock_at=$2::timestamptz+interval '7 days'-interval '15 minutes' and
-      waiver_process_at=(date_trunc('week',($2::timestamptz+interval '7 days') at time zone 'America/Los_Angeles')::date+3+time '00:00') at time zone 'America/Los_Angeles'
-      from league_transaction_windows where league_id=$1 and gameweek=2`,[s.league,s.kickoff]),true,'Existing LA Thursday waiver and kickoff-minus-lock deadline formulas unchanged');
+      waiver_process_at=least(
+        (date_trunc('week',($2::timestamptz+interval '7 days') at time zone 'America/Los_Angeles')::date+3+time '00:00') at time zone 'America/Los_Angeles',
+        $2::timestamptz+interval '7 days'-interval '15 minutes'-interval '1 second')
+      from league_transaction_windows where league_id=$1 and gameweek=2`,[s.league,s.kickoff]),true,'Existing LA Thursday waiver (capped before roster lock) and kickoff-minus-lock formulas unchanged');
     verify(await scalar('select private.lineup_changes_locked($1)',[s.league]),false,'Future next-week lineup is editable');
     const windowBefore = (await query('select * from league_transaction_windows where league_id=$1 and gameweek=2',[s.league])).rows;
     const priorityBefore = (await query('select user_id,waiver_priority from league_members where league_id=$1 order by user_id',[s.league])).rows;

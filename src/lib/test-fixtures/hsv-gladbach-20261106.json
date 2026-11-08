@@ -1,0 +1,7344 @@
+{
+  "source": {
+    "raw_data": {
+      "id": 19735119,
+      "state": {
+        "id": 5,
+        "name": "Full Time",
+        "state": "FT",
+        "short_name": "FT",
+        "developer_name": "FT"
+      },
+      "events": [
+        {
+          "id": 158558982,
+          "info": "Left foot shot",
+          "minute": 11,
+          "result": "1-0",
+          "injured": null,
+          "section": "event",
+          "type_id": 14,
+          "addition": "1st Goal",
+          "coach_id": null,
+          "on_bench": false,
+          "period_id": 7215875,
+          "player_id": 200872,
+          "rescinded": null,
+          "fixture_id": 19735119,
+          "sort_order": 1,
+          "player_name": "Miro Muheim",
+          "sub_type_id": 1521,
+          "extra_minute": null,
+          "participant_id": 2708,
+          "related_player_id": 538907,
+          "detailed_period_id": 7215875,
+          "related_player_name": "Albert Sambi Lokonga"
+        },
+        {
+          "id": 158559631,
+          "info": "Left foot shot",
+          "minute": 44,
+          "result": "1-1",
+          "injured": null,
+          "section": "event",
+          "type_id": 14,
+          "addition": "2nd Goal",
+          "coach_id": null,
+          "on_bench": false,
+          "period_id": 7215875,
+          "player_id": 17158438,
+          "rescinded": null,
+          "fixture_id": 19735119,
+          "sort_order": 2,
+          "player_name": "Joe Scally",
+          "sub_type_id": 1521,
+          "extra_minute": null,
+          "participant_id": 683,
+          "related_player_id": null,
+          "detailed_period_id": 7215875,
+          "related_player_name": null
+        },
+        {
+          "id": 158560506,
+          "info": "Right foot shot",
+          "minute": 59,
+          "result": "2-1",
+          "injured": null,
+          "section": "event",
+          "type_id": 14,
+          "addition": "3rd Goal",
+          "coach_id": null,
+          "on_bench": false,
+          "period_id": 7216029,
+          "player_id": 37691049,
+          "rescinded": null,
+          "fixture_id": 19735119,
+          "sort_order": 3,
+          "player_name": "Shafiq Nandja",
+          "sub_type_id": 1522,
+          "extra_minute": null,
+          "participant_id": 2708,
+          "related_player_id": 37509380,
+          "detailed_period_id": 7216029,
+          "related_player_name": "Albert Grønbæk"
+        },
+        {
+          "id": 158560704,
+          "info": "Right foot shot",
+          "minute": 70,
+          "result": "3-1",
+          "injured": null,
+          "section": "event",
+          "type_id": 14,
+          "addition": "4th Goal",
+          "coach_id": null,
+          "on_bench": false,
+          "period_id": 7216029,
+          "player_id": 37509380,
+          "rescinded": null,
+          "fixture_id": 19735119,
+          "sort_order": 4,
+          "player_name": "Albert Grønbæk",
+          "sub_type_id": 1522,
+          "extra_minute": null,
+          "participant_id": 2708,
+          "related_player_id": null,
+          "detailed_period_id": 7216029,
+          "related_player_name": null
+        },
+        {
+          "id": 158560445,
+          "info": null,
+          "minute": 56,
+          "result": null,
+          "injured": null,
+          "section": "event",
+          "type_id": 18,
+          "addition": "1st Substitution",
+          "coach_id": null,
+          "on_bench": false,
+          "period_id": 7216029,
+          "player_id": 25106,
+          "rescinded": null,
+          "fixture_id": 19735119,
+          "sort_order": 1,
+          "player_name": "Kevin Diks",
+          "sub_type_id": null,
+          "extra_minute": null,
+          "participant_id": 683,
+          "related_player_id": 1452396,
+          "detailed_period_id": 7216029,
+          "related_player_name": "Robin Hack"
+        },
+        {
+          "id": 158560574,
+          "info": null,
+          "minute": 63,
+          "result": null,
+          "injured": null,
+          "section": "event",
+          "type_id": 18,
+          "addition": "2nd Substitution",
+          "coach_id": null,
+          "on_bench": false,
+          "period_id": 7216029,
+          "player_id": 37755719,
+          "rescinded": null,
+          "fixture_id": 19735119,
+          "sort_order": 2,
+          "player_name": "Alexander Røssing-Lelesiit",
+          "sub_type_id": null,
+          "extra_minute": null,
+          "participant_id": 2708,
+          "related_player_id": 37691049,
+          "detailed_period_id": 7216029,
+          "related_player_name": "Shafiq Nandja"
+        },
+        {
+          "id": 158560580,
+          "info": null,
+          "minute": 63,
+          "result": null,
+          "injured": null,
+          "section": "event",
+          "type_id": 18,
+          "addition": "3rd Substitution",
+          "coach_id": null,
+          "on_bench": false,
+          "period_id": 7216029,
+          "player_id": 3187862,
+          "rescinded": null,
+          "fixture_id": 19735119,
+          "sort_order": 3,
+          "player_name": "Terem Moffi",
+          "sub_type_id": null,
+          "extra_minute": null,
+          "participant_id": 2708,
+          "related_player_id": 37337021,
+          "detailed_period_id": 7216029,
+          "related_player_name": "Martin Adeline"
+        },
+        {
+          "id": 158560870,
+          "info": null,
+          "minute": 80,
+          "result": null,
+          "injured": null,
+          "section": "event",
+          "type_id": 18,
+          "addition": "4th Substitution",
+          "coach_id": null,
+          "on_bench": false,
+          "period_id": 7216029,
+          "player_id": 37596210,
+          "rescinded": null,
+          "fixture_id": 19735119,
+          "sort_order": 4,
+          "player_name": "Kofi Amoako",
+          "sub_type_id": null,
+          "extra_minute": null,
+          "participant_id": 2708,
+          "related_player_id": 538907,
+          "detailed_period_id": 7216029,
+          "related_player_name": "Albert Sambi Lokonga"
+        },
+        {
+          "id": 158560871,
+          "info": null,
+          "minute": 80,
+          "result": null,
+          "injured": null,
+          "section": "event",
+          "type_id": 18,
+          "addition": "5th Substitution",
+          "coach_id": null,
+          "on_bench": false,
+          "period_id": 7216029,
+          "player_id": 32587,
+          "rescinded": null,
+          "fixture_id": 19735119,
+          "sort_order": 5,
+          "player_name": "Yussuf Poulsen",
+          "sub_type_id": null,
+          "extra_minute": null,
+          "participant_id": 2708,
+          "related_player_id": 37509380,
+          "detailed_period_id": 7216029,
+          "related_player_name": "Albert Grønbæk"
+        },
+        {
+          "id": 158560883,
+          "info": null,
+          "minute": 81,
+          "result": null,
+          "injured": null,
+          "section": "event",
+          "type_id": 18,
+          "addition": "6th Substitution",
+          "coach_id": null,
+          "on_bench": false,
+          "period_id": 7216029,
+          "player_id": 37528761,
+          "rescinded": null,
+          "fixture_id": 19735119,
+          "sort_order": 6,
+          "player_name": "Jens Castrop",
+          "sub_type_id": null,
+          "extra_minute": null,
+          "participant_id": 683,
+          "related_player_id": 37616671,
+          "detailed_period_id": 7216029,
+          "related_player_name": "Zento Uno"
+        },
+        {
+          "id": 158560884,
+          "info": null,
+          "minute": 81,
+          "result": null,
+          "injured": null,
+          "section": "event",
+          "type_id": 18,
+          "addition": "7th Substitution",
+          "coach_id": null,
+          "on_bench": false,
+          "period_id": 7216029,
+          "player_id": 96307,
+          "rescinded": null,
+          "fixture_id": 19735119,
+          "sort_order": 7,
+          "player_name": "Franck Honorat",
+          "sub_type_id": null,
+          "extra_minute": null,
+          "participant_id": 683,
+          "related_player_id": 37558984,
+          "detailed_period_id": 7216029,
+          "related_player_name": "Lukas Ullrich"
+        },
+        {
+          "id": 158560885,
+          "info": null,
+          "minute": 81,
+          "result": null,
+          "injured": null,
+          "section": "event",
+          "type_id": 18,
+          "addition": "8th Substitution",
+          "coach_id": null,
+          "on_bench": false,
+          "period_id": 7216029,
+          "player_id": 191329,
+          "rescinded": null,
+          "fixture_id": 19735119,
+          "sort_order": 8,
+          "player_name": "Isac Lidberg",
+          "sub_type_id": null,
+          "extra_minute": null,
+          "participant_id": 683,
+          "related_player_id": 10959317,
+          "detailed_period_id": 7216029,
+          "related_player_name": "Shuto Machino"
+        },
+        {
+          "id": 158561011,
+          "info": null,
+          "minute": 89,
+          "result": null,
+          "injured": null,
+          "section": "event",
+          "type_id": 18,
+          "addition": "9th Substitution",
+          "coach_id": null,
+          "on_bench": false,
+          "period_id": 7216029,
+          "player_id": 38219214,
+          "rescinded": null,
+          "fixture_id": 19735119,
+          "sort_order": 9,
+          "player_name": "Jason Dean Bissi Mouelle",
+          "sub_type_id": null,
+          "extra_minute": null,
+          "participant_id": 2708,
+          "related_player_id": 4536574,
+          "detailed_period_id": 7216029,
+          "related_player_name": "Sebastiaan Bornauw"
+        },
+        {
+          "id": 158559459,
+          "info": "Foul",
+          "minute": 38,
+          "result": null,
+          "injured": null,
+          "section": "event",
+          "type_id": 19,
+          "addition": "1st Yellowcard",
+          "coach_id": null,
+          "on_bench": false,
+          "period_id": 7215875,
+          "player_id": 310132,
+          "rescinded": false,
+          "fixture_id": 19735119,
+          "sort_order": 1,
+          "player_name": "Ko Itakura",
+          "sub_type_id": 1496,
+          "extra_minute": null,
+          "participant_id": 683,
+          "related_player_id": null,
+          "detailed_period_id": 7215875,
+          "related_player_name": null
+        },
+        {
+          "id": 158561080,
+          "info": "Foul",
+          "minute": 90,
+          "result": null,
+          "injured": null,
+          "section": "event",
+          "type_id": 19,
+          "addition": "2nd Yellowcard",
+          "coach_id": null,
+          "on_bench": false,
+          "period_id": 7216029,
+          "player_id": 37528761,
+          "rescinded": false,
+          "fixture_id": 19735119,
+          "sort_order": 2,
+          "player_name": "Jens Castrop",
+          "sub_type_id": 1496,
+          "extra_minute": 2,
+          "participant_id": 683,
+          "related_player_id": null,
+          "detailed_period_id": 7216029,
+          "related_player_name": null
+        },
+        {
+          "id": 158561104,
+          "info": "Time wasting",
+          "minute": 90,
+          "result": null,
+          "injured": null,
+          "section": "event",
+          "type_id": 19,
+          "addition": "3rd Yellowcard",
+          "coach_id": null,
+          "on_bench": false,
+          "period_id": 7216029,
+          "player_id": 8932826,
+          "rescinded": false,
+          "fixture_id": 19735119,
+          "sort_order": 3,
+          "player_name": "Warmed Omari",
+          "sub_type_id": 1501,
+          "extra_minute": 3,
+          "participant_id": 2708,
+          "related_player_id": null,
+          "detailed_period_id": 7216029,
+          "related_player_name": null
+        },
+        {
+          "id": 158560298,
+          "info": "Foul",
+          "minute": 49,
+          "result": null,
+          "injured": null,
+          "section": "event",
+          "type_id": 21,
+          "addition": "1st Yellow/red Card",
+          "coach_id": null,
+          "on_bench": false,
+          "period_id": 7216029,
+          "player_id": 310132,
+          "rescinded": false,
+          "fixture_id": 19735119,
+          "sort_order": 1,
+          "player_name": "Ko Itakura",
+          "sub_type_id": 1496,
+          "extra_minute": null,
+          "participant_id": 683,
+          "related_player_id": null,
+          "detailed_period_id": 7216029,
+          "related_player_name": null
+        }
+      ],
+      "scores": [
+        {
+          "id": 37647701,
+          "score": {
+            "goals": 1,
+            "participant": "away"
+          },
+          "type_id": 1,
+          "fixture_id": 19735119,
+          "description": "1ST_HALF",
+          "participant_id": 683
+        },
+        {
+          "id": 37647703,
+          "score": {
+            "goals": 1,
+            "participant": "home"
+          },
+          "type_id": 1,
+          "fixture_id": 19735119,
+          "description": "1ST_HALF",
+          "participant_id": 2708
+        },
+        {
+          "id": 37647705,
+          "score": {
+            "goals": 1,
+            "participant": "away"
+          },
+          "type_id": 2,
+          "fixture_id": 19735119,
+          "description": "2ND_HALF",
+          "participant_id": 683
+        },
+        {
+          "id": 37647707,
+          "score": {
+            "goals": 3,
+            "participant": "home"
+          },
+          "type_id": 2,
+          "fixture_id": 19735119,
+          "description": "2ND_HALF",
+          "participant_id": 2708
+        },
+        {
+          "id": 37647698,
+          "score": {
+            "goals": 1,
+            "participant": "away"
+          },
+          "type_id": 1525,
+          "fixture_id": 19735119,
+          "description": "CURRENT",
+          "participant_id": 683
+        },
+        {
+          "id": 37647699,
+          "score": {
+            "goals": 3,
+            "participant": "home"
+          },
+          "type_id": 1525,
+          "fixture_id": 19735119,
+          "description": "CURRENT",
+          "participant_id": 2708
+        },
+        {
+          "id": 37648576,
+          "score": {
+            "goals": 0,
+            "participant": "away"
+          },
+          "type_id": 48996,
+          "fixture_id": 19735119,
+          "description": "2ND_HALF_ONLY",
+          "participant_id": 683
+        },
+        {
+          "id": 37648575,
+          "score": {
+            "goals": 2,
+            "participant": "home"
+          },
+          "type_id": 48996,
+          "fixture_id": 19735119,
+          "description": "2ND_HALF_ONLY",
+          "participant_id": 2708
+        }
+      ],
+      "lineups": [
+        {
+          "id": 14675265116,
+          "details": [
+            {
+              "id": 2350242470,
+              "data": {
+                "value": 95
+              },
+              "type_id": 117172
+            },
+            {
+              "id": 2350254312,
+              "data": {
+                "value": 61
+              },
+              "type_id": 120
+            },
+            {
+              "id": 2350254310,
+              "data": {
+                "value": 47
+              },
+              "type_id": 80
+            },
+            {
+              "id": 2350255704,
+              "data": {
+                "value": 1
+              },
+              "type_id": 27274
+            },
+            {
+              "id": 2350254317,
+              "data": {
+                "value": 50
+              },
+              "type_id": 27276
+            },
+            {
+              "id": 2350254309,
+              "data": {
+                "value": 90
+              },
+              "type_id": 119
+            },
+            {
+              "id": 2350254311,
+              "data": {
+                "value": 36
+              },
+              "type_id": 116
+            },
+            {
+              "id": 2350254313,
+              "data": {
+                "value": 1
+              },
+              "type_id": 107
+            },
+            {
+              "id": 2350254314,
+              "data": {
+                "value": 2
+              },
+              "type_id": 106
+            },
+            {
+              "id": 2350254315,
+              "data": {
+                "value": 4
+              },
+              "type_id": 105
+            },
+            {
+              "id": 2350257845,
+              "data": {
+                "value": 76
+              },
+              "type_id": 1584
+            },
+            {
+              "id": 2350295581,
+              "data": {
+                "value": 1
+              },
+              "type_id": 42
+            },
+            {
+              "id": 2350295582,
+              "data": {
+                "value": 1
+              },
+              "type_id": 41
+            },
+            {
+              "id": 2350312360,
+              "data": {
+                "value": 3
+              },
+              "type_id": 88
+            },
+            {
+              "id": 2350334633,
+              "data": {
+                "value": 8
+              },
+              "type_id": 101
+            },
+            {
+              "id": 2350353537,
+              "data": {
+                "value": 2
+              },
+              "type_id": 98
+            },
+            {
+              "id": 2350376006,
+              "data": {
+                "value": 9
+              },
+              "type_id": 27271
+            },
+            {
+              "id": 2350376007,
+              "data": {
+                "value": 6
+              },
+              "type_id": 27272
+            },
+            {
+              "id": 2350376005,
+              "data": {
+                "value": 6
+              },
+              "type_id": 27269
+            },
+            {
+              "id": 2350411410,
+              "data": {
+                "value": 6
+              },
+              "type_id": 122
+            },
+            {
+              "id": 2350464114,
+              "data": {
+                "value": 33
+              },
+              "type_id": 27270
+            },
+            {
+              "id": 2350470118,
+              "data": {
+                "value": 1
+              },
+              "type_id": 78
+            },
+            {
+              "id": 2350484481,
+              "data": {
+                "value": 2
+              },
+              "type_id": 123
+            },
+            {
+              "id": 2350254316,
+              "data": {
+                "value": 14
+              },
+              "type_id": 27273
+            },
+            {
+              "id": 2350729902,
+              "data": {
+                "value": 1
+              },
+              "type_id": 56
+            },
+            {
+              "id": 2350729903,
+              "data": {
+                "value": 2
+              },
+              "type_id": 1491
+            },
+            {
+              "id": 2350241124,
+              "data": {
+                "value": 6.26
+              },
+              "type_id": 118
+            },
+            {
+              "id": 2350902571,
+              "data": {
+                "value": 1
+              },
+              "type_id": 110
+            },
+            {
+              "id": 2351575805,
+              "data": {
+                "value": 1
+              },
+              "type_id": 121
+            }
+          ],
+          "team_id": 683,
+          "type_id": 11,
+          "player_id": 37576590,
+          "player_name": "Fabio Chiarodia"
+        },
+        {
+          "id": 14675292561,
+          "details": [
+            {
+              "id": 2350916752,
+              "data": {
+                "value": 1
+              },
+              "type_id": 27273
+            },
+            {
+              "id": 2350916753,
+              "data": {
+                "value": 40
+              },
+              "type_id": 27276
+            },
+            {
+              "id": 2350900147,
+              "data": {
+                "value": 9
+              },
+              "type_id": 119
+            },
+            {
+              "id": 2350931294,
+              "data": {
+                "value": 1
+              },
+              "type_id": 117
+            },
+            {
+              "id": 2350917846,
+              "data": {
+                "value": 4
+              },
+              "type_id": 27274
+            },
+            {
+              "id": 2350919323,
+              "data": {
+                "value": 3
+              },
+              "type_id": 1491
+            },
+            {
+              "id": 2350920737,
+              "data": {
+                "value": 3
+              },
+              "type_id": 27266
+            },
+            {
+              "id": 2350930322,
+              "data": {
+                "value": 1
+              },
+              "type_id": 9706
+            },
+            {
+              "id": 2350916750,
+              "data": {
+                "value": 2
+              },
+              "type_id": 106
+            },
+            {
+              "id": 2350916751,
+              "data": {
+                "value": 5
+              },
+              "type_id": 105
+            },
+            {
+              "id": 2350904031,
+              "data": {
+                "value": 13
+              },
+              "type_id": 117172
+            },
+            {
+              "id": 2350916747,
+              "data": {
+                "value": 4
+              },
+              "type_id": 80
+            },
+            {
+              "id": 2350916748,
+              "data": {
+                "value": 7
+              },
+              "type_id": 120
+            },
+            {
+              "id": 2350916749,
+              "data": {
+                "value": 1
+              },
+              "type_id": 107
+            },
+            {
+              "id": 2350919321,
+              "data": {
+                "value": 1
+              },
+              "type_id": 78
+            },
+            {
+              "id": 2350919322,
+              "data": {
+                "value": 3
+              },
+              "type_id": 116
+            },
+            {
+              "id": 2350922399,
+              "data": {
+                "value": 75
+              },
+              "type_id": 1584
+            },
+            {
+              "id": 2350922400,
+              "data": {
+                "value": 25
+              },
+              "type_id": 27275
+            },
+            {
+              "id": 2350925402,
+              "data": {
+                "value": 1
+              },
+              "type_id": 27271
+            },
+            {
+              "id": 2350922398,
+              "data": {
+                "value": 6.96
+              },
+              "type_id": 118
+            },
+            {
+              "id": 2350970814,
+              "data": {
+                "value": 1
+              },
+              "type_id": 580
+            },
+            {
+              "id": 2351575806,
+              "data": {
+                "value": 1
+              },
+              "type_id": 124
+            },
+            {
+              "id": 2351575807,
+              "data": {
+                "value": 1
+              },
+              "type_id": 125
+            }
+          ],
+          "team_id": 683,
+          "type_id": 12,
+          "player_id": 191329,
+          "player_name": "Isac Lidberg"
+        },
+        {
+          "id": 14675292562,
+          "details": [
+            {
+              "id": 2350752135,
+              "data": {
+                "value": 34
+              },
+              "type_id": 119
+            },
+            {
+              "id": 2350755650,
+              "data": {
+                "value": 38
+              },
+              "type_id": 117172
+            },
+            {
+              "id": 2350770953,
+              "data": {
+                "value": 2
+              },
+              "type_id": 88
+            },
+            {
+              "id": 2350767088,
+              "data": {
+                "value": 100
+              },
+              "type_id": 1533
+            },
+            {
+              "id": 2350811615,
+              "data": {
+                "value": 13
+              },
+              "type_id": 116
+            },
+            {
+              "id": 2350811636,
+              "data": {
+                "value": 87
+              },
+              "type_id": 1584
+            },
+            {
+              "id": 2350768824,
+              "data": {
+                "value": 26
+              },
+              "type_id": 120
+            },
+            {
+              "id": 2350768825,
+              "data": {
+                "value": 2
+              },
+              "type_id": 98
+            },
+            {
+              "id": 2350786916,
+              "data": {
+                "value": 6.08
+              },
+              "type_id": 118
+            },
+            {
+              "id": 2350785395,
+              "data": {
+                "value": 4
+              },
+              "type_id": 105
+            },
+            {
+              "id": 2350785396,
+              "data": {
+                "value": 3
+              },
+              "type_id": 1491
+            },
+            {
+              "id": 2350785393,
+              "data": {
+                "value": 1
+              },
+              "type_id": 56
+            },
+            {
+              "id": 2350834466,
+              "data": {
+                "value": 2
+              },
+              "type_id": 27269
+            },
+            {
+              "id": 2350811593,
+              "data": {
+                "value": 15
+              },
+              "type_id": 80
+            },
+            {
+              "id": 2350834465,
+              "data": {
+                "value": 1
+              },
+              "type_id": 78
+            },
+            {
+              "id": 2350834468,
+              "data": {
+                "value": 25
+              },
+              "type_id": 27276
+            },
+            {
+              "id": 2350834467,
+              "data": {
+                "value": 1
+              },
+              "type_id": 106
+            },
+            {
+              "id": 2350858891,
+              "data": {
+                "value": 1
+              },
+              "type_id": 27272
+            },
+            {
+              "id": 2350858889,
+              "data": {
+                "value": 1
+              },
+              "type_id": 122
+            },
+            {
+              "id": 2350858890,
+              "data": {
+                "value": 1
+              },
+              "type_id": 123
+            },
+            {
+              "id": 2350858892,
+              "data": {
+                "value": 100
+              },
+              "type_id": 27270
+            },
+            {
+              "id": 2350865445,
+              "data": {
+                "value": 4
+              },
+              "type_id": 27273
+            },
+            {
+              "id": 2350889685,
+              "data": {
+                "value": 2
+              },
+              "type_id": 27271
+            },
+            {
+              "id": 2350909107,
+              "data": {
+                "value": 1
+              },
+              "type_id": 101
+            },
+            {
+              "id": 2350902572,
+              "data": {
+                "value": 2
+              },
+              "type_id": 99
+            },
+            {
+              "id": 2350922401,
+              "data": {
+                "value": 2
+              },
+              "type_id": 110
+            },
+            {
+              "id": 2351575808,
+              "data": {
+                "value": 2
+              },
+              "type_id": 121
+            }
+          ],
+          "team_id": 683,
+          "type_id": 12,
+          "player_id": 25106,
+          "player_name": "Kevin Diks"
+        },
+        {
+          "id": 14675285374,
+          "details": [
+            {
+              "id": 2350241129,
+              "data": {
+                "value": 5.37
+              },
+              "type_id": 118
+            },
+            {
+              "id": 2350242475,
+              "data": {
+                "value": 50
+              },
+              "type_id": 117172
+            },
+            {
+              "id": 2350500256,
+              "data": {
+                "value": 4
+              },
+              "type_id": 101
+            },
+            {
+              "id": 2350500258,
+              "data": {
+                "value": 50
+              },
+              "type_id": 27275
+            },
+            {
+              "id": 2350257848,
+              "data": {
+                "value": 77
+              },
+              "type_id": 1584
+            },
+            {
+              "id": 2350254351,
+              "data": {
+                "value": 30
+              },
+              "type_id": 80
+            },
+            {
+              "id": 2350254352,
+              "data": {
+                "value": 23
+              },
+              "type_id": 116
+            },
+            {
+              "id": 2350254356,
+              "data": {
+                "value": 10
+              },
+              "type_id": 27273
+            },
+            {
+              "id": 2350254353,
+              "data": {
+                "value": 42
+              },
+              "type_id": 120
+            },
+            {
+              "id": 2350282389,
+              "data": {
+                "value": 5
+              },
+              "type_id": 122
+            },
+            {
+              "id": 2350312388,
+              "data": {
+                "value": 1
+              },
+              "type_id": 88
+            },
+            {
+              "id": 2350310975,
+              "data": {
+                "value": 3
+              },
+              "type_id": 121
+            },
+            {
+              "id": 2350254350,
+              "data": {
+                "value": 49
+              },
+              "type_id": 119
+            },
+            {
+              "id": 2350376028,
+              "data": {
+                "value": 9
+              },
+              "type_id": 105
+            },
+            {
+              "id": 2350376025,
+              "data": {
+                "value": 5
+              },
+              "type_id": 27272
+            },
+            {
+              "id": 2350376024,
+              "data": {
+                "value": 3
+              },
+              "type_id": 27271
+            },
+            {
+              "id": 2350381170,
+              "data": {
+                "value": 1
+              },
+              "type_id": 42
+            },
+            {
+              "id": 2350377900,
+              "data": {
+                "value": 2
+              },
+              "type_id": 27274
+            },
+            {
+              "id": 2350381174,
+              "data": {
+                "value": 6
+              },
+              "type_id": 1491
+            },
+            {
+              "id": 2350381172,
+              "data": {
+                "value": 4
+              },
+              "type_id": 56
+            },
+            {
+              "id": 2350381173,
+              "data": {
+                "value": 1
+              },
+              "type_id": 27266
+            },
+            {
+              "id": 2350381175,
+              "data": {
+                "value": 1
+              },
+              "type_id": 41
+            },
+            {
+              "id": 2350447966,
+              "data": {
+                "value": 2
+              },
+              "type_id": 78
+            },
+            {
+              "id": 2350447968,
+              "data": {
+                "value": 33
+              },
+              "type_id": 27276
+            },
+            {
+              "id": 2350451006,
+              "data": {
+                "value": 50
+              },
+              "type_id": 27268
+            },
+            {
+              "id": 2350451003,
+              "data": {
+                "value": 1
+              },
+              "type_id": 27267
+            },
+            {
+              "id": 2350447967,
+              "data": {
+                "value": 3
+              },
+              "type_id": 106
+            },
+            {
+              "id": 2350500257,
+              "data": {
+                "value": 1
+              },
+              "type_id": 107
+            },
+            {
+              "id": 2350381171,
+              "data": {
+                "value": 4
+              },
+              "type_id": 27269
+            },
+            {
+              "id": 2350661087,
+              "data": {
+                "value": 1
+              },
+              "type_id": 110
+            },
+            {
+              "id": 2350661088,
+              "data": {
+                "value": 1
+              },
+              "type_id": 84
+            },
+            {
+              "id": 2350700192,
+              "data": {
+                "value": 1
+              },
+              "type_id": 123
+            },
+            {
+              "id": 2350701975,
+              "data": {
+                "value": 20
+              },
+              "type_id": 27270
+            },
+            {
+              "id": 2350902573,
+              "data": {
+                "value": 1
+              },
+              "type_id": 85
+            }
+          ],
+          "team_id": 683,
+          "type_id": 11,
+          "player_id": 310132,
+          "player_name": "Ko Itakura"
+        },
+        {
+          "id": 14675292563,
+          "details": [],
+          "team_id": 683,
+          "type_id": 12,
+          "player_id": 31864,
+          "player_name": "Kevin Stöger"
+        },
+        {
+          "id": 14675292564,
+          "details": [
+            {
+              "id": 2350900148,
+              "data": {
+                "value": 9
+              },
+              "type_id": 119
+            },
+            {
+              "id": 2350904032,
+              "data": {
+                "value": 13
+              },
+              "type_id": 117172
+            },
+            {
+              "id": 2350922402,
+              "data": {
+                "value": 1
+              },
+              "type_id": 27269
+            },
+            {
+              "id": 2350905521,
+              "data": {
+                "value": 2
+              },
+              "type_id": 1491
+            },
+            {
+              "id": 2350905520,
+              "data": {
+                "value": 3
+              },
+              "type_id": 105
+            },
+            {
+              "id": 2350922403,
+              "data": {
+                "value": 1
+              },
+              "type_id": 110
+            },
+            {
+              "id": 2350922405,
+              "data": {
+                "value": 75
+              },
+              "type_id": 1584
+            },
+            {
+              "id": 2350920167,
+              "data": {
+                "value": 1
+              },
+              "type_id": 27274
+            },
+            {
+              "id": 2350938692,
+              "data": {
+                "value": 100
+              },
+              "type_id": 1533
+            },
+            {
+              "id": 2350919325,
+              "data": {
+                "value": 3
+              },
+              "type_id": 116
+            },
+            {
+              "id": 2350919324,
+              "data": {
+                "value": 4
+              },
+              "type_id": 80
+            },
+            {
+              "id": 2350919326,
+              "data": {
+                "value": 8
+              },
+              "type_id": 120
+            },
+            {
+              "id": 2350919327,
+              "data": {
+                "value": 1
+              },
+              "type_id": 107
+            },
+            {
+              "id": 2350919371,
+              "data": {
+                "value": 33
+              },
+              "type_id": 27276
+            },
+            {
+              "id": 2350937077,
+              "data": {
+                "value": 1
+              },
+              "type_id": 98
+            },
+            {
+              "id": 2350931296,
+              "data": {
+                "value": 1
+              },
+              "type_id": 27271
+            },
+            {
+              "id": 2350922404,
+              "data": {
+                "value": 6.37
+              },
+              "type_id": 118
+            },
+            {
+              "id": 2350931298,
+              "data": {
+                "value": 1
+              },
+              "type_id": 108
+            },
+            {
+              "id": 2350919329,
+              "data": {
+                "value": 2
+              },
+              "type_id": 27273
+            },
+            {
+              "id": 2350931297,
+              "data": {
+                "value": 1
+              },
+              "type_id": 27272
+            },
+            {
+              "id": 2350919328,
+              "data": {
+                "value": 1
+              },
+              "type_id": 106
+            },
+            {
+              "id": 2350970815,
+              "data": {
+                "value": 1
+              },
+              "type_id": 99
+            },
+            {
+              "id": 2351575809,
+              "data": {
+                "value": 1
+              },
+              "type_id": 121
+            }
+          ],
+          "team_id": 683,
+          "type_id": 12,
+          "player_id": 96307,
+          "player_name": "Franck Honorat"
+        },
+        {
+          "id": 14675265117,
+          "details": [
+            {
+              "id": 2350500252,
+              "data": {
+                "value": 1
+              },
+              "type_id": 97
+            },
+            {
+              "id": 2350241132,
+              "data": {
+                "value": 7.24
+              },
+              "type_id": 118
+            },
+            {
+              "id": 2350242478,
+              "data": {
+                "value": 95
+              },
+              "type_id": 117172
+            },
+            {
+              "id": 2350254386,
+              "data": {
+                "value": 90
+              },
+              "type_id": 119
+            },
+            {
+              "id": 2350275707,
+              "data": {
+                "value": 9
+              },
+              "type_id": 105
+            },
+            {
+              "id": 2350275704,
+              "data": {
+                "value": 3
+              },
+              "type_id": 78
+            },
+            {
+              "id": 2350275706,
+              "data": {
+                "value": 5
+              },
+              "type_id": 106
+            },
+            {
+              "id": 2350275708,
+              "data": {
+                "value": 4
+              },
+              "type_id": 1491
+            },
+            {
+              "id": 2350275705,
+              "data": {
+                "value": 49
+              },
+              "type_id": 120
+            },
+            {
+              "id": 2350275709,
+              "data": {
+                "value": 8
+              },
+              "type_id": 27273
+            },
+            {
+              "id": 2350275710,
+              "data": {
+                "value": 1
+              },
+              "type_id": 94
+            },
+            {
+              "id": 2350275711,
+              "data": {
+                "value": 56
+              },
+              "type_id": 27276
+            },
+            {
+              "id": 2350295586,
+              "data": {
+                "value": 24
+              },
+              "type_id": 116
+            },
+            {
+              "id": 2350295585,
+              "data": {
+                "value": 30
+              },
+              "type_id": 80
+            },
+            {
+              "id": 2350312414,
+              "data": {
+                "value": 3
+              },
+              "type_id": 88
+            },
+            {
+              "id": 2350310977,
+              "data": {
+                "value": 1
+              },
+              "type_id": 121
+            },
+            {
+              "id": 2350375970,
+              "data": {
+                "value": 2
+              },
+              "type_id": 27267
+            },
+            {
+              "id": 2350375974,
+              "data": {
+                "value": 80
+              },
+              "type_id": 1584
+            },
+            {
+              "id": 2350375971,
+              "data": {
+                "value": 8
+              },
+              "type_id": 122
+            },
+            {
+              "id": 2350375973,
+              "data": {
+                "value": 67
+              },
+              "type_id": 27268
+            },
+            {
+              "id": 2350375972,
+              "data": {
+                "value": 10
+              },
+              "type_id": 27271
+            },
+            {
+              "id": 2350375975,
+              "data": {
+                "value": 67
+              },
+              "type_id": 27270
+            },
+            {
+              "id": 2350388946,
+              "data": {
+                "value": 3
+              },
+              "type_id": 41
+            },
+            {
+              "id": 2350388945,
+              "data": {
+                "value": 5
+              },
+              "type_id": 42
+            },
+            {
+              "id": 2350411392,
+              "data": {
+                "value": 1
+              },
+              "type_id": 100
+            },
+            {
+              "id": 2350412010,
+              "data": {
+                "value": 8
+              },
+              "type_id": 27269
+            },
+            {
+              "id": 2350484478,
+              "data": {
+                "value": 6
+              },
+              "type_id": 123
+            },
+            {
+              "id": 2350486130,
+              "data": {
+                "value": 1
+              },
+              "type_id": 101
+            },
+            {
+              "id": 2350549179,
+              "data": {
+                "value": 3
+              },
+              "type_id": 27272
+            },
+            {
+              "id": 2350691276,
+              "data": {
+                "value": 2
+              },
+              "type_id": 27266
+            },
+            {
+              "id": 2350697367,
+              "data": {
+                "value": 3
+              },
+              "type_id": 27274
+            },
+            {
+              "id": 2350729899,
+              "data": {
+                "value": 1
+              },
+              "type_id": 107
+            },
+            {
+              "id": 2350733498,
+              "data": {
+                "value": 33
+              },
+              "type_id": 27275
+            },
+            {
+              "id": 2350828060,
+              "data": {
+                "value": 1
+              },
+              "type_id": 98
+            },
+            {
+              "id": 2350878830,
+              "data": {
+                "value": 1
+              },
+              "type_id": 96
+            },
+            {
+              "id": 2350900962,
+              "data": {
+                "value": 1
+              },
+              "type_id": 9706
+            },
+            {
+              "id": 2350889686,
+              "data": {
+                "value": 2
+              },
+              "type_id": 86
+            },
+            {
+              "id": 2350902574,
+              "data": {
+                "value": 1
+              },
+              "type_id": 110
+            },
+            {
+              "id": 2350900149,
+              "data": {
+                "value": 1
+              },
+              "type_id": 117
+            },
+            {
+              "id": 2350970816,
+              "data": {
+                "value": 1
+              },
+              "type_id": 581
+            }
+          ],
+          "team_id": 683,
+          "type_id": 11,
+          "player_id": 35815,
+          "player_name": "Florian Neuhaus"
+        },
+        {
+          "id": 14675265119,
+          "details": [
+            {
+              "id": 2349988605,
+              "data": {
+                "value": true
+              },
+              "type_id": 40
+            },
+            {
+              "id": 2350254301,
+              "data": {
+                "value": 2
+              },
+              "type_id": 78
+            },
+            {
+              "id": 2350254303,
+              "data": {
+                "value": 40
+              },
+              "type_id": 80
+            },
+            {
+              "id": 2350254306,
+              "data": {
+                "value": 5
+              },
+              "type_id": 106
+            },
+            {
+              "id": 2350254308,
+              "data": {
+                "value": 42
+              },
+              "type_id": 27276
+            },
+            {
+              "id": 2350257844,
+              "data": {
+                "value": 88
+              },
+              "type_id": 1584
+            },
+            {
+              "id": 2350241123,
+              "data": {
+                "value": 6.18
+              },
+              "type_id": 118
+            },
+            {
+              "id": 2350254302,
+              "data": {
+                "value": 90
+              },
+              "type_id": 119
+            },
+            {
+              "id": 2350242469,
+              "data": {
+                "value": 95
+              },
+              "type_id": 117172
+            },
+            {
+              "id": 2350254305,
+              "data": {
+                "value": 56
+              },
+              "type_id": 120
+            },
+            {
+              "id": 2350254304,
+              "data": {
+                "value": 34
+              },
+              "type_id": 116
+            },
+            {
+              "id": 2350312359,
+              "data": {
+                "value": 3
+              },
+              "type_id": 88
+            },
+            {
+              "id": 2350342037,
+              "data": {
+                "value": 7
+              },
+              "type_id": 27274
+            },
+            {
+              "id": 2350340026,
+              "data": {
+                "value": 5
+              },
+              "type_id": 27266
+            },
+            {
+              "id": 2350342035,
+              "data": {
+                "value": 2
+              },
+              "type_id": 56
+            },
+            {
+              "id": 2350342036,
+              "data": {
+                "value": 7
+              },
+              "type_id": 1491
+            },
+            {
+              "id": 2350347431,
+              "data": {
+                "value": 1
+              },
+              "type_id": 100
+            },
+            {
+              "id": 2350388948,
+              "data": {
+                "value": 5
+              },
+              "type_id": 101
+            },
+            {
+              "id": 2350381169,
+              "data": {
+                "value": 7
+              },
+              "type_id": 27273
+            },
+            {
+              "id": 2350427206,
+              "data": {
+                "value": 3
+              },
+              "type_id": 27271
+            },
+            {
+              "id": 2350376003,
+              "data": {
+                "value": 8
+              },
+              "type_id": 27272
+            },
+            {
+              "id": 2350464089,
+              "data": {
+                "value": 29
+              },
+              "type_id": 27275
+            },
+            {
+              "id": 2350464058,
+              "data": {
+                "value": 2
+              },
+              "type_id": 27269
+            },
+            {
+              "id": 2350464062,
+              "data": {
+                "value": 2
+              },
+              "type_id": 122
+            },
+            {
+              "id": 2350464088,
+              "data": {
+                "value": 2
+              },
+              "type_id": 107
+            },
+            {
+              "id": 2350254307,
+              "data": {
+                "value": 12
+              },
+              "type_id": 105
+            },
+            {
+              "id": 2350523765,
+              "data": {
+                "value": 1
+              },
+              "type_id": 123
+            },
+            {
+              "id": 2350529154,
+              "data": {
+                "value": 50
+              },
+              "type_id": 27270
+            },
+            {
+              "id": 2350819868,
+              "data": {
+                "value": 1
+              },
+              "type_id": 96
+            },
+            {
+              "id": 2350922406,
+              "data": {
+                "value": 1
+              },
+              "type_id": 110
+            },
+            {
+              "id": 2350934660,
+              "data": {
+                "value": 1
+              },
+              "type_id": 98
+            },
+            {
+              "id": 2351575812,
+              "data": {
+                "value": 1
+              },
+              "type_id": 95
+            }
+          ],
+          "team_id": 683,
+          "type_id": 11,
+          "player_id": 19274270,
+          "player_name": "Philipp Sander"
+        },
+        {
+          "id": 14675292565,
+          "details": [
+            {
+              "id": 2350904033,
+              "data": {
+                "value": 13
+              },
+              "type_id": 117172
+            },
+            {
+              "id": 2350919373,
+              "data": {
+                "value": 10
+              },
+              "type_id": 120
+            },
+            {
+              "id": 2350900150,
+              "data": {
+                "value": 9
+              },
+              "type_id": 119
+            },
+            {
+              "id": 2350934661,
+              "data": {
+                "value": 3
+              },
+              "type_id": 116
+            },
+            {
+              "id": 2350937079,
+              "data": {
+                "value": 2
+              },
+              "type_id": 105
+            },
+            {
+              "id": 2350919372,
+              "data": {
+                "value": 6
+              },
+              "type_id": 80
+            },
+            {
+              "id": 2350938694,
+              "data": {
+                "value": 50
+              },
+              "type_id": 1584
+            },
+            {
+              "id": 2350937078,
+              "data": {
+                "value": 1
+              },
+              "type_id": 56
+            },
+            {
+              "id": 2350937080,
+              "data": {
+                "value": 2
+              },
+              "type_id": 1491
+            },
+            {
+              "id": 2350931299,
+              "data": {
+                "value": 2
+              },
+              "type_id": 122
+            },
+            {
+              "id": 2350919374,
+              "data": {
+                "value": 4
+              },
+              "type_id": 27273
+            },
+            {
+              "id": 2350922407,
+              "data": {
+                "value": 6.24
+              },
+              "type_id": 118
+            },
+            {
+              "id": 2350937081,
+              "data": {
+                "value": 1
+              },
+              "type_id": 108
+            },
+            {
+              "id": 2350938693,
+              "data": {
+                "value": 2
+              },
+              "type_id": 27272
+            },
+            {
+              "id": 2350946186,
+              "data": {
+                "value": 1
+              },
+              "type_id": 84
+            },
+            {
+              "id": 2350940109,
+              "data": {
+                "value": 1
+              },
+              "type_id": 101
+            },
+            {
+              "id": 2350946700,
+              "data": {
+                "value": 1
+              },
+              "type_id": 27269
+            },
+            {
+              "id": 2351575813,
+              "data": {
+                "value": 1
+              },
+              "type_id": 121
+            },
+            {
+              "id": 2351575814,
+              "data": {
+                "value": 1
+              },
+              "type_id": 124
+            }
+          ],
+          "team_id": 683,
+          "type_id": 12,
+          "player_id": 37528761,
+          "player_name": "Jens Castrop"
+        },
+        {
+          "id": 14675265120,
+          "details": [
+            {
+              "id": 2350241135,
+              "data": {
+                "value": 6.6
+              },
+              "type_id": 118
+            },
+            {
+              "id": 2350255707,
+              "data": {
+                "value": 6
+              },
+              "type_id": 27274
+            },
+            {
+              "id": 2350254397,
+              "data": {
+                "value": 5
+              },
+              "type_id": 27266
+            },
+            {
+              "id": 2350254395,
+              "data": {
+                "value": 11
+              },
+              "type_id": 116
+            },
+            {
+              "id": 2350254422,
+              "data": {
+                "value": 21
+              },
+              "type_id": 27273
+            },
+            {
+              "id": 2350254421,
+              "data": {
+                "value": 9
+              },
+              "type_id": 1491
+            },
+            {
+              "id": 2350254394,
+              "data": {
+                "value": 18
+              },
+              "type_id": 80
+            },
+            {
+              "id": 2350254398,
+              "data": {
+                "value": 11
+              },
+              "type_id": 105
+            },
+            {
+              "id": 2350242481,
+              "data": {
+                "value": 82
+              },
+              "type_id": 117172
+            },
+            {
+              "id": 2350257851,
+              "data": {
+                "value": 61
+              },
+              "type_id": 1584
+            },
+            {
+              "id": 2350262928,
+              "data": {
+                "value": 1
+              },
+              "type_id": 42
+            },
+            {
+              "id": 2350274377,
+              "data": {
+                "value": 1
+              },
+              "type_id": 41
+            },
+            {
+              "id": 2350254396,
+              "data": {
+                "value": 40
+              },
+              "type_id": 120
+            },
+            {
+              "id": 2350254392,
+              "data": {
+                "value": 81
+              },
+              "type_id": 119
+            },
+            {
+              "id": 2350312416,
+              "data": {
+                "value": 3
+              },
+              "type_id": 88
+            },
+            {
+              "id": 2350362121,
+              "data": {
+                "value": 3
+              },
+              "type_id": 117
+            },
+            {
+              "id": 2350362122,
+              "data": {
+                "value": 3
+              },
+              "type_id": 9706
+            },
+            {
+              "id": 2350376040,
+              "data": {
+                "value": 2
+              },
+              "type_id": 27269
+            },
+            {
+              "id": 2350381164,
+              "data": {
+                "value": 4
+              },
+              "type_id": 27271
+            },
+            {
+              "id": 2350376041,
+              "data": {
+                "value": 5
+              },
+              "type_id": 27272
+            },
+            {
+              "id": 2350569804,
+              "data": {
+                "value": 1
+              },
+              "type_id": 107
+            },
+            {
+              "id": 2350569805,
+              "data": {
+                "value": 2
+              },
+              "type_id": 106
+            },
+            {
+              "id": 2350569807,
+              "data": {
+                "value": 18
+              },
+              "type_id": 27276
+            },
+            {
+              "id": 2350569806,
+              "data": {
+                "value": 17
+              },
+              "type_id": 27275
+            },
+            {
+              "id": 2350700188,
+              "data": {
+                "value": 1
+              },
+              "type_id": 56
+            },
+            {
+              "id": 2350700189,
+              "data": {
+                "value": 2
+              },
+              "type_id": 108
+            },
+            {
+              "id": 2350811680,
+              "data": {
+                "value": 1
+              },
+              "type_id": 100
+            },
+            {
+              "id": 2350819898,
+              "data": {
+                "value": 1
+              },
+              "type_id": 122
+            },
+            {
+              "id": 2350858893,
+              "data": {
+                "value": 1
+              },
+              "type_id": 94
+            },
+            {
+              "id": 2350889687,
+              "data": {
+                "value": 1
+              },
+              "type_id": 78
+            },
+            {
+              "id": 2350895228,
+              "data": {
+                "value": 1
+              },
+              "type_id": 98
+            },
+            {
+              "id": 2350902575,
+              "data": {
+                "value": 1
+              },
+              "type_id": 580
+            },
+            {
+              "id": 2351575815,
+              "data": {
+                "value": 12
+              },
+              "type_id": 121
+            }
+          ],
+          "team_id": 683,
+          "type_id": 11,
+          "player_id": 10959317,
+          "player_name": "Shuto Machino"
+        },
+        {
+          "id": 14675292566,
+          "details": [],
+          "team_id": 683,
+          "type_id": 12,
+          "player_id": 37266095,
+          "player_name": "David Herold"
+        },
+        {
+          "id": 14675292567,
+          "details": [],
+          "team_id": 683,
+          "type_id": 12,
+          "player_id": 4545319,
+          "player_name": "Yukhym Konoplya"
+        },
+        {
+          "id": 14675292568,
+          "details": [],
+          "team_id": 683,
+          "type_id": 12,
+          "player_id": 16119517,
+          "player_name": "Jan Olschowsky"
+        },
+        {
+          "id": 14675265121,
+          "details": [
+            {
+              "id": 2350241125,
+              "data": {
+                "value": 7.76
+              },
+              "type_id": 118
+            },
+            {
+              "id": 2350242471,
+              "data": {
+                "value": 57
+              },
+              "type_id": 117172
+            },
+            {
+              "id": 2350254325,
+              "data": {
+                "value": 43
+              },
+              "type_id": 27276
+            },
+            {
+              "id": 2350254323,
+              "data": {
+                "value": 3
+              },
+              "type_id": 106
+            },
+            {
+              "id": 2350254318,
+              "data": {
+                "value": 1
+              },
+              "type_id": 78
+            },
+            {
+              "id": 2350257846,
+              "data": {
+                "value": 83
+              },
+              "type_id": 1584
+            },
+            {
+              "id": 2350254321,
+              "data": {
+                "value": 10
+              },
+              "type_id": 116
+            },
+            {
+              "id": 2350262925,
+              "data": {
+                "value": 2
+              },
+              "type_id": 27266
+            },
+            {
+              "id": 2350262926,
+              "data": {
+                "value": 2
+              },
+              "type_id": 9706
+            },
+            {
+              "id": 2350263849,
+              "data": {
+                "value": 2
+              },
+              "type_id": 27274
+            },
+            {
+              "id": 2350275691,
+              "data": {
+                "value": 2
+              },
+              "type_id": 117
+            },
+            {
+              "id": 2350254324,
+              "data": {
+                "value": 7
+              },
+              "type_id": 105
+            },
+            {
+              "id": 2350275692,
+              "data": {
+                "value": 4
+              },
+              "type_id": 1491
+            },
+            {
+              "id": 2350254319,
+              "data": {
+                "value": 56
+              },
+              "type_id": 119
+            },
+            {
+              "id": 2350301456,
+              "data": {
+                "value": 7
+              },
+              "type_id": 27273
+            },
+            {
+              "id": 2350312361,
+              "data": {
+                "value": 1
+              },
+              "type_id": 88
+            },
+            {
+              "id": 2350353540,
+              "data": {
+                "value": 1
+              },
+              "type_id": 41
+            },
+            {
+              "id": 2350353539,
+              "data": {
+                "value": 3
+              },
+              "type_id": 42
+            },
+            {
+              "id": 2350419571,
+              "data": {
+                "value": 2
+              },
+              "type_id": 86
+            },
+            {
+              "id": 2350372693,
+              "data": {
+                "value": 2
+              },
+              "type_id": 99
+            },
+            {
+              "id": 2350376013,
+              "data": {
+                "value": 4
+              },
+              "type_id": 98
+            },
+            {
+              "id": 2350376015,
+              "data": {
+                "value": 50
+              },
+              "type_id": 1533
+            },
+            {
+              "id": 2350376008,
+              "data": {
+                "value": 1
+              },
+              "type_id": 27267
+            },
+            {
+              "id": 2350376009,
+              "data": {
+                "value": 1
+              },
+              "type_id": 27269
+            },
+            {
+              "id": 2350376012,
+              "data": {
+                "value": 3
+              },
+              "type_id": 27272
+            },
+            {
+              "id": 2350376010,
+              "data": {
+                "value": 1
+              },
+              "type_id": 110
+            },
+            {
+              "id": 2350376011,
+              "data": {
+                "value": 4
+              },
+              "type_id": 27271
+            },
+            {
+              "id": 2350376014,
+              "data": {
+                "value": 100
+              },
+              "type_id": 27268
+            },
+            {
+              "id": 2350254322,
+              "data": {
+                "value": 29
+              },
+              "type_id": 120
+            },
+            {
+              "id": 2350254320,
+              "data": {
+                "value": 12
+              },
+              "type_id": 80
+            },
+            {
+              "id": 2350542874,
+              "data": {
+                "value": 2
+              },
+              "type_id": 96
+            },
+            {
+              "id": 2350569811,
+              "data": {
+                "value": 1
+              },
+              "type_id": 122
+            },
+            {
+              "id": 2350569812,
+              "data": {
+                "value": 1
+              },
+              "type_id": 123
+            },
+            {
+              "id": 2350569813,
+              "data": {
+                "value": 100
+              },
+              "type_id": 27270
+            },
+            {
+              "id": 2350553965,
+              "data": {
+                "value": 1
+              },
+              "type_id": 52
+            },
+            {
+              "id": 2350657335,
+              "data": {
+                "value": 1
+              },
+              "type_id": 108
+            },
+            {
+              "id": 2351575816,
+              "data": {
+                "value": 2
+              },
+              "type_id": 121
+            }
+          ],
+          "team_id": 683,
+          "type_id": 11,
+          "player_id": 1452396,
+          "player_name": "Robin Hack"
+        },
+        {
+          "id": 14675265122,
+          "details": [
+            {
+              "id": 2350241134,
+              "data": {
+                "value": 6.46
+              },
+              "type_id": 118
+            },
+            {
+              "id": 2350242480,
+              "data": {
+                "value": 82
+              },
+              "type_id": 117172
+            },
+            {
+              "id": 2350254391,
+              "data": {
+                "value": 81
+              },
+              "type_id": 119
+            },
+            {
+              "id": 2350289359,
+              "data": {
+                "value": 5
+              },
+              "type_id": 101
+            },
+            {
+              "id": 2350295592,
+              "data": {
+                "value": 11
+              },
+              "type_id": 27273
+            },
+            {
+              "id": 2350289358,
+              "data": {
+                "value": 34
+              },
+              "type_id": 120
+            },
+            {
+              "id": 2350301460,
+              "data": {
+                "value": 1
+              },
+              "type_id": 100
+            },
+            {
+              "id": 2350301459,
+              "data": {
+                "value": 1
+              },
+              "type_id": 42
+            },
+            {
+              "id": 2350301461,
+              "data": {
+                "value": 1
+              },
+              "type_id": 41
+            },
+            {
+              "id": 2350312415,
+              "data": {
+                "value": 3
+              },
+              "type_id": 88
+            },
+            {
+              "id": 2350409165,
+              "data": {
+                "value": 1
+              },
+              "type_id": 51
+            },
+            {
+              "id": 2350372694,
+              "data": {
+                "value": 4
+              },
+              "type_id": 122
+            },
+            {
+              "id": 2350372695,
+              "data": {
+                "value": 1
+              },
+              "type_id": 99
+            },
+            {
+              "id": 2350376037,
+              "data": {
+                "value": 2
+              },
+              "type_id": 98
+            },
+            {
+              "id": 2350376039,
+              "data": {
+                "value": 50
+              },
+              "type_id": 1533
+            },
+            {
+              "id": 2350376035,
+              "data": {
+                "value": 3
+              },
+              "type_id": 27269
+            },
+            {
+              "id": 2350376036,
+              "data": {
+                "value": 9
+              },
+              "type_id": 116
+            },
+            {
+              "id": 2350376038,
+              "data": {
+                "value": 57
+              },
+              "type_id": 1584
+            },
+            {
+              "id": 2350388947,
+              "data": {
+                "value": 1
+              },
+              "type_id": 97
+            },
+            {
+              "id": 2350403559,
+              "data": {
+                "value": 1
+              },
+              "type_id": 27272
+            },
+            {
+              "id": 2350295590,
+              "data": {
+                "value": 15
+              },
+              "type_id": 80
+            },
+            {
+              "id": 2350416406,
+              "data": {
+                "value": 1
+              },
+              "type_id": 117
+            },
+            {
+              "id": 2350419570,
+              "data": {
+                "value": 1
+              },
+              "type_id": 9706
+            },
+            {
+              "id": 2350427205,
+              "data": {
+                "value": 4
+              },
+              "type_id": 27271
+            },
+            {
+              "id": 2350529153,
+              "data": {
+                "value": 100
+              },
+              "type_id": 27268
+            },
+            {
+              "id": 2350523746,
+              "data": {
+                "value": 67
+              },
+              "type_id": 27276
+            },
+            {
+              "id": 2350529152,
+              "data": {
+                "value": 1
+              },
+              "type_id": 27267
+            },
+            {
+              "id": 2350523744,
+              "data": {
+                "value": 3
+              },
+              "type_id": 105
+            },
+            {
+              "id": 2350523742,
+              "data": {
+                "value": 2
+              },
+              "type_id": 106
+            },
+            {
+              "id": 2350523740,
+              "data": {
+                "value": 1
+              },
+              "type_id": 78
+            },
+            {
+              "id": 2350578688,
+              "data": {
+                "value": 1
+              },
+              "type_id": 107
+            },
+            {
+              "id": 2350580898,
+              "data": {
+                "value": 1
+              },
+              "type_id": 27274
+            },
+            {
+              "id": 2350745564,
+              "data": {
+                "value": 1
+              },
+              "type_id": 56
+            },
+            {
+              "id": 2350745566,
+              "data": {
+                "value": 1
+              },
+              "type_id": 48997
+            },
+            {
+              "id": 2350865470,
+              "data": {
+                "value": 1
+              },
+              "type_id": 1491
+            },
+            {
+              "id": 2351575817,
+              "data": {
+                "value": 1
+              },
+              "type_id": 94
+            },
+            {
+              "id": 2351575818,
+              "data": {
+                "value": 2
+              },
+              "type_id": 121
+            }
+          ],
+          "team_id": 683,
+          "type_id": 11,
+          "player_id": 37558984,
+          "player_name": "Lukas Ullrich"
+        },
+        {
+          "id": 14675265123,
+          "details": [
+            {
+              "id": 2350241130,
+              "data": {
+                "value": 6.74
+              },
+              "type_id": 118
+            },
+            {
+              "id": 2350254366,
+              "data": {
+                "value": 9
+              },
+              "type_id": 27273
+            },
+            {
+              "id": 2350242476,
+              "data": {
+                "value": 95
+              },
+              "type_id": 117172
+            },
+            {
+              "id": 2350254364,
+              "data": {
+                "value": 7
+              },
+              "type_id": 105
+            },
+            {
+              "id": 2350257849,
+              "data": {
+                "value": 76
+              },
+              "type_id": 1584
+            },
+            {
+              "id": 2350254360,
+              "data": {
+                "value": 5
+              },
+              "type_id": 122
+            },
+            {
+              "id": 2350254362,
+              "data": {
+                "value": 1
+              },
+              "type_id": 107
+            },
+            {
+              "id": 2350254363,
+              "data": {
+                "value": 2
+              },
+              "type_id": 106
+            },
+            {
+              "id": 2350254365,
+              "data": {
+                "value": 5
+              },
+              "type_id": 1491
+            },
+            {
+              "id": 2350254368,
+              "data": {
+                "value": 29
+              },
+              "type_id": 27276
+            },
+            {
+              "id": 2350254357,
+              "data": {
+                "value": 90
+              },
+              "type_id": 119
+            },
+            {
+              "id": 2350254358,
+              "data": {
+                "value": 26
+              },
+              "type_id": 80
+            },
+            {
+              "id": 2350254359,
+              "data": {
+                "value": 21
+              },
+              "type_id": 116
+            },
+            {
+              "id": 2350254367,
+              "data": {
+                "value": 1
+              },
+              "type_id": 94
+            },
+            {
+              "id": 2350255705,
+              "data": {
+                "value": 4
+              },
+              "type_id": 27274
+            },
+            {
+              "id": 2350254361,
+              "data": {
+                "value": 41
+              },
+              "type_id": 120
+            },
+            {
+              "id": 2350295584,
+              "data": {
+                "value": 1
+              },
+              "type_id": 48997
+            },
+            {
+              "id": 2350295583,
+              "data": {
+                "value": 3
+              },
+              "type_id": 117
+            },
+            {
+              "id": 2350312412,
+              "data": {
+                "value": 3
+              },
+              "type_id": 88
+            },
+            {
+              "id": 2350310976,
+              "data": {
+                "value": 3
+              },
+              "type_id": 121
+            },
+            {
+              "id": 2350321825,
+              "data": {
+                "value": 3
+              },
+              "type_id": 27266
+            },
+            {
+              "id": 2350340033,
+              "data": {
+                "value": 3
+              },
+              "type_id": 42
+            },
+            {
+              "id": 2350342045,
+              "data": {
+                "value": 2
+              },
+              "type_id": 41
+            },
+            {
+              "id": 2350375960,
+              "data": {
+                "value": 3
+              },
+              "type_id": 27271
+            },
+            {
+              "id": 2350375961,
+              "data": {
+                "value": 7
+              },
+              "type_id": 27272
+            },
+            {
+              "id": 2350375962,
+              "data": {
+                "value": 80
+              },
+              "type_id": 27270
+            },
+            {
+              "id": 2350375963,
+              "data": {
+                "value": 25
+              },
+              "type_id": 27275
+            },
+            {
+              "id": 2350484477,
+              "data": {
+                "value": 4
+              },
+              "type_id": 123
+            },
+            {
+              "id": 2350555039,
+              "data": {
+                "value": 1
+              },
+              "type_id": 79
+            },
+            {
+              "id": 2350296317,
+              "data": {
+                "value": 3
+              },
+              "type_id": 9706
+            },
+            {
+              "id": 2350537140,
+              "data": {
+                "value": 1
+              },
+              "type_id": 96
+            },
+            {
+              "id": 2350733497,
+              "data": {
+                "value": 2
+              },
+              "type_id": 27269
+            },
+            {
+              "id": 2350834469,
+              "data": {
+                "value": 1
+              },
+              "type_id": 98
+            },
+            {
+              "id": 2350811681,
+              "data": {
+                "value": 1
+              },
+              "type_id": 56
+            },
+            {
+              "id": 2350819900,
+              "data": {
+                "value": 1
+              },
+              "type_id": 86
+            },
+            {
+              "id": 2350940112,
+              "data": {
+                "value": 1
+              },
+              "type_id": 101
+            },
+            {
+              "id": 2350902576,
+              "data": {
+                "value": 1
+              },
+              "type_id": 581
+            }
+          ],
+          "team_id": 683,
+          "type_id": 11,
+          "player_id": 17158438,
+          "player_name": "Joe Scally"
+        },
+        {
+          "id": 14675265124,
+          "details": [
+            {
+              "id": 2350254297,
+              "data": {
+                "value": 41
+              },
+              "type_id": 80
+            },
+            {
+              "id": 2350254298,
+              "data": {
+                "value": 23
+              },
+              "type_id": 122
+            },
+            {
+              "id": 2350242468,
+              "data": {
+                "value": 95
+              },
+              "type_id": 117172
+            },
+            {
+              "id": 2350254299,
+              "data": {
+                "value": 53
+              },
+              "type_id": 120
+            },
+            {
+              "id": 2350254300,
+              "data": {
+                "value": 17
+              },
+              "type_id": 27273
+            },
+            {
+              "id": 2350241122,
+              "data": {
+                "value": 7.5
+              },
+              "type_id": 118
+            },
+            {
+              "id": 2350262924,
+              "data": {
+                "value": 24
+              },
+              "type_id": 116
+            },
+            {
+              "id": 2350254296,
+              "data": {
+                "value": 90
+              },
+              "type_id": 119
+            },
+            {
+              "id": 2350295578,
+              "data": {
+                "value": 6
+              },
+              "type_id": 57
+            },
+            {
+              "id": 2350295579,
+              "data": {
+                "value": 6
+              },
+              "type_id": 104
+            },
+            {
+              "id": 2350312358,
+              "data": {
+                "value": 3
+              },
+              "type_id": 1535
+            },
+            {
+              "id": 2350310970,
+              "data": {
+                "value": 59
+              },
+              "type_id": 1584
+            },
+            {
+              "id": 2350378796,
+              "data": {
+                "value": 3
+              },
+              "type_id": 88
+            },
+            {
+              "id": 2350376001,
+              "data": {
+                "value": 3
+              },
+              "type_id": 27271
+            },
+            {
+              "id": 2350375984,
+              "data": {
+                "value": 6
+              },
+              "type_id": 27269
+            },
+            {
+              "id": 2350486131,
+              "data": {
+                "value": 3
+              },
+              "type_id": 101
+            },
+            {
+              "id": 2350486133,
+              "data": {
+                "value": 2
+              },
+              "type_id": 106
+            },
+            {
+              "id": 2350486134,
+              "data": {
+                "value": 2
+              },
+              "type_id": 105
+            },
+            {
+              "id": 2350484480,
+              "data": {
+                "value": 2
+              },
+              "type_id": 103
+            },
+            {
+              "id": 2350487532,
+              "data": {
+                "value": 2
+              },
+              "type_id": 27274
+            },
+            {
+              "id": 2350486132,
+              "data": {
+                "value": 2
+              },
+              "type_id": 107
+            },
+            {
+              "id": 2350486135,
+              "data": {
+                "value": 100
+              },
+              "type_id": 27276
+            },
+            {
+              "id": 2350537141,
+              "data": {
+                "value": 7
+              },
+              "type_id": 123
+            },
+            {
+              "id": 2350537142,
+              "data": {
+                "value": 30
+              },
+              "type_id": 27270
+            },
+            {
+              "id": 2350811682,
+              "data": {
+                "value": 1
+              },
+              "type_id": 584
+            }
+          ],
+          "team_id": 683,
+          "type_id": 11,
+          "player_id": 31230,
+          "player_name": "Daniel Batz"
+        },
+        {
+          "id": 14675292569,
+          "details": [],
+          "team_id": 683,
+          "type_id": 12,
+          "player_id": 37706074,
+          "player_name": "Mathieu Nguefack"
+        },
+        {
+          "id": 14675265125,
+          "details": [
+            {
+              "id": 2350241128,
+              "data": {
+                "value": 6.62
+              },
+              "type_id": 118
+            },
+            {
+              "id": 2350254348,
+              "data": {
+                "value": 8
+              },
+              "type_id": 108
+            },
+            {
+              "id": 2350254349,
+              "data": {
+                "value": 16
+              },
+              "type_id": 27273
+            },
+            {
+              "id": 2350254344,
+              "data": {
+                "value": 18
+              },
+              "type_id": 105
+            },
+            {
+              "id": 2350254340,
+              "data": {
+                "value": 90
+              },
+              "type_id": 119
+            },
+            {
+              "id": 2350254346,
+              "data": {
+                "value": 11
+              },
+              "type_id": 1491
+            },
+            {
+              "id": 2350257847,
+              "data": {
+                "value": 83
+              },
+              "type_id": 1584
+            },
+            {
+              "id": 2350242474,
+              "data": {
+                "value": 95
+              },
+              "type_id": 117172
+            },
+            {
+              "id": 2350289357,
+              "data": {
+                "value": 2
+              },
+              "type_id": 101
+            },
+            {
+              "id": 2350340031,
+              "data": {
+                "value": 1
+              },
+              "type_id": 58
+            },
+            {
+              "id": 2350312387,
+              "data": {
+                "value": 3
+              },
+              "type_id": 88
+            },
+            {
+              "id": 2350310973,
+              "data": {
+                "value": 10
+              },
+              "type_id": 121
+            },
+            {
+              "id": 2350340029,
+              "data": {
+                "value": 2
+              },
+              "type_id": 42
+            },
+            {
+              "id": 2350254342,
+              "data": {
+                "value": 19
+              },
+              "type_id": 116
+            },
+            {
+              "id": 2350254343,
+              "data": {
+                "value": 53
+              },
+              "type_id": 120
+            },
+            {
+              "id": 2350362119,
+              "data": {
+                "value": 4
+              },
+              "type_id": 109
+            },
+            {
+              "id": 2350362118,
+              "data": {
+                "value": 7
+              },
+              "type_id": 106
+            },
+            {
+              "id": 2350362120,
+              "data": {
+                "value": 39
+              },
+              "type_id": 27276
+            },
+            {
+              "id": 2350375977,
+              "data": {
+                "value": 4
+              },
+              "type_id": 27271
+            },
+            {
+              "id": 2350375976,
+              "data": {
+                "value": 1
+              },
+              "type_id": 110
+            },
+            {
+              "id": 2350403560,
+              "data": {
+                "value": 4
+              },
+              "type_id": 27272
+            },
+            {
+              "id": 2350411393,
+              "data": {
+                "value": 1
+              },
+              "type_id": 78
+            },
+            {
+              "id": 2350439778,
+              "data": {
+                "value": 1
+              },
+              "type_id": 100
+            },
+            {
+              "id": 2350254341,
+              "data": {
+                "value": 22
+              },
+              "type_id": 80
+            },
+            {
+              "id": 2350515228,
+              "data": {
+                "value": 2
+              },
+              "type_id": 117
+            },
+            {
+              "id": 2350515229,
+              "data": {
+                "value": 2
+              },
+              "type_id": 9706
+            },
+            {
+              "id": 2350755652,
+              "data": {
+                "value": 1
+              },
+              "type_id": 96
+            },
+            {
+              "id": 2350755651,
+              "data": {
+                "value": 1
+              },
+              "type_id": 27269
+            },
+            {
+              "id": 2350769777,
+              "data": {
+                "value": 2
+              },
+              "type_id": 27274
+            },
+            {
+              "id": 2350768826,
+              "data": {
+                "value": 1
+              },
+              "type_id": 107
+            },
+            {
+              "id": 2350858894,
+              "data": {
+                "value": 4
+              },
+              "type_id": 94
+            },
+            {
+              "id": 2350895229,
+              "data": {
+                "value": 1
+              },
+              "type_id": 27266
+            },
+            {
+              "id": 2350895230,
+              "data": {
+                "value": 1
+              },
+              "type_id": 41
+            },
+            {
+              "id": 2350896079,
+              "data": {
+                "value": 50
+              },
+              "type_id": 27275
+            },
+            {
+              "id": 2350905522,
+              "data": {
+                "value": 1
+              },
+              "type_id": 56
+            }
+          ],
+          "team_id": 683,
+          "type_id": 11,
+          "player_id": 37711376,
+          "player_name": "Wael Mohya"
+        },
+        {
+          "id": 14675265126,
+          "details": [
+            {
+              "id": 2350241131,
+              "data": {
+                "value": 6.78
+              },
+              "type_id": 118
+            },
+            {
+              "id": 2350254369,
+              "data": {
+                "value": 1
+              },
+              "type_id": 78
+            },
+            {
+              "id": 2350254379,
+              "data": {
+                "value": 4
+              },
+              "type_id": 106
+            },
+            {
+              "id": 2350254382,
+              "data": {
+                "value": 5
+              },
+              "type_id": 1491
+            },
+            {
+              "id": 2350242477,
+              "data": {
+                "value": 82
+              },
+              "type_id": 117172
+            },
+            {
+              "id": 2350254371,
+              "data": {
+                "value": 26
+              },
+              "type_id": 80
+            },
+            {
+              "id": 2350254376,
+              "data": {
+                "value": 3
+              },
+              "type_id": 56
+            },
+            {
+              "id": 2350254374,
+              "data": {
+                "value": 45
+              },
+              "type_id": 120
+            },
+            {
+              "id": 2350254381,
+              "data": {
+                "value": 9
+              },
+              "type_id": 105
+            },
+            {
+              "id": 2350254383,
+              "data": {
+                "value": 14
+              },
+              "type_id": 27273
+            },
+            {
+              "id": 2350254384,
+              "data": {
+                "value": 1
+              },
+              "type_id": 98
+            },
+            {
+              "id": 2350254385,
+              "data": {
+                "value": 44
+              },
+              "type_id": 27276
+            },
+            {
+              "id": 2350257850,
+              "data": {
+                "value": 65
+              },
+              "type_id": 1584
+            },
+            {
+              "id": 2350275703,
+              "data": {
+                "value": 1
+              },
+              "type_id": 122
+            },
+            {
+              "id": 2350254370,
+              "data": {
+                "value": 81
+              },
+              "type_id": 119
+            },
+            {
+              "id": 2350312413,
+              "data": {
+                "value": 3
+              },
+              "type_id": 88
+            },
+            {
+              "id": 2350254373,
+              "data": {
+                "value": 17
+              },
+              "type_id": 116
+            },
+            {
+              "id": 2350328774,
+              "data": {
+                "value": 2
+              },
+              "type_id": 100
+            },
+            {
+              "id": 2350375967,
+              "data": {
+                "value": 8
+              },
+              "type_id": 27272
+            },
+            {
+              "id": 2350381165,
+              "data": {
+                "value": 2
+              },
+              "type_id": 42
+            },
+            {
+              "id": 2350375966,
+              "data": {
+                "value": 5
+              },
+              "type_id": 27271
+            },
+            {
+              "id": 2350375968,
+              "data": {
+                "value": 100
+              },
+              "type_id": 27268
+            },
+            {
+              "id": 2350375964,
+              "data": {
+                "value": 1
+              },
+              "type_id": 27267
+            },
+            {
+              "id": 2350375965,
+              "data": {
+                "value": 4
+              },
+              "type_id": 27269
+            },
+            {
+              "id": 2350381166,
+              "data": {
+                "value": 1
+              },
+              "type_id": 86
+            },
+            {
+              "id": 2350567894,
+              "data": {
+                "value": 2
+              },
+              "type_id": 27266
+            },
+            {
+              "id": 2350542873,
+              "data": {
+                "value": 2
+              },
+              "type_id": 101
+            },
+            {
+              "id": 2350569810,
+              "data": {
+                "value": 2
+              },
+              "type_id": 27274
+            },
+            {
+              "id": 2350745559,
+              "data": {
+                "value": 3
+              },
+              "type_id": 108
+            },
+            {
+              "id": 2350745560,
+              "data": {
+                "value": 3
+              },
+              "type_id": 109
+            },
+            {
+              "id": 2350895231,
+              "data": {
+                "value": 1
+              },
+              "type_id": 58
+            },
+            {
+              "id": 2351575819,
+              "data": {
+                "value": 4
+              },
+              "type_id": 121
+            }
+          ],
+          "team_id": 683,
+          "type_id": 11,
+          "player_id": 37616671,
+          "player_name": "Zento Uno"
+        },
+        {
+          "id": 14675265127,
+          "details": [
+            {
+              "id": 2350242467,
+              "data": {
+                "value": 95
+              },
+              "type_id": 117172
+            },
+            {
+              "id": 2350254295,
+              "data": {
+                "value": 12
+              },
+              "type_id": 27273
+            },
+            {
+              "id": 2350254291,
+              "data": {
+                "value": 90
+              },
+              "type_id": 119
+            },
+            {
+              "id": 2350254293,
+              "data": {
+                "value": 19
+              },
+              "type_id": 122
+            },
+            {
+              "id": 2350241121,
+              "data": {
+                "value": 7.19
+              },
+              "type_id": 118
+            },
+            {
+              "id": 2350254292,
+              "data": {
+                "value": 54
+              },
+              "type_id": 80
+            },
+            {
+              "id": 2350254294,
+              "data": {
+                "value": 63
+              },
+              "type_id": 120
+            },
+            {
+              "id": 2350262923,
+              "data": {
+                "value": 43
+              },
+              "type_id": 116
+            },
+            {
+              "id": 2350310969,
+              "data": {
+                "value": 80
+              },
+              "type_id": 1584
+            },
+            {
+              "id": 2350381167,
+              "data": {
+                "value": 4
+              },
+              "type_id": 57
+            },
+            {
+              "id": 2350375982,
+              "data": {
+                "value": 12
+              },
+              "type_id": 27271
+            },
+            {
+              "id": 2350375983,
+              "data": {
+                "value": 42
+              },
+              "type_id": 27270
+            },
+            {
+              "id": 2350381168,
+              "data": {
+                "value": 2
+              },
+              "type_id": 104
+            },
+            {
+              "id": 2350488493,
+              "data": {
+                "value": 5
+              },
+              "type_id": 27269
+            },
+            {
+              "id": 2350484479,
+              "data": {
+                "value": 8
+              },
+              "type_id": 123
+            },
+            {
+              "id": 2350550825,
+              "data": {
+                "value": 1
+              },
+              "type_id": 1535
+            },
+            {
+              "id": 2350661084,
+              "data": {
+                "value": 1
+              },
+              "type_id": 88
+            },
+            {
+              "id": 2350828065,
+              "data": {
+                "value": 1
+              },
+              "type_id": 584
+            }
+          ],
+          "team_id": 2708,
+          "type_id": 11,
+          "player_id": 32487,
+          "player_name": "Daniel Heuer Fernandes"
+        },
+        {
+          "id": 14675265128,
+          "details": [
+            {
+              "id": 2350241136,
+              "data": {
+                "value": 6.88
+              },
+              "type_id": 118
+            },
+            {
+              "id": 2350500251,
+              "data": {
+                "value": 2
+              },
+              "type_id": 86
+            },
+            {
+              "id": 2350254424,
+              "data": {
+                "value": 55
+              },
+              "type_id": 80
+            },
+            {
+              "id": 2350254445,
+              "data": {
+                "value": 81
+              },
+              "type_id": 120
+            },
+            {
+              "id": 2350254423,
+              "data": {
+                "value": 90
+              },
+              "type_id": 119
+            },
+            {
+              "id": 2350254448,
+              "data": {
+                "value": 12
+              },
+              "type_id": 27273
+            },
+            {
+              "id": 2350273431,
+              "data": {
+                "value": 50
+              },
+              "type_id": 116
+            },
+            {
+              "id": 2350375959,
+              "data": {
+                "value": 91
+              },
+              "type_id": 1584
+            },
+            {
+              "id": 2350375958,
+              "data": {
+                "value": 14
+              },
+              "type_id": 27272
+            },
+            {
+              "id": 2350416405,
+              "data": {
+                "value": 4
+              },
+              "type_id": 98
+            },
+            {
+              "id": 2350447964,
+              "data": {
+                "value": 4
+              },
+              "type_id": 1491
+            },
+            {
+              "id": 2350447963,
+              "data": {
+                "value": 7
+              },
+              "type_id": 105
+            },
+            {
+              "id": 2350242482,
+              "data": {
+                "value": 95
+              },
+              "type_id": 117172
+            },
+            {
+              "id": 2350505602,
+              "data": {
+                "value": 2
+              },
+              "type_id": 42
+            },
+            {
+              "id": 2350484476,
+              "data": {
+                "value": 1
+              },
+              "type_id": 27266
+            },
+            {
+              "id": 2350488473,
+              "data": {
+                "value": 10
+              },
+              "type_id": 27269
+            },
+            {
+              "id": 2350486129,
+              "data": {
+                "value": 3
+              },
+              "type_id": 27274
+            },
+            {
+              "id": 2350550833,
+              "data": {
+                "value": 1
+              },
+              "type_id": 88
+            },
+            {
+              "id": 2350537138,
+              "data": {
+                "value": 1
+              },
+              "type_id": 56
+            },
+            {
+              "id": 2350657334,
+              "data": {
+                "value": 1
+              },
+              "type_id": 108
+            },
+            {
+              "id": 2350661086,
+              "data": {
+                "value": 1
+              },
+              "type_id": 581
+            },
+            {
+              "id": 2350767090,
+              "data": {
+                "value": 43
+              },
+              "type_id": 27276
+            },
+            {
+              "id": 2350767089,
+              "data": {
+                "value": 67
+              },
+              "type_id": 27275
+            },
+            {
+              "id": 2350811684,
+              "data": {
+                "value": 2
+              },
+              "type_id": 27271
+            },
+            {
+              "id": 2350768827,
+              "data": {
+                "value": 3
+              },
+              "type_id": 101
+            },
+            {
+              "id": 2350768829,
+              "data": {
+                "value": 3
+              },
+              "type_id": 106
+            },
+            {
+              "id": 2350785410,
+              "data": {
+                "value": 1
+              },
+              "type_id": 96
+            },
+            {
+              "id": 2350834470,
+              "data": {
+                "value": 1
+              },
+              "type_id": 122
+            },
+            {
+              "id": 2350847990,
+              "data": {
+                "value": 1
+              },
+              "type_id": 100
+            },
+            {
+              "id": 2350895232,
+              "data": {
+                "value": 1
+              },
+              "type_id": 97
+            },
+            {
+              "id": 2350768828,
+              "data": {
+                "value": 2
+              },
+              "type_id": 107
+            },
+            {
+              "id": 2350970817,
+              "data": {
+                "value": 1
+              },
+              "type_id": 110
+            },
+            {
+              "id": 2350310978,
+              "data": {
+                "value": 3
+              },
+              "type_id": 121
+            }
+          ],
+          "team_id": 2708,
+          "type_id": 11,
+          "player_id": 33166012,
+          "player_name": "David Møller Wolfe"
+        },
+        {
+          "id": 14675265129,
+          "details": [
+            {
+              "id": 2350241119,
+              "data": {
+                "value": 6.75
+              },
+              "type_id": 118
+            },
+            {
+              "id": 2350242465,
+              "data": {
+                "value": 64
+              },
+              "type_id": 117172
+            },
+            {
+              "id": 2350254282,
+              "data": {
+                "value": 27
+              },
+              "type_id": 116
+            },
+            {
+              "id": 2350254283,
+              "data": {
+                "value": 38
+              },
+              "type_id": 120
+            },
+            {
+              "id": 2350254280,
+              "data": {
+                "value": 63
+              },
+              "type_id": 119
+            },
+            {
+              "id": 2350254281,
+              "data": {
+                "value": 32
+              },
+              "type_id": 80
+            },
+            {
+              "id": 2350257843,
+              "data": {
+                "value": 84
+              },
+              "type_id": 1584
+            },
+            {
+              "id": 2350301455,
+              "data": {
+                "value": 9
+              },
+              "type_id": 27273
+            },
+            {
+              "id": 2350340025,
+              "data": {
+                "value": 1
+              },
+              "type_id": 9706
+            },
+            {
+              "id": 2350342030,
+              "data": {
+                "value": 1
+              },
+              "type_id": 117
+            },
+            {
+              "id": 2350347406,
+              "data": {
+                "value": 1
+              },
+              "type_id": 580
+            },
+            {
+              "id": 2350431831,
+              "data": {
+                "value": 1
+              },
+              "type_id": 78
+            },
+            {
+              "id": 2350375936,
+              "data": {
+                "value": 5
+              },
+              "type_id": 27272
+            },
+            {
+              "id": 2350375935,
+              "data": {
+                "value": 4
+              },
+              "type_id": 27271
+            },
+            {
+              "id": 2350388944,
+              "data": {
+                "value": 1
+              },
+              "type_id": 98
+            },
+            {
+              "id": 2350431833,
+              "data": {
+                "value": 4
+              },
+              "type_id": 105
+            },
+            {
+              "id": 2350439777,
+              "data": {
+                "value": 1
+              },
+              "type_id": 122
+            },
+            {
+              "id": 2350431834,
+              "data": {
+                "value": 50
+              },
+              "type_id": 27276
+            },
+            {
+              "id": 2350450982,
+              "data": {
+                "value": 100
+              },
+              "type_id": 27270
+            },
+            {
+              "id": 2350431832,
+              "data": {
+                "value": 2
+              },
+              "type_id": 106
+            },
+            {
+              "id": 2350433214,
+              "data": {
+                "value": 1
+              },
+              "type_id": 27267
+            },
+            {
+              "id": 2350433215,
+              "data": {
+                "value": 100
+              },
+              "type_id": 27268
+            },
+            {
+              "id": 2350464023,
+              "data": {
+                "value": 1
+              },
+              "type_id": 108
+            },
+            {
+              "id": 2350469762,
+              "data": {
+                "value": 3
+              },
+              "type_id": 27269
+            },
+            {
+              "id": 2350464022,
+              "data": {
+                "value": 2
+              },
+              "type_id": 1491
+            },
+            {
+              "id": 2350484474,
+              "data": {
+                "value": 1
+              },
+              "type_id": 123
+            },
+            {
+              "id": 2350550830,
+              "data": {
+                "value": 1
+              },
+              "type_id": 88
+            },
+            {
+              "id": 2350713530,
+              "data": {
+                "value": 1
+              },
+              "type_id": 107
+            },
+            {
+              "id": 2350715866,
+              "data": {
+                "value": 1
+              },
+              "type_id": 27274
+            },
+            {
+              "id": 2350755649,
+              "data": {
+                "value": 1
+              },
+              "type_id": 56
+            },
+            {
+              "id": 2351575820,
+              "data": {
+                "value": 3
+              },
+              "type_id": 121
+            }
+          ],
+          "team_id": 2708,
+          "type_id": 11,
+          "player_id": 37337021,
+          "player_name": "Martin Adeline"
+        },
+        {
+          "id": 14675265130,
+          "details": [
+            {
+              "id": 2349988606,
+              "data": {
+                "value": true
+              },
+              "type_id": 40
+            },
+            {
+              "id": 2350241138,
+              "data": {
+                "value": 7.35
+              },
+              "type_id": 118
+            },
+            {
+              "id": 2350242484,
+              "data": {
+                "value": 81
+              },
+              "type_id": 117172
+            },
+            {
+              "id": 2350254506,
+              "data": {
+                "value": 6
+              },
+              "type_id": 106
+            },
+            {
+              "id": 2350254520,
+              "data": {
+                "value": 9
+              },
+              "type_id": 27273
+            },
+            {
+              "id": 2350254533,
+              "data": {
+                "value": 75
+              },
+              "type_id": 27276
+            },
+            {
+              "id": 2350254507,
+              "data": {
+                "value": 8
+              },
+              "type_id": 105
+            },
+            {
+              "id": 2350254476,
+              "data": {
+                "value": 80
+              },
+              "type_id": 119
+            },
+            {
+              "id": 2350254477,
+              "data": {
+                "value": 54
+              },
+              "type_id": 80
+            },
+            {
+              "id": 2350254451,
+              "data": {
+                "value": 2
+              },
+              "type_id": 78
+            },
+            {
+              "id": 2350254505,
+              "data": {
+                "value": 4
+              },
+              "type_id": 96
+            },
+            {
+              "id": 2350254478,
+              "data": {
+                "value": 48
+              },
+              "type_id": 116
+            },
+            {
+              "id": 2350254504,
+              "data": {
+                "value": 69
+              },
+              "type_id": 120
+            },
+            {
+              "id": 2350257852,
+              "data": {
+                "value": 89
+              },
+              "type_id": 1584
+            },
+            {
+              "id": 2350275714,
+              "data": {
+                "value": 3
+              },
+              "type_id": 122
+            },
+            {
+              "id": 2350262929,
+              "data": {
+                "value": 2
+              },
+              "type_id": 123
+            },
+            {
+              "id": 2350316841,
+              "data": {
+                "value": 1
+              },
+              "type_id": 9706
+            },
+            {
+              "id": 2350310979,
+              "data": {
+                "value": 3
+              },
+              "type_id": 121
+            },
+            {
+              "id": 2350315368,
+              "data": {
+                "value": 2
+              },
+              "type_id": 117
+            },
+            {
+              "id": 2350315366,
+              "data": {
+                "value": 1
+              },
+              "type_id": 79
+            },
+            {
+              "id": 2350375955,
+              "data": {
+                "value": 4
+              },
+              "type_id": 27271
+            },
+            {
+              "id": 2350375952,
+              "data": {
+                "value": 6
+              },
+              "type_id": 27269
+            },
+            {
+              "id": 2350375956,
+              "data": {
+                "value": 9
+              },
+              "type_id": 27272
+            },
+            {
+              "id": 2350375954,
+              "data": {
+                "value": 1
+              },
+              "type_id": 101
+            },
+            {
+              "id": 2350375957,
+              "data": {
+                "value": 67
+              },
+              "type_id": 27270
+            },
+            {
+              "id": 2350469763,
+              "data": {
+                "value": 2
+              },
+              "type_id": 100
+            },
+            {
+              "id": 2350550831,
+              "data": {
+                "value": 1
+              },
+              "type_id": 88
+            },
+            {
+              "id": 2350878831,
+              "data": {
+                "value": 1
+              },
+              "type_id": 56
+            },
+            {
+              "id": 2350878832,
+              "data": {
+                "value": 2
+              },
+              "type_id": 1491
+            },
+            {
+              "id": 2350889689,
+              "data": {
+                "value": 1
+              },
+              "type_id": 94
+            }
+          ],
+          "team_id": 2708,
+          "type_id": 11,
+          "player_id": 538907,
+          "player_name": "Albert Sambi Lokonga"
+        },
+        {
+          "id": 14675285373,
+          "details": [
+            {
+              "id": 2350241137,
+              "data": {
+                "value": 7.04
+              },
+              "type_id": 118
+            },
+            {
+              "id": 2350295593,
+              "data": {
+                "value": 54
+              },
+              "type_id": 120
+            },
+            {
+              "id": 2350340034,
+              "data": {
+                "value": 3
+              },
+              "type_id": 42
+            },
+            {
+              "id": 2350254450,
+              "data": {
+                "value": 90
+              },
+              "type_id": 119
+            },
+            {
+              "id": 2350309347,
+              "data": {
+                "value": 26
+              },
+              "type_id": 116
+            },
+            {
+              "id": 2350340074,
+              "data": {
+                "value": 1
+              },
+              "type_id": 86
+            },
+            {
+              "id": 2350347472,
+              "data": {
+                "value": 1
+              },
+              "type_id": 581
+            },
+            {
+              "id": 2350340035,
+              "data": {
+                "value": 1
+              },
+              "type_id": 97
+            },
+            {
+              "id": 2350375949,
+              "data": {
+                "value": 9
+              },
+              "type_id": 27273
+            },
+            {
+              "id": 2350375951,
+              "data": {
+                "value": 87
+              },
+              "type_id": 1584
+            },
+            {
+              "id": 2350375948,
+              "data": {
+                "value": 11
+              },
+              "type_id": 27272
+            },
+            {
+              "id": 2350375947,
+              "data": {
+                "value": 6
+              },
+              "type_id": 27271
+            },
+            {
+              "id": 2350309346,
+              "data": {
+                "value": 29
+              },
+              "type_id": 80
+            },
+            {
+              "id": 2350411390,
+              "data": {
+                "value": 2
+              },
+              "type_id": 1491
+            },
+            {
+              "id": 2350411389,
+              "data": {
+                "value": 5
+              },
+              "type_id": 105
+            },
+            {
+              "id": 2350411391,
+              "data": {
+                "value": 1
+              },
+              "type_id": 94
+            },
+            {
+              "id": 2350411388,
+              "data": {
+                "value": 6
+              },
+              "type_id": 122
+            },
+            {
+              "id": 2350242483,
+              "data": {
+                "value": 95
+              },
+              "type_id": 117172
+            },
+            {
+              "id": 2350486128,
+              "data": {
+                "value": 3
+              },
+              "type_id": 123
+            },
+            {
+              "id": 2350488466,
+              "data": {
+                "value": 60
+              },
+              "type_id": 27270
+            },
+            {
+              "id": 2350550829,
+              "data": {
+                "value": 1
+              },
+              "type_id": 88
+            },
+            {
+              "id": 2350748532,
+              "data": {
+                "value": 2
+              },
+              "type_id": 41
+            },
+            {
+              "id": 2350865534,
+              "data": {
+                "value": 1
+              },
+              "type_id": 98
+            },
+            {
+              "id": 2350768831,
+              "data": {
+                "value": 3
+              },
+              "type_id": 106
+            },
+            {
+              "id": 2350768832,
+              "data": {
+                "value": 2
+              },
+              "type_id": 108
+            },
+            {
+              "id": 2350768833,
+              "data": {
+                "value": 1
+              },
+              "type_id": 109
+            },
+            {
+              "id": 2350768834,
+              "data": {
+                "value": 60
+              },
+              "type_id": 27276
+            },
+            {
+              "id": 2350865535,
+              "data": {
+                "value": 100
+              },
+              "type_id": 1533
+            },
+            {
+              "id": 2350858895,
+              "data": {
+                "value": 2
+              },
+              "type_id": 78
+            },
+            {
+              "id": 2350878834,
+              "data": {
+                "value": 2
+              },
+              "type_id": 117
+            },
+            {
+              "id": 2350881309,
+              "data": {
+                "value": 2
+              },
+              "type_id": 9706
+            },
+            {
+              "id": 2350916032,
+              "data": {
+                "value": 1
+              },
+              "type_id": 27269
+            },
+            {
+              "id": 2350923961,
+              "data": {
+                "value": 1
+              },
+              "type_id": 580
+            },
+            {
+              "id": 2350923962,
+              "data": {
+                "value": 1
+              },
+              "type_id": 99
+            },
+            {
+              "id": 2351575821,
+              "data": {
+                "value": 5
+              },
+              "type_id": 121
+            }
+          ],
+          "team_id": 2708,
+          "type_id": 11,
+          "player_id": 37540780,
+          "player_name": "Zakaria El Ouahdi"
+        },
+        {
+          "id": 14675292570,
+          "details": [
+            {
+              "id": 2350790363,
+              "data": {
+                "value": 27
+              },
+              "type_id": 119
+            },
+            {
+              "id": 2350797144,
+              "data": {
+                "value": 31
+              },
+              "type_id": 117172
+            },
+            {
+              "id": 2350828066,
+              "data": {
+                "value": 6.61
+              },
+              "type_id": 118
+            },
+            {
+              "id": 2350834487,
+              "data": {
+                "value": 2
+              },
+              "type_id": 105
+            },
+            {
+              "id": 2350834488,
+              "data": {
+                "value": 1
+              },
+              "type_id": 1491
+            },
+            {
+              "id": 2350858898,
+              "data": {
+                "value": 14
+              },
+              "type_id": 120
+            },
+            {
+              "id": 2350858899,
+              "data": {
+                "value": 6
+              },
+              "type_id": 27273
+            },
+            {
+              "id": 2350856830,
+              "data": {
+                "value": 1
+              },
+              "type_id": 27266
+            },
+            {
+              "id": 2350857899,
+              "data": {
+                "value": 2
+              },
+              "type_id": 27274
+            },
+            {
+              "id": 2350858896,
+              "data": {
+                "value": 8
+              },
+              "type_id": 80
+            },
+            {
+              "id": 2350858897,
+              "data": {
+                "value": 7
+              },
+              "type_id": 116
+            },
+            {
+              "id": 2350858900,
+              "data": {
+                "value": 88
+              },
+              "type_id": 1584
+            },
+            {
+              "id": 2350889692,
+              "data": {
+                "value": 1
+              },
+              "type_id": 107
+            },
+            {
+              "id": 2350889691,
+              "data": {
+                "value": 1
+              },
+              "type_id": 117
+            },
+            {
+              "id": 2350889693,
+              "data": {
+                "value": 1
+              },
+              "type_id": 106
+            },
+            {
+              "id": 2350889696,
+              "data": {
+                "value": 50
+              },
+              "type_id": 27276
+            },
+            {
+              "id": 2350889694,
+              "data": {
+                "value": 1
+              },
+              "type_id": 9706
+            },
+            {
+              "id": 2350889695,
+              "data": {
+                "value": 50
+              },
+              "type_id": 27275
+            },
+            {
+              "id": 2350909108,
+              "data": {
+                "value": 2
+              },
+              "type_id": 27272
+            },
+            {
+              "id": 2350943090,
+              "data": {
+                "value": 1
+              },
+              "type_id": 27269
+            },
+            {
+              "id": 2351575822,
+              "data": {
+                "value": 5
+              },
+              "type_id": 121
+            }
+          ],
+          "team_id": 2708,
+          "type_id": 12,
+          "player_id": 3187862,
+          "player_name": "Terem Moffi"
+        },
+        {
+          "id": 14675265132,
+          "details": [
+            {
+              "id": 2350241120,
+              "data": {
+                "value": 9.04
+              },
+              "type_id": 118
+            },
+            {
+              "id": 2350254288,
+              "data": {
+                "value": 6
+              },
+              "type_id": 1491
+            },
+            {
+              "id": 2350254290,
+              "data": {
+                "value": 24
+              },
+              "type_id": 27273
+            },
+            {
+              "id": 2350273426,
+              "data": {
+                "value": 42
+              },
+              "type_id": 80
+            },
+            {
+              "id": 2350254285,
+              "data": {
+                "value": 67
+              },
+              "type_id": 120
+            },
+            {
+              "id": 2350254286,
+              "data": {
+                "value": 1
+              },
+              "type_id": 27266
+            },
+            {
+              "id": 2350254289,
+              "data": {
+                "value": 6
+              },
+              "type_id": 108
+            },
+            {
+              "id": 2350254287,
+              "data": {
+                "value": 15
+              },
+              "type_id": 105
+            },
+            {
+              "id": 2350254284,
+              "data": {
+                "value": 80
+              },
+              "type_id": 119
+            },
+            {
+              "id": 2350255703,
+              "data": {
+                "value": 2
+              },
+              "type_id": 27274
+            },
+            {
+              "id": 2350273427,
+              "data": {
+                "value": 30
+              },
+              "type_id": 116
+            },
+            {
+              "id": 2350275690,
+              "data": {
+                "value": 60
+              },
+              "type_id": 27276
+            },
+            {
+              "id": 2350275689,
+              "data": {
+                "value": 9
+              },
+              "type_id": 106
+            },
+            {
+              "id": 2350275688,
+              "data": {
+                "value": 2
+              },
+              "type_id": 78
+            },
+            {
+              "id": 2350310967,
+              "data": {
+                "value": 10
+              },
+              "type_id": 121
+            },
+            {
+              "id": 2350310968,
+              "data": {
+                "value": 71
+              },
+              "type_id": 1584
+            },
+            {
+              "id": 2350375978,
+              "data": {
+                "value": 2
+              },
+              "type_id": 27267
+            },
+            {
+              "id": 2350375979,
+              "data": {
+                "value": 3
+              },
+              "type_id": 27271
+            },
+            {
+              "id": 2350375980,
+              "data": {
+                "value": 11
+              },
+              "type_id": 27272
+            },
+            {
+              "id": 2350375981,
+              "data": {
+                "value": 100
+              },
+              "type_id": 27268
+            },
+            {
+              "id": 2350450994,
+              "data": {
+                "value": 2
+              },
+              "type_id": 27269
+            },
+            {
+              "id": 2350455571,
+              "data": {
+                "value": 3
+              },
+              "type_id": 96
+            },
+            {
+              "id": 2350242466,
+              "data": {
+                "value": 81
+              },
+              "type_id": 117172
+            },
+            {
+              "id": 2350500253,
+              "data": {
+                "value": 4
+              },
+              "type_id": 117
+            },
+            {
+              "id": 2350495004,
+              "data": {
+                "value": 4
+              },
+              "type_id": 9706
+            },
+            {
+              "id": 2350515230,
+              "data": {
+                "value": 2
+              },
+              "type_id": 42
+            },
+            {
+              "id": 2350515231,
+              "data": {
+                "value": 1
+              },
+              "type_id": 100
+            },
+            {
+              "id": 2350515233,
+              "data": {
+                "value": 1
+              },
+              "type_id": 41
+            },
+            {
+              "id": 2350550835,
+              "data": {
+                "value": 1
+              },
+              "type_id": 88
+            },
+            {
+              "id": 2350542869,
+              "data": {
+                "value": 3
+              },
+              "type_id": 109
+            },
+            {
+              "id": 2350661085,
+              "data": {
+                "value": 2
+              },
+              "type_id": 580
+            },
+            {
+              "id": 2350704890,
+              "data": {
+                "value": 3
+              },
+              "type_id": 98
+            },
+            {
+              "id": 2350772513,
+              "data": {
+                "value": 1
+              },
+              "type_id": 79
+            },
+            {
+              "id": 2350834489,
+              "data": {
+                "value": 1
+              },
+              "type_id": 52
+            },
+            {
+              "id": 2350834512,
+              "data": {
+                "value": 1
+              },
+              "type_id": 86
+            },
+            {
+              "id": 2350878835,
+              "data": {
+                "value": 1
+              },
+              "type_id": 107
+            },
+            {
+              "id": 2350881310,
+              "data": {
+                "value": 50
+              },
+              "type_id": 27275
+            },
+            {
+              "id": 2350922408,
+              "data": {
+                "value": 1
+              },
+              "type_id": 110
+            },
+            {
+              "id": 2351575823,
+              "data": {
+                "value": 1
+              },
+              "type_id": 1490
+            }
+          ],
+          "team_id": 2708,
+          "type_id": 11,
+          "player_id": 37509380,
+          "player_name": "Albert Grønbæk"
+        },
+        {
+          "id": 14675292571,
+          "details": [],
+          "team_id": 2708,
+          "type_id": 12,
+          "player_id": 24816996,
+          "player_name": "Sander Tangvik"
+        },
+        {
+          "id": 14675292572,
+          "details": [
+            {
+              "id": 2350900151,
+              "data": {
+                "value": 10
+              },
+              "type_id": 119
+            },
+            {
+              "id": 2350905528,
+              "data": {
+                "value": 8
+              },
+              "type_id": 116
+            },
+            {
+              "id": 2350905526,
+              "data": {
+                "value": 8
+              },
+              "type_id": 80
+            },
+            {
+              "id": 2350905529,
+              "data": {
+                "value": 15
+              },
+              "type_id": 120
+            },
+            {
+              "id": 2350909109,
+              "data": {
+                "value": 100
+              },
+              "type_id": 1584
+            },
+            {
+              "id": 2350900152,
+              "data": {
+                "value": 14
+              },
+              "type_id": 117172
+            },
+            {
+              "id": 2350922409,
+              "data": {
+                "value": 6.6
+              },
+              "type_id": 118
+            },
+            {
+              "id": 2350919398,
+              "data": {
+                "value": 3
+              },
+              "type_id": 106
+            },
+            {
+              "id": 2350919399,
+              "data": {
+                "value": 5
+              },
+              "type_id": 105
+            },
+            {
+              "id": 2350919405,
+              "data": {
+                "value": 60
+              },
+              "type_id": 27276
+            },
+            {
+              "id": 2350937082,
+              "data": {
+                "value": 1
+              },
+              "type_id": 78
+            },
+            {
+              "id": 2350919400,
+              "data": {
+                "value": 2
+              },
+              "type_id": 1491
+            },
+            {
+              "id": 2350919401,
+              "data": {
+                "value": 1
+              },
+              "type_id": 108
+            },
+            {
+              "id": 2350919402,
+              "data": {
+                "value": 1
+              },
+              "type_id": 109
+            },
+            {
+              "id": 2350925403,
+              "data": {
+                "value": 1
+              },
+              "type_id": 27272
+            },
+            {
+              "id": 2350938696,
+              "data": {
+                "value": 1
+              },
+              "type_id": 27271
+            },
+            {
+              "id": 2350919404,
+              "data": {
+                "value": 2
+              },
+              "type_id": 94
+            },
+            {
+              "id": 2350940114,
+              "data": {
+                "value": 1
+              },
+              "type_id": 96
+            },
+            {
+              "id": 2350919403,
+              "data": {
+                "value": 3
+              },
+              "type_id": 27273
+            },
+            {
+              "id": 2351575824,
+              "data": {
+                "value": 2
+              },
+              "type_id": 121
+            }
+          ],
+          "team_id": 2708,
+          "type_id": 12,
+          "player_id": 32587,
+          "player_name": "Yussuf Poulsen"
+        },
+        {
+          "id": 14675265133,
+          "details": [
+            {
+              "id": 2350241118,
+              "data": {
+                "value": 6.76
+              },
+              "type_id": 118
+            },
+            {
+              "id": 2350255702,
+              "data": {
+                "value": 5
+              },
+              "type_id": 27274
+            },
+            {
+              "id": 2350254273,
+              "data": {
+                "value": 90
+              },
+              "type_id": 119
+            },
+            {
+              "id": 2350254274,
+              "data": {
+                "value": 89
+              },
+              "type_id": 120
+            },
+            {
+              "id": 2350242464,
+              "data": {
+                "value": 95
+              },
+              "type_id": 117172
+            },
+            {
+              "id": 2350254279,
+              "data": {
+                "value": 62
+              },
+              "type_id": 27276
+            },
+            {
+              "id": 2350254275,
+              "data": {
+                "value": 7
+              },
+              "type_id": 101
+            },
+            {
+              "id": 2350254277,
+              "data": {
+                "value": 8
+              },
+              "type_id": 106
+            },
+            {
+              "id": 2350254276,
+              "data": {
+                "value": 5
+              },
+              "type_id": 107
+            },
+            {
+              "id": 2350254278,
+              "data": {
+                "value": 13
+              },
+              "type_id": 105
+            },
+            {
+              "id": 2350273420,
+              "data": {
+                "value": 68
+              },
+              "type_id": 80
+            },
+            {
+              "id": 2350275687,
+              "data": {
+                "value": 13
+              },
+              "type_id": 27273
+            },
+            {
+              "id": 2350289354,
+              "data": {
+                "value": 2
+              },
+              "type_id": 108
+            },
+            {
+              "id": 2350289355,
+              "data": {
+                "value": 1
+              },
+              "type_id": 109
+            },
+            {
+              "id": 2350310966,
+              "data": {
+                "value": 87
+              },
+              "type_id": 1584
+            },
+            {
+              "id": 2350262922,
+              "data": {
+                "value": 60
+              },
+              "type_id": 116
+            },
+            {
+              "id": 2350372691,
+              "data": {
+                "value": 11
+              },
+              "type_id": 122
+            },
+            {
+              "id": 2350375931,
+              "data": {
+                "value": 6
+              },
+              "type_id": 27269
+            },
+            {
+              "id": 2350375933,
+              "data": {
+                "value": 45
+              },
+              "type_id": 27270
+            },
+            {
+              "id": 2350375932,
+              "data": {
+                "value": 6
+              },
+              "type_id": 27271
+            },
+            {
+              "id": 2350459710,
+              "data": {
+                "value": 5
+              },
+              "type_id": 27272
+            },
+            {
+              "id": 2350484473,
+              "data": {
+                "value": 5
+              },
+              "type_id": 123
+            },
+            {
+              "id": 2350542871,
+              "data": {
+                "value": 5
+              },
+              "type_id": 1491
+            },
+            {
+              "id": 2350550828,
+              "data": {
+                "value": 1
+              },
+              "type_id": 88
+            },
+            {
+              "id": 2350542870,
+              "data": {
+                "value": 1
+              },
+              "type_id": 56
+            },
+            {
+              "id": 2350878836,
+              "data": {
+                "value": 1
+              },
+              "type_id": 100
+            },
+            {
+              "id": 2350916754,
+              "data": {
+                "value": 1
+              },
+              "type_id": 117
+            },
+            {
+              "id": 2350905530,
+              "data": {
+                "value": 1
+              },
+              "type_id": 96
+            },
+            {
+              "id": 2350902577,
+              "data": {
+                "value": 3
+              },
+              "type_id": 110
+            },
+            {
+              "id": 2350909110,
+              "data": {
+                "value": 1
+              },
+              "type_id": 78
+            },
+            {
+              "id": 2350912329,
+              "data": {
+                "value": 1
+              },
+              "type_id": 27267
+            },
+            {
+              "id": 2350912330,
+              "data": {
+                "value": 100
+              },
+              "type_id": 27268
+            },
+            {
+              "id": 2350914932,
+              "data": {
+                "value": 1
+              },
+              "type_id": 9706
+            },
+            {
+              "id": 2350946187,
+              "data": {
+                "value": 1
+              },
+              "type_id": 84
+            },
+            {
+              "id": 2351575825,
+              "data": {
+                "value": 5
+              },
+              "type_id": 121
+            }
+          ],
+          "team_id": 2708,
+          "type_id": 11,
+          "player_id": 8932826,
+          "player_name": "Warmed Omari"
+        },
+        {
+          "id": 14675292573,
+          "details": [],
+          "team_id": 2708,
+          "type_id": 12,
+          "player_id": 37660397,
+          "player_name": "Otto Stange"
+        },
+        {
+          "id": 14675292574,
+          "details": [
+            {
+              "id": 2350934664,
+              "data": {
+                "value": 1
+              },
+              "type_id": 78
+            },
+            {
+              "id": 2350909111,
+              "data": {
+                "value": 2
+              },
+              "type_id": 27272
+            },
+            {
+              "id": 2350905531,
+              "data": {
+                "value": 9
+              },
+              "type_id": 80
+            },
+            {
+              "id": 2350905532,
+              "data": {
+                "value": 9
+              },
+              "type_id": 116
+            },
+            {
+              "id": 2350905533,
+              "data": {
+                "value": 12
+              },
+              "type_id": 120
+            },
+            {
+              "id": 2350900187,
+              "data": {
+                "value": 10
+              },
+              "type_id": 119
+            },
+            {
+              "id": 2350909112,
+              "data": {
+                "value": 100
+              },
+              "type_id": 1584
+            },
+            {
+              "id": 2350916034,
+              "data": {
+                "value": 1
+              },
+              "type_id": 41
+            },
+            {
+              "id": 2350938698,
+              "data": {
+                "value": 1
+              },
+              "type_id": 27267
+            },
+            {
+              "id": 2350914933,
+              "data": {
+                "value": 1
+              },
+              "type_id": 42
+            },
+            {
+              "id": 2350934666,
+              "data": {
+                "value": 1
+              },
+              "type_id": 105
+            },
+            {
+              "id": 2350900188,
+              "data": {
+                "value": 14
+              },
+              "type_id": 117172
+            },
+            {
+              "id": 2350934665,
+              "data": {
+                "value": 1
+              },
+              "type_id": 106
+            },
+            {
+              "id": 2350934667,
+              "data": {
+                "value": 100
+              },
+              "type_id": 27276
+            },
+            {
+              "id": 2350922410,
+              "data": {
+                "value": 6.74
+              },
+              "type_id": 118
+            },
+            {
+              "id": 2350938699,
+              "data": {
+                "value": 100
+              },
+              "type_id": 27268
+            }
+          ],
+          "team_id": 2708,
+          "type_id": 12,
+          "player_id": 37596210,
+          "player_name": "Kofi Amoako"
+        },
+        {
+          "id": 14675292575,
+          "details": [],
+          "team_id": 2708,
+          "type_id": 12,
+          "player_id": 33612,
+          "player_name": "Jordan Torunarigha"
+        },
+        {
+          "id": 14675292383,
+          "details": [
+            {
+              "id": 2350241133,
+              "data": {
+                "value": 6.62
+              },
+              "type_id": 118
+            },
+            {
+              "id": 2350242479,
+              "data": {
+                "value": 95
+              },
+              "type_id": 117172
+            },
+            {
+              "id": 2350254388,
+              "data": {
+                "value": 4
+              },
+              "type_id": 27266
+            },
+            {
+              "id": 2350255706,
+              "data": {
+                "value": 10
+              },
+              "type_id": 27274
+            },
+            {
+              "id": 2350254387,
+              "data": {
+                "value": 90
+              },
+              "type_id": 119
+            },
+            {
+              "id": 2350254390,
+              "data": {
+                "value": 5
+              },
+              "type_id": 1491
+            },
+            {
+              "id": 2350254389,
+              "data": {
+                "value": 13
+              },
+              "type_id": 105
+            },
+            {
+              "id": 2350275713,
+              "data": {
+                "value": 10
+              },
+              "type_id": 27273
+            },
+            {
+              "id": 2350275712,
+              "data": {
+                "value": 40
+              },
+              "type_id": 120
+            },
+            {
+              "id": 2350273430,
+              "data": {
+                "value": 21
+              },
+              "type_id": 80
+            },
+            {
+              "id": 2350295588,
+              "data": {
+                "value": 1
+              },
+              "type_id": 94
+            },
+            {
+              "id": 2350295587,
+              "data": {
+                "value": 4
+              },
+              "type_id": 42
+            },
+            {
+              "id": 2350295589,
+              "data": {
+                "value": 2
+              },
+              "type_id": 86
+            },
+            {
+              "id": 2350301458,
+              "data": {
+                "value": 2
+              },
+              "type_id": 581
+            },
+            {
+              "id": 2350334636,
+              "data": {
+                "value": 16
+              },
+              "type_id": 116
+            },
+            {
+              "id": 2350342048,
+              "data": {
+                "value": 62
+              },
+              "type_id": 27276
+            },
+            {
+              "id": 2350342046,
+              "data": {
+                "value": 6
+              },
+              "type_id": 107
+            },
+            {
+              "id": 2350347471,
+              "data": {
+                "value": 3
+              },
+              "type_id": 96
+            },
+            {
+              "id": 2350342047,
+              "data": {
+                "value": 8
+              },
+              "type_id": 106
+            },
+            {
+              "id": 2350376033,
+              "data": {
+                "value": 76
+              },
+              "type_id": 1584
+            },
+            {
+              "id": 2350376031,
+              "data": {
+                "value": 1
+              },
+              "type_id": 101
+            },
+            {
+              "id": 2350376034,
+              "data": {
+                "value": 60
+              },
+              "type_id": 27275
+            },
+            {
+              "id": 2350427204,
+              "data": {
+                "value": 1
+              },
+              "type_id": 27269
+            },
+            {
+              "id": 2350537139,
+              "data": {
+                "value": 1
+              },
+              "type_id": 51
+            },
+            {
+              "id": 2350550834,
+              "data": {
+                "value": 1
+              },
+              "type_id": 88
+            },
+            {
+              "id": 2350755017,
+              "data": {
+                "value": 2
+              },
+              "type_id": 41
+            },
+            {
+              "id": 2350865579,
+              "data": {
+                "value": 1
+              },
+              "type_id": 78
+            },
+            {
+              "id": 2350865580,
+              "data": {
+                "value": 1
+              },
+              "type_id": 27267
+            },
+            {
+              "id": 2350865586,
+              "data": {
+                "value": 100
+              },
+              "type_id": 27268
+            },
+            {
+              "id": 2350376032,
+              "data": {
+                "value": 7
+              },
+              "type_id": 27272
+            },
+            {
+              "id": 2350889698,
+              "data": {
+                "value": 2
+              },
+              "type_id": 27271
+            },
+            {
+              "id": 2351575826,
+              "data": {
+                "value": 5
+              },
+              "type_id": 121
+            }
+          ],
+          "team_id": 2708,
+          "type_id": 11,
+          "player_id": 55485,
+          "player_name": "Patson Daka"
+        },
+        {
+          "id": 14675265135,
+          "details": [
+            {
+              "id": 2350241127,
+              "data": {
+                "value": 7.54
+              },
+              "type_id": 118
+            },
+            {
+              "id": 2350242473,
+              "data": {
+                "value": 95
+              },
+              "type_id": 117172
+            },
+            {
+              "id": 2350254331,
+              "data": {
+                "value": 1
+              },
+              "type_id": 78
+            },
+            {
+              "id": 2350254334,
+              "data": {
+                "value": 3
+              },
+              "type_id": 106
+            },
+            {
+              "id": 2350254332,
+              "data": {
+                "value": 90
+              },
+              "type_id": 119
+            },
+            {
+              "id": 2350254335,
+              "data": {
+                "value": 6
+              },
+              "type_id": 105
+            },
+            {
+              "id": 2350254336,
+              "data": {
+                "value": 3
+              },
+              "type_id": 1491
+            },
+            {
+              "id": 2350254337,
+              "data": {
+                "value": 19
+              },
+              "type_id": 27273
+            },
+            {
+              "id": 2350254338,
+              "data": {
+                "value": 1
+              },
+              "type_id": 94
+            },
+            {
+              "id": 2350254339,
+              "data": {
+                "value": 50
+              },
+              "type_id": 27276
+            },
+            {
+              "id": 2350273428,
+              "data": {
+                "value": 72
+              },
+              "type_id": 80
+            },
+            {
+              "id": 2350273429,
+              "data": {
+                "value": 58
+              },
+              "type_id": 116
+            },
+            {
+              "id": 2350310972,
+              "data": {
+                "value": 81
+              },
+              "type_id": 1584
+            },
+            {
+              "id": 2350312363,
+              "data": {
+                "value": 4
+              },
+              "type_id": 42
+            },
+            {
+              "id": 2350254333,
+              "data": {
+                "value": 88
+              },
+              "type_id": 120
+            },
+            {
+              "id": 2350310971,
+              "data": {
+                "value": 1
+              },
+              "type_id": 121
+            },
+            {
+              "id": 2350312362,
+              "data": {
+                "value": 1
+              },
+              "type_id": 52
+            },
+            {
+              "id": 2350312364,
+              "data": {
+                "value": 1
+              },
+              "type_id": 86
+            },
+            {
+              "id": 2350376022,
+              "data": {
+                "value": 6
+              },
+              "type_id": 27271
+            },
+            {
+              "id": 2350376023,
+              "data": {
+                "value": 15
+              },
+              "type_id": 27272
+            },
+            {
+              "id": 2350376021,
+              "data": {
+                "value": 4
+              },
+              "type_id": 27269
+            },
+            {
+              "id": 2350390490,
+              "data": {
+                "value": 83
+              },
+              "type_id": 27270
+            },
+            {
+              "id": 2350388949,
+              "data": {
+                "value": 6
+              },
+              "type_id": 122
+            },
+            {
+              "id": 2350393156,
+              "data": {
+                "value": 2
+              },
+              "type_id": 58
+            },
+            {
+              "id": 2350403597,
+              "data": {
+                "value": 4
+              },
+              "type_id": 98
+            },
+            {
+              "id": 2350455559,
+              "data": {
+                "value": 2
+              },
+              "type_id": 100
+            },
+            {
+              "id": 2350484475,
+              "data": {
+                "value": 5
+              },
+              "type_id": 123
+            },
+            {
+              "id": 2350550832,
+              "data": {
+                "value": 1
+              },
+              "type_id": 88
+            },
+            {
+              "id": 2350700190,
+              "data": {
+                "value": 1
+              },
+              "type_id": 96
+            },
+            {
+              "id": 2350700191,
+              "data": {
+                "value": 1
+              },
+              "type_id": 107
+            },
+            {
+              "id": 2350701930,
+              "data": {
+                "value": 2
+              },
+              "type_id": 27274
+            },
+            {
+              "id": 2350735575,
+              "data": {
+                "value": 1
+              },
+              "type_id": 41
+            },
+            {
+              "id": 2350729904,
+              "data": {
+                "value": 1
+              },
+              "type_id": 56
+            },
+            {
+              "id": 2350920739,
+              "data": {
+                "value": 1
+              },
+              "type_id": 9706
+            },
+            {
+              "id": 2350922411,
+              "data": {
+                "value": 50
+              },
+              "type_id": 27275
+            },
+            {
+              "id": 2350919406,
+              "data": {
+                "value": 1
+              },
+              "type_id": 117
+            },
+            {
+              "id": 2350920738,
+              "data": {
+                "value": 1
+              },
+              "type_id": 27266
+            },
+            {
+              "id": 2350931300,
+              "data": {
+                "value": 1
+              },
+              "type_id": 48997
+            }
+          ],
+          "team_id": 2708,
+          "type_id": 11,
+          "player_id": 200872,
+          "player_name": "Miro Muheim"
+        },
+        {
+          "id": 14675285372,
+          "details": [
+            {
+              "id": 2350241126,
+              "data": {
+                "value": 7.29
+              },
+              "type_id": 118
+            },
+            {
+              "id": 2350242472,
+              "data": {
+                "value": 90
+              },
+              "type_id": 117172
+            },
+            {
+              "id": 2350500254,
+              "data": {
+                "value": 11
+              },
+              "type_id": 105
+            },
+            {
+              "id": 2350500255,
+              "data": {
+                "value": 3
+              },
+              "type_id": 1491
+            },
+            {
+              "id": 2350254330,
+              "data": {
+                "value": 10
+              },
+              "type_id": 27273
+            },
+            {
+              "id": 2350254327,
+              "data": {
+                "value": 54
+              },
+              "type_id": 80
+            },
+            {
+              "id": 2350254328,
+              "data": {
+                "value": 70
+              },
+              "type_id": 120
+            },
+            {
+              "id": 2350254329,
+              "data": {
+                "value": 7
+              },
+              "type_id": 101
+            },
+            {
+              "id": 2350254326,
+              "data": {
+                "value": 89
+              },
+              "type_id": 119
+            },
+            {
+              "id": 2350275702,
+              "data": {
+                "value": 3
+              },
+              "type_id": 122
+            },
+            {
+              "id": 2350282385,
+              "data": {
+                "value": 45
+              },
+              "type_id": 116
+            },
+            {
+              "id": 2350376017,
+              "data": {
+                "value": 3
+              },
+              "type_id": 27272
+            },
+            {
+              "id": 2350376016,
+              "data": {
+                "value": 1
+              },
+              "type_id": 27269
+            },
+            {
+              "id": 2350376019,
+              "data": {
+                "value": 85
+              },
+              "type_id": 1584
+            },
+            {
+              "id": 2350376020,
+              "data": {
+                "value": 33
+              },
+              "type_id": 27270
+            },
+            {
+              "id": 2350470126,
+              "data": {
+                "value": 2
+              },
+              "type_id": 27271
+            },
+            {
+              "id": 2350484482,
+              "data": {
+                "value": 1
+              },
+              "type_id": 123
+            },
+            {
+              "id": 2350496251,
+              "data": {
+                "value": 7
+              },
+              "type_id": 27274
+            },
+            {
+              "id": 2350495005,
+              "data": {
+                "value": 3
+              },
+              "type_id": 27266
+            },
+            {
+              "id": 2350569814,
+              "data": {
+                "value": 4
+              },
+              "type_id": 107
+            },
+            {
+              "id": 2350550836,
+              "data": {
+                "value": 1
+              },
+              "type_id": 88
+            },
+            {
+              "id": 2350569816,
+              "data": {
+                "value": 57
+              },
+              "type_id": 27275
+            },
+            {
+              "id": 2350569817,
+              "data": {
+                "value": 73
+              },
+              "type_id": 27276
+            },
+            {
+              "id": 2350569815,
+              "data": {
+                "value": 8
+              },
+              "type_id": 106
+            },
+            {
+              "id": 2350660020,
+              "data": {
+                "value": 50
+              },
+              "type_id": 27268
+            },
+            {
+              "id": 2350657336,
+              "data": {
+                "value": 4
+              },
+              "type_id": 78
+            },
+            {
+              "id": 2350660019,
+              "data": {
+                "value": 2
+              },
+              "type_id": 27267
+            },
+            {
+              "id": 2350700193,
+              "data": {
+                "value": 1
+              },
+              "type_id": 100
+            },
+            {
+              "id": 2350811685,
+              "data": {
+                "value": 1
+              },
+              "type_id": 97
+            },
+            {
+              "id": 2350819923,
+              "data": {
+                "value": 1
+              },
+              "type_id": 582
+            },
+            {
+              "id": 2350819924,
+              "data": {
+                "value": 1
+              },
+              "type_id": 48997
+            },
+            {
+              "id": 2351575827,
+              "data": {
+                "value": 1
+              },
+              "type_id": 121
+            }
+          ],
+          "team_id": 2708,
+          "type_id": 11,
+          "player_id": 4536574,
+          "player_name": "Sebastiaan Bornauw"
+        },
+        {
+          "id": 14675292576,
+          "details": [],
+          "team_id": 2708,
+          "type_id": 12,
+          "player_id": 37769153,
+          "player_name": "Louis Lemke"
+        },
+        {
+          "id": 14675292577,
+          "details": [
+            {
+              "id": 2350865613,
+              "data": {
+                "value": 6
+              },
+              "type_id": 116
+            },
+            {
+              "id": 2350878838,
+              "data": {
+                "value": 2
+              },
+              "type_id": 98
+            },
+            {
+              "id": 2350811687,
+              "data": {
+                "value": 1
+              },
+              "type_id": 96
+            },
+            {
+              "id": 2350790374,
+              "data": {
+                "value": 27
+              },
+              "type_id": 119
+            },
+            {
+              "id": 2350803304,
+              "data": {
+                "value": 7
+              },
+              "type_id": 105
+            },
+            {
+              "id": 2350811689,
+              "data": {
+                "value": 71
+              },
+              "type_id": 27276
+            },
+            {
+              "id": 2350811688,
+              "data": {
+                "value": 5
+              },
+              "type_id": 106
+            },
+            {
+              "id": 2350828072,
+              "data": {
+                "value": 1
+              },
+              "type_id": 56
+            },
+            {
+              "id": 2350811686,
+              "data": {
+                "value": 23
+              },
+              "type_id": 120
+            },
+            {
+              "id": 2350828073,
+              "data": {
+                "value": 2
+              },
+              "type_id": 1491
+            },
+            {
+              "id": 2350828074,
+              "data": {
+                "value": 6.99
+              },
+              "type_id": 118
+            },
+            {
+              "id": 2350797145,
+              "data": {
+                "value": 31
+              },
+              "type_id": 117172
+            },
+            {
+              "id": 2350834583,
+              "data": {
+                "value": 4
+              },
+              "type_id": 108
+            },
+            {
+              "id": 2350834584,
+              "data": {
+                "value": 8
+              },
+              "type_id": 27273
+            },
+            {
+              "id": 2350865616,
+              "data": {
+                "value": 75
+              },
+              "type_id": 1584
+            },
+            {
+              "id": 2350878837,
+              "data": {
+                "value": 3
+              },
+              "type_id": 109
+            },
+            {
+              "id": 2350865612,
+              "data": {
+                "value": 8
+              },
+              "type_id": 80
+            },
+            {
+              "id": 2350865614,
+              "data": {
+                "value": 2
+              },
+              "type_id": 27272
+            },
+            {
+              "id": 2350909114,
+              "data": {
+                "value": 1
+              },
+              "type_id": 27271
+            },
+            {
+              "id": 2350909115,
+              "data": {
+                "value": 1
+              },
+              "type_id": 86
+            },
+            {
+              "id": 2350909113,
+              "data": {
+                "value": 1
+              },
+              "type_id": 42
+            },
+            {
+              "id": 2350912331,
+              "data": {
+                "value": 1
+              },
+              "type_id": 27269
+            },
+            {
+              "id": 2350931302,
+              "data": {
+                "value": 1
+              },
+              "type_id": 27267
+            },
+            {
+              "id": 2350931301,
+              "data": {
+                "value": 1
+              },
+              "type_id": 78
+            },
+            {
+              "id": 2350931303,
+              "data": {
+                "value": 100
+              },
+              "type_id": 27268
+            },
+            {
+              "id": 2351575828,
+              "data": {
+                "value": 4
+              },
+              "type_id": 121
+            }
+          ],
+          "team_id": 2708,
+          "type_id": 12,
+          "player_id": 37755719,
+          "player_name": "Alexander Røssing-Lelesiit"
+        },
+        {
+          "id": 14675265137,
+          "details": [
+            {
+              "id": 2350241139,
+              "data": {
+                "value": 6.89
+              },
+              "type_id": 118
+            },
+            {
+              "id": 2350242485,
+              "data": {
+                "value": 64
+              },
+              "type_id": 117172
+            },
+            {
+              "id": 2350254546,
+              "data": {
+                "value": 43
+              },
+              "type_id": 120
+            },
+            {
+              "id": 2350254545,
+              "data": {
+                "value": 27
+              },
+              "type_id": 116
+            },
+            {
+              "id": 2350254535,
+              "data": {
+                "value": 35
+              },
+              "type_id": 80
+            },
+            {
+              "id": 2350257853,
+              "data": {
+                "value": 77
+              },
+              "type_id": 1584
+            },
+            {
+              "id": 2350254534,
+              "data": {
+                "value": 63
+              },
+              "type_id": 119
+            },
+            {
+              "id": 2350295595,
+              "data": {
+                "value": 10
+              },
+              "type_id": 27273
+            },
+            {
+              "id": 2350334640,
+              "data": {
+                "value": 6
+              },
+              "type_id": 105
+            },
+            {
+              "id": 2350334638,
+              "data": {
+                "value": 2
+              },
+              "type_id": 106
+            },
+            {
+              "id": 2350334641,
+              "data": {
+                "value": 1
+              },
+              "type_id": 108
+            },
+            {
+              "id": 2350334642,
+              "data": {
+                "value": 1
+              },
+              "type_id": 109
+            },
+            {
+              "id": 2350334643,
+              "data": {
+                "value": 33
+              },
+              "type_id": 27276
+            },
+            {
+              "id": 2350372692,
+              "data": {
+                "value": 4
+              },
+              "type_id": 122
+            },
+            {
+              "id": 2350375938,
+              "data": {
+                "value": 3
+              },
+              "type_id": 27269
+            },
+            {
+              "id": 2350375941,
+              "data": {
+                "value": 2
+              },
+              "type_id": 27271
+            },
+            {
+              "id": 2350375943,
+              "data": {
+                "value": 4
+              },
+              "type_id": 1491
+            },
+            {
+              "id": 2350375942,
+              "data": {
+                "value": 2
+              },
+              "type_id": 27272
+            },
+            {
+              "id": 2350532333,
+              "data": {
+                "value": 1
+              },
+              "type_id": 110
+            },
+            {
+              "id": 2350523717,
+              "data": {
+                "value": 1
+              },
+              "type_id": 94
+            },
+            {
+              "id": 2350561186,
+              "data": {
+                "value": 3
+              },
+              "type_id": 27274
+            },
+            {
+              "id": 2350559108,
+              "data": {
+                "value": 2
+              },
+              "type_id": 27266
+            },
+            {
+              "id": 2350550827,
+              "data": {
+                "value": 1
+              },
+              "type_id": 88
+            },
+            {
+              "id": 2350550826,
+              "data": {
+                "value": 1
+              },
+              "type_id": 100
+            },
+            {
+              "id": 2350729910,
+              "data": {
+                "value": 1
+              },
+              "type_id": 101
+            },
+            {
+              "id": 2350772518,
+              "data": {
+                "value": 1
+              },
+              "type_id": 52
+            },
+            {
+              "id": 2350772519,
+              "data": {
+                "value": 1
+              },
+              "type_id": 42
+            },
+            {
+              "id": 2350772520,
+              "data": {
+                "value": 1
+              },
+              "type_id": 86
+            },
+            {
+              "id": 2351575831,
+              "data": {
+                "value": 1
+              },
+              "type_id": 95
+            },
+            {
+              "id": 2351575832,
+              "data": {
+                "value": 33
+              },
+              "type_id": 27275
+            },
+            {
+              "id": 2351575829,
+              "data": {
+                "value": 1
+              },
+              "type_id": 107
+            },
+            {
+              "id": 2351575830,
+              "data": {
+                "value": 2
+              },
+              "type_id": 121
+            }
+          ],
+          "team_id": 2708,
+          "type_id": 11,
+          "player_id": 37691049,
+          "player_name": "Shafiq Nandja"
+        },
+        {
+          "id": 14675292578,
+          "details": [
+            {
+              "id": 2350932713,
+              "data": {
+                "value": 2
+              },
+              "type_id": 27274
+            },
+            {
+              "id": 2350931307,
+              "data": {
+                "value": 4
+              },
+              "type_id": 120
+            },
+            {
+              "id": 2350931304,
+              "data": {
+                "value": 5
+              },
+              "type_id": 117172
+            },
+            {
+              "id": 2350931306,
+              "data": {
+                "value": 4
+              },
+              "type_id": 116
+            },
+            {
+              "id": 2350931309,
+              "data": {
+                "value": 2
+              },
+              "type_id": 106
+            },
+            {
+              "id": 2350931310,
+              "data": {
+                "value": 2
+              },
+              "type_id": 105
+            },
+            {
+              "id": 2350931311,
+              "data": {
+                "value": 100
+              },
+              "type_id": 1584
+            },
+            {
+              "id": 2350931312,
+              "data": {
+                "value": 100
+              },
+              "type_id": 27276
+            },
+            {
+              "id": 2350931305,
+              "data": {
+                "value": 4
+              },
+              "type_id": 80
+            },
+            {
+              "id": 2350928404,
+              "data": {
+                "value": 1
+              },
+              "type_id": 119
+            },
+            {
+              "id": 2350931308,
+              "data": {
+                "value": 2
+              },
+              "type_id": 107
+            }
+          ],
+          "team_id": 2708,
+          "type_id": 12,
+          "player_id": 38219214,
+          "player_name": "Jason Dean Bissi Mouelle"
+        }
+      ],
+      "league_id": 82,
+      "starting_at": "2026-11-06 19:30:00",
+      "participants": [
+        {
+          "id": 683,
+          "meta": {
+            "winner": false,
+            "location": "away",
+            "position": 18
+          },
+          "name": "Borussia Mönchengladbach",
+          "type": "domestic",
+          "gender": "male",
+          "founded": 1900,
+          "sport_id": 1,
+          "venue_id": 180,
+          "country_id": 11,
+          "image_path": "https://cdn.sportmonks.com/images/soccer/teams/11/683.png",
+          "short_code": "BMG",
+          "placeholder": false,
+          "last_played_at": "2026-11-06 19:30:00"
+        },
+        {
+          "id": 2708,
+          "meta": {
+            "winner": true,
+            "location": "home",
+            "position": 8
+          },
+          "name": "Hamburger SV",
+          "type": "domestic",
+          "gender": "male",
+          "founded": 1887,
+          "sport_id": 1,
+          "venue_id": 1610,
+          "country_id": 11,
+          "image_path": "https://cdn.sportmonks.com/images/soccer/teams/20/2708.png",
+          "short_code": "HSV",
+          "placeholder": false,
+          "last_played_at": "2026-11-06 19:30:00"
+        }
+      ]
+    },
+    "fixture_id": 1575218,
+    "player_map": {
+      "25106": 2725,
+      "31230": 3074,
+      "31864": 2721,
+      "32487": 2741,
+      "32587": 2735,
+      "33612": 2742,
+      "35815": 2723,
+      "55485": 4680,
+      "96307": 2718,
+      "191329": 4262,
+      "200872": 2743,
+      "310132": 4887,
+      "538907": 3030,
+      "1452396": 2716,
+      "3187862": 3554,
+      "4536574": 737,
+      "4545319": 4703,
+      "8932826": 2746,
+      "10959317": 2744,
+      "16119517": 3166,
+      "17158438": 2726,
+      "19274270": 2720,
+      "24816996": 3149,
+      "33166012": 648,
+      "37266095": 4241,
+      "37337021": 4657,
+      "37509380": 1996,
+      "37528761": 2729,
+      "37540780": 4952,
+      "37558984": 2731,
+      "37576590": 2730,
+      "37596210": 4275,
+      "37616671": 4706,
+      "37660397": 2774,
+      "37691049": 3189,
+      "37706074": 4662,
+      "37711376": 3104,
+      "37755719": 2754,
+      "37769153": 3178,
+      "38219214": 5008
+    },
+    "sportmonks_id": 19735119
+  },
+  "context": {
+    "kickoff": "2026-11-06T19:30:00+00:00",
+    "away_score": 1,
+    "fixture_id": 1575218,
+    "home_score": 3,
+    "competition_id": 78
+  }
+}

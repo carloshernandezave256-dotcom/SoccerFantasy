@@ -17,7 +17,7 @@ type Player={id:number;full_name:string;position:string;club:string;competition?
 type Manager={draft_slot:number;user_id:string;team_name:string};
 type LineupRow={player_id:number;is_starter:boolean;is_captain:boolean;bench_order:number|null;pitch_order:number|null};
 type PlayerLock={player_id:number;locks_at:string|null;locked:boolean;rolling:boolean;server_time:string};
-type LineupLock={gameweek:number;locks_at:string;reopens_after:string|null;locked:boolean};
+type LineupLock={gameweek:number;locks_at:string|null;reopens_after:string|null;locked:boolean};
 
 function centerHaaland(order:number[],roster:Player[]){
   const forwards=order.filter(id=>roster.find(player=>player.id===id)?.position==="FWD");
@@ -223,7 +223,9 @@ export function TeamManager(){
   const lineupDeadline=rollingLocks?"This week only · Gray players are locked. Other players lock at kickoff.":lineupLock
     ? lineupLocked
       ? "Reopens after gameweek results are verified"
-      : `Locks ${new Date(lineupLock.locks_at).toLocaleString([], {weekday:"short",month:"short",day:"numeric",hour:"numeric",minute:"2-digit"})}`
+      : lineupLock.locks_at === null
+        ? "This gameweek stays open until results are finalized"
+        : `Locks ${new Date(lineupLock.locks_at).toLocaleString([], {weekday:"short",month:"short",day:"numeric",hour:"numeric",minute:"2-digit"})}`
     : "Lineup deadline will appear when the gameweek schedule is ready";
 
   function tapStarter(id:number){

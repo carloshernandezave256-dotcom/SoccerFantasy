@@ -6,7 +6,7 @@ export type SportMonksFixture = {
  scores:Array<{description:string;participant_id:number;score:{goals:number}}>;
  events:Array<{id:number;minute?:number;type_id:number;player_id:number|null;related_player_id:number|null;participant_id:number;player_name?:string;related_player_name?:string;rescinded:boolean|null;on_bench?:boolean}>;
  lineups:Array<{id?:number;player_id:number|null;team_id:number;type_id:number;player_name:string;
- details:Array<{type_id:number;data:{value:number|null};type?:{code:string}}> | null}>;
+ details:Array<{id?:number;type_id:number;data:{value:number|null};type?:{code:string}}> | null}>;
 };
 /** Match only real IDs or nonempty exact names, never two missing IDs. */
 function referencesPlayer(e:SportMonksFixture['events'][number],l:SportMonksFixture['lineups'][number]){
@@ -145,6 +145,66 @@ function reviewedHacDuplicateGoal(source:SportMonksSource,context:FixtureContext
   &&events.some(e=>e.id===158407774&&e.type_id===14&&e.minute===86&&e.player_id===37731194&&e.participant_id===1055);
 }
 
+const REVIEWED_SCALLY_GOAL_NOTE = 'Reviewed correction: HSV–Gladbach 2026-11-06, SportMonks 19735119 event 158559631; Robin Hack goals 1→0, Joe Scally goals omitted→1 and assists 1→0. Official scorer/no assist: https://www.hsv.de/en/news/3-1-home-win-against-gladbach-featuring-stunning-goals-and-a-maiden-bundesliga-strike ; https://datencenter.dfb.de/en/data-center/bundesliga/2026-2027/9/2419415 ; https://www.bundesliga.com/en/bundesliga/matchday/2026-2027/9/hamburger-sv-vs-borussia-moenchengladbach/liveticker';
+
+/** Official scorer correction predates the provider aggregate correction. Accept
+ * only the reviewed stale tuple, atomically, never a partially corrected tuple.
+ * Raw evidence remains immutable; all ordinary whole-fixture guards still run.
+ */
+function reviewedScallyGoal(source: SportMonksSource, context: FixtureContext) {
+ const f = source.raw_data;
+ const replacements = new Map<number, Map<number, number | null>>();
+ if (f.id !== 19735119 || f.state.state !== 'FT') return replacements;
+ const fail = (reason: string): never => { throw new Error(`SportMonks ${f.id}: reviewed Scally goal ${reason}`); };
+ const target = (id: number) => f.lineups.filter(l => l.player_id === id);
+ const hacks = target(1452396), scallys = target(17158438);
+ if (hacks.length !== 1 || scallys.length !== 1) fail('requires both unique player identities');
+ const hack = hacks[0], scally = scallys[0];
+ const stats = (l: typeof hack) => {
+  if (!Array.isArray(l.details) || new Set(l.details.map(d => d.type_id)).size !== l.details.length) fail('requires complete unique statistics');
+  return new Map(l.details!.map(d => [d.type_id, d.data.value]));
+ };
+ const h = stats(hack), s = stats(scally);
+ const zero = (m: Map<number, number | null>, type: number) => !m.has(type) || m.get(type) === 0;
+ // Fully corrected provider data supersedes this historical snapshot, including
+ // sparse zeros. Ordinary whole-fixture validation still applies unchanged.
+ if (zero(h,52) && zero(h,79) && s.get(52) === 1 && zero(s,79)) return replacements;
+ const current = f.scores.filter(score => score.description === 'CURRENT');
+ const goals = f.events.filter(e => [14,15,16].includes(e.type_id) && e.rescinded !== true);
+ const awayGoals = goals.filter(e => e.participant_id === 683);
+ const goal = awayGoals[0];
+ const subs = f.events.filter(e => e.type_id === 18 && e.rescinded !== true &&
+  (e.player_id === 1452396 || e.related_player_id === 1452396));
+ const sub = subs[0];
+ const sameFixture = source.sportmonks_id === 19735119 && source.fixture_id === 1575218 && context.fixture_id === 1575218 &&
+  f.league_id === 82 && context.competition_id === 78 && f.starting_at === '2026-11-06 19:30:00' &&
+  Date.parse(context.kickoff) === Date.parse('2026-11-06T19:30:00Z') &&
+  f.participants.length === 2 &&
+  f.participants.some(p => p.id === 2708 && p.name === 'Hamburger SV' && p.meta.location === 'home') &&
+  f.participants.some(p => p.id === 683 && p.name === 'Borussia Mönchengladbach' && p.meta.location === 'away') &&
+  context.home_score === 3 && context.away_score === 1 && current.length === 2 &&
+  current.some(p => p.participant_id === 2708 && p.score.goals === 3) &&
+  current.some(p => p.participant_id === 683 && p.score.goals === 1) &&
+  hack.id === 14675265121 && hack.player_name === 'Robin Hack' && hack.team_id === 683 && hack.type_id === 11 &&
+  scally.id === 14675265123 && scally.player_name === 'Joe Scally' && scally.team_id === 683 && scally.type_id === 11 &&
+  source.player_map['1452396'] === 2716 && source.player_map['17158438'] === 2726 &&
+  h.get(119) === 56 && s.get(119) === 90 &&
+  goals.length === 4 && awayGoals.length === 1 && goal.id === 158559631 && goal.type_id === 14 &&
+  goal.minute === 44 && goal.player_id === 17158438 && goal.player_name === 'Joe Scally' &&
+  goal.related_player_id === null && goal.related_player_name == null && goal.rescinded === null &&
+  [[158558982,200872,11],[158560506,37691049,59],[158560704,37509380,70]].every(([id,player,minute]) =>
+   goals.some(e => e.id === id && e.player_id === player && e.minute === minute && e.participant_id === 2708 && e.type_id === 14)) &&
+  subs.length === 1 && sub.id === 158560445 && sub.minute === 56 && sub.player_id === 25106 &&
+  sub.related_player_id === 1452396 && sub.participant_id === 683 && sub.on_bench === false;
+ if (!sameFixture) fail('does not match reviewed fixture, identities and events');
+ if (h.get(52) !== 1 || h.has(79) || s.has(52) || s.get(79) !== 1 ||
+  hack.details!.some(d => d.type_id === 52 && d.id !== undefined && d.id !== 2350553965) ||
+  scally.details!.some(d => d.type_id === 79 && d.id !== undefined && d.id !== 2350555039)) fail('conflicting, malformed or partially corrected provider tuple');
+ replacements.set(1452396, new Map(h).set(52, 0));
+ replacements.set(17158438, new Map(s).set(52, 1).set(79, 0));
+ return replacements;
+}
+
 /** Only reviewed identity maps are accepted. Missing appearance evidence never becomes a DNP by default. */
 export function normalizeSportMonks(source:SportMonksSource,context:FixtureContext,observedAt:string,options:{live?:boolean;onReviewedEvidence?:(note:string)=>void}={}){
  const f=source.raw_data;
@@ -169,6 +229,8 @@ export function normalizeSportMonks(source:SportMonksSource,context:FixtureConte
   return {...e,player_id:resolve(e.player_id,e.player_name),related_player_id:resolve(e.related_player_id,e.related_player_name)};
  });
  if(new Set(events.map(e=>e.id)).size!==events.length)fail('duplicate events');
+ const reviewedGoals = reviewedScallyGoal(source,context);
+ if (reviewedGoals.size) reviewedEvidence.add(REVIEWED_SCALLY_GOAL_NOTE);
  const seen=new Set<string>();const mapped=new Set<number>(); const rows:FixturePlayerStatRow[]=[];
  for(const team of f.participants){
   const squad=f.lineups.filter(l=>l.team_id===team.id);
@@ -188,8 +250,9 @@ export function normalizeSportMonks(source:SportMonksSource,context:FixtureConte
    const details=l.details??[];
    if(new Set(details.map(d=>d.type_id)).size!==details.length)fail(`duplicate stats: ${l.player_name}`);
    const providerStats = new Map(details.map(d=>[d.type_id,d.data.value]));
-   const stats = reviewedCoreStats(source,context,l,providerStats);
-   if (stats !== providerStats) reviewedEvidence.add(REVIEWED_DOVBYK_CORE_NOTE);
+   const coreStats = reviewedCoreStats(source,context,l,providerStats);
+   const stats = reviewedGoals.get(l.player_id!) ?? coreStats;
+   if (coreStats !== providerStats) reviewedEvidence.add(REVIEWED_DOVBYK_CORE_NOTE);
    const value=(id:number)=>{const n=stats.get(id);if(n===undefined)return 0;if(typeof n!=='number'||!Number.isFinite(n)||n<0)return fail(`invalid stat ${id}: ${l.player_name}`);return n;};
    let minutes=stats.get(119);
    // Cumulative minutes include stoppage time and still prove a short late appearance.
