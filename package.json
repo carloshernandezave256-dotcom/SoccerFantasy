@@ -14,7 +14,7 @@
     "test:scoring:db": "node scripts/regression-scoring-db.mjs && node scripts/regression-priority-db.mjs && node scripts/regression-saves-db.mjs",
     "test:scoring:concurrency": "node scripts/regression-scoring-concurrency.mjs",
     "test:rollover:db": "node scripts/regression-rollover-db.mjs",
-    "test:automation:db": "node scripts/regression-scoring-automation-db.mjs && node scripts/regression-sportmonks-db.mjs",
+    "test:automation:db": "node scripts/regression-scoring-automation-db.mjs && node scripts/regression-sportmonks-db.mjs && node scripts/regression-full-week-lineup-db.mjs",
     "test:identity:concurrency": "node scripts/regression-sportmonks-concurrency.mjs"
   },
   "dependencies": {

@@ -55,3 +55,35 @@ export function reviewedDovbyk(): SportMonksSource {
  ];
  return s;
 }
+
+export const scallyContext: FixtureContext = {
+ fixture_id: 1575218, kickoff: '2026-11-06T19:30:00Z', competition_id: 78, home_score: 3, away_score: 1,
+};
+// Synthetic squads with exact reviewed goal, substitution, and affected stat identities.
+export function reviewedScally(): SportMonksSource {
+ const s = source(), f = s.raw_data;
+ s.fixture_id = 1575218; s.sportmonks_id = f.id = 19735119;
+ f.league_id = 82; f.starting_at = '2026-11-06 19:30:00';
+ f.participants = [{id:2708,name:'Hamburger SV',meta:{location:'home'}},
+  {id:683,name:'Borussia Mönchengladbach',meta:{location:'away'}}];
+ f.scores = [2708,683].map((participant_id,i) => ({description:'CURRENT',participant_id,score:{goals:i===0?3:1}}));
+ for (const l of f.lineups) l.team_id = l.team_id === 10 ? 2708 : 683;
+ const change = (index:number, id:number, name:string, canonical:number) => {
+  const l = f.lineups[index]; delete s.player_map[String(l.player_id)];
+  l.player_id = id; l.player_name = name; s.player_map[String(id)] = canonical; return l;
+ };
+ const hack = change(11,1452396,'Robin Hack',2716), scally = change(12,17158438,'Joe Scally',2726);
+ hack.id = 14675265121; scally.id = 14675265123;
+ hack.details!.find(d => d.type_id === 119)!.data.value = 56;
+ hack.details!.push({id:2350553965,type_id:52,data:{value:1}});
+ scally.details!.push({id:2350555039,type_id:79,data:{value:1}});
+ const diks = change(22,25106,'Kevin Diks',2727); diks.team_id = 683;
+ diks.details = [{type_id:119,data:{value:34}},{type_id:118,data:{value:7}},{type_id:80,data:{value:10}}];
+ f.events = [{id:158559631,type_id:14,minute:44,player_id:17158438,player_name:'Joe Scally',related_player_id:null,participant_id:683,rescinded:null},
+  {id:158560445,type_id:18,minute:56,player_id:25106,related_player_id:1452396,participant_id:683,rescinded:null,on_bench:false}];
+ [[200872,158558982,11],[37691049,158560506,59],[37509380,158560704,70]].forEach(([player,id,minute],i) => {
+  change(i,player,`Home scorer ${i}`,1000+i).details!.push({type_id:52,data:{value:1}});
+  f.events.push({id,type_id:14,minute,player_id:player,related_player_id:null,participant_id:2708,rescinded:null});
+ });
+ return s;
+}
